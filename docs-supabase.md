@@ -15,7 +15,7 @@ Ne jamais utiliser `SUPABASE_SECRET_KEY` ou une clé `service_role` dans React, 
 
 Dans Supabase Dashboard → SQL Editor, exécuter `supabase/migrations/001_avani_core.sql`. Cette migration crée les profils, follows, posts, conversations, membres, messages, notifications et rôles admin; elle ajoute aussi les politiques RLS et les tables Realtime.
 
-Le trigger `auth.users` crée automatiquement un profil et une notification de bienvenue. L’email admin ne doit pas être stocké en clair dans le client : attribuer un rôle dans `admin_roles` via une migration privée ou une Edge Function protégée.
+Puis exécuter `supabase/migrations/002_social_features.sql` pour les pages, groupes, commentaires, likes, fichiers, signalements, audit logs et buckets Storage. Le trigger `auth.users` crée automatiquement un profil et une notification de bienvenue. L’email admin ne doit pas être stocké en clair dans le client : attribuer un rôle dans `admin_roles` via une migration privée ou une Edge Function protégée.
 
 ## Routes client / API
 
@@ -30,6 +30,11 @@ Avec Supabase, le frontend appelle la Data API via `supabase-js` :
 | Messages | `GET /rest/v1/messages?conversation_id=eq.<id>` | Membre de la conversation |
 | Envoyer message | `POST /rest/v1/messages` | `sender_id = auth.uid()` + membre |
 | Notifications | `GET /rest/v1/notifications?user_id=eq.<userId>` | Propriétaire |
+| Pages | `GET/POST /rest/v1/pages` | Lecture publique, création propriétaire |
+| Groupes | `GET/POST /rest/v1/groups` | Public ou membre |
+| Commentaires | `GET/POST /rest/v1/comments` | Lecture publique, écriture authentifiée |
+| Fichiers | `POST /storage/v1/object/files/<userId>/<name>` | Propriétaire via Storage RLS |
+| Signalements | `POST /rest/v1/reports` | Utilisateur connecté |
 
 Les helpers sont dans `src/lib/api.ts`. Les accès directs sont protégés par RLS : masquer un bouton ne remplace jamais une policy SQL.
 

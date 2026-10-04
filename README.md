@@ -17,10 +17,10 @@ Créer `.env.local` à partir de `.env.example` avec `VITE_SUPABASE_URL` et `VIT
 
 ## Activer Supabase
 
-1. Dans Supabase → **SQL Editor**, exécuter `supabase/migrations/001_avani_core.sql`.
+1. Dans Supabase → **SQL Editor**, exécuter `supabase/migrations/001_avani_core.sql`, puis `supabase/migrations/002_social_features.sql`.
 2. Dans Supabase → **Authentication → URL Configuration**, ajouter `https://avani-pro.onrender.com` et `https://avani-pro.onrender.com/reset-password`.
 3. Dans Render → **Environment**, ajouter `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`, puis relancer le déploiement.
-4. Pour les messages, l’application charge l’historique depuis `messages` et s’abonne aux INSERT Realtime avec RLS. Les détails API/Edge Functions sont dans `docs-supabase.md`.
+4. Pour les messages, l’application charge l’historique depuis `messages` et s’abonne aux INSERT Realtime avec RLS. Les publications créées par un utilisateur connecté sont maintenant enregistrées dans `posts`. Les détails API/Edge Functions sont dans `docs-supabase.md`.
 
 ## Déployer sur Render
 

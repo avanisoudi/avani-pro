@@ -3,10 +3,11 @@ import type { User } from '@supabase/supabase-js'
 import './App.css'
 import { AuthModal } from './components/AuthModal'
 import { MessagesPanel } from './components/MessagesPanel'
+import { createPost } from './lib/api'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'profile'
-type Post = { id: number; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean }
+type Post = { id: string | number; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean }
 
 const postsSeed: Post[] = [
   { id: 1, name: 'Maya Chen', handle: '@mayachen', role: 'Product strategist · Paris', avatar: 'MC', time: '12 min', body: 'La meilleure roadmap n’est pas celle qui contient le plus de features. C’est celle qui rend la prochaine décision évidente. ✦', tags: ['#product', '#leadership'], stats: { likes: 248, comments: 31, shares: 18 }, kind: 'thought' },
@@ -32,8 +33,8 @@ function App() {
 
   const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', profile: 'Votre profil' }[active]), [active])
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400) }
-  const toggleLike = (id: number) => setPosts(current => current.map(post => post.id === id ? { ...post, liked: !post.liked, stats: { ...post.stats, likes: post.stats.likes + (post.liked ? -1 : 1) } } : post))
-  const publish = () => { if (!composer.trim()) return; setPosts(current => [{ id: Date.now(), name: 'Alex Morgan', handle: '@alexmorgan', role: 'Product builder · Avani Pro', avatar: 'AM', time: 'à l’instant', body: composer.trim(), tags: ['#nouveau'], stats: { likes: 0, comments: 0, shares: 0 }, kind: 'thought' }, ...current]); setComposer(''); flash('Publication partagée avec votre réseau') }
+  const toggleLike = (id: string | number) => setPosts(current => current.map(post => post.id === id ? { ...post, liked: !post.liked, stats: { ...post.stats, likes: post.stats.likes + (post.liked ? -1 : 1) } } : post))
+  const publish = async () => { if (!composer.trim()) return; if (isSupabaseConfigured && !sessionUser) { openAuth(); return }; const body = composer.trim(); try { const persisted = sessionUser ? await createPost(sessionUser.id, body) : null; setPosts(current => [{ id: persisted?.id ?? Date.now(), name: 'Alex Morgan', handle: '@alexmorgan', role: 'Product builder · Avani Pro', avatar: 'AM', time: 'à l’instant', body, tags: ['#nouveau'], stats: { likes: 0, comments: 0, shares: 0 }, kind: 'thought' }, ...current]); setComposer(''); flash(sessionUser ? 'Publication enregistrée dans votre feed' : 'Publication partagée avec votre réseau') } catch (caught) { flash(caught instanceof Error ? caught.message : 'La publication n’a pas pu être enregistrée.') } }
   useEffect(() => { if (!supabase) return; supabase.auth.getSession().then(({ data }) => setSessionUser(data.session?.user ?? null)); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSessionUser(session?.user ?? null)); return () => subscription.unsubscribe() }, [])
   const openAuth = () => { if (!isSupabaseConfigured) { flash('Ajoutez vos variables Supabase dans Render pour activer la connexion.'); return }; setAuthOpen(true) }
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); flash('Vous êtes déconnecté de votre espace sécurisé.') }

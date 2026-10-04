@@ -5,6 +5,13 @@ export type ProfileRecord = { id: string; username: string; full_name: string; a
 export type MessageRecord = { id: string; conversation_id: string; sender_id: string; body: string; attachment_path: string | null; created_at: string; sender?: Pick<ProfileRecord, 'username' | 'full_name' | 'avatar_url'> }
 export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; conversation_members?: { user_id: string; profile: ProfileRecord }[] }
 
+export async function createPost(authorId: string, body: string, postType = 'text') {
+  const client = requireSupabase()
+  const { data, error } = await client.from('posts').insert({ author_id: authorId, body: body.trim(), post_type: postType }).select('id, created_at').single()
+  if (error) throw error
+  return data as { id: string; created_at: string }
+}
+
 export async function getMyProfile(user: User) {
   const client = requireSupabase()
   const { data, error } = await client.from('profiles').select('id, username, full_name, avatar_url, bio, verified_type').eq('id', user.id).maybeSingle()
