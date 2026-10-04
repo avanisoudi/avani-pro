@@ -1,0 +1,10 @@
+{
+  "routes": [
+    { "path": "/", "title": "Avani Pro — Feed" },
+    { "path": "/explore", "title": "Avani Pro — Explorer" },
+    { "path": "/messages", "title": "Avani Pro — Messages" },
+    { "path": "/groups", "title": "Avani Pro — Groupes" },
+    { "path": "/profile/:username", "title": "Avani Pro — Profil" },
+    { "path": "/admin", "title": "Avani Pro — Administration" }
+  ]
+}
