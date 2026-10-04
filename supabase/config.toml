@@ -1,0 +1,4 @@
+project_id = "hpsftpganwkcftnbgnwq"
+
+[functions.messages]
+verify_jwt = true

@@ -6,9 +6,10 @@
 - [x] Ajouter des profils, suggestions, pages suivies, badge vérifié et compteurs sociaux.
 - [x] Ajouter centre de notifications et états de messages non lus.
 - [x] Préparer le routage déclaratif et la configuration Render.
-- [ ] Brancher Supabase Auth : inscription (nom, username, email, téléphone, mot de passe), connexion, oubli de mot de passe et session persistante.
-- [ ] Ajouter les migrations SQL, RLS, Storage sécurisé et fonctions de profil/feed.
-- [ ] Ajouter messagerie Realtime, pièces jointes, présence en ligne et groupes.
+- [x] Brancher Supabase Auth : inscription (nom, username, email, téléphone, mot de passe), connexion, oubli de mot de passe et session persistante.
+- [x] Ajouter une migration SQL avec profils, follows, posts, conversations, messages, notifications, rôles admin et RLS.
+- [x] Ajouter la messagerie Realtime avec historique, envoi de messages et abonnement aux nouveaux messages.
+- [ ] Ajouter Storage sécurisé, pièces jointes, présence en ligne et groupes.
 - [ ] Ajouter pages : création, abonnements, publications comme page et administrateurs.
 - [ ] Ajouter `/admin` avec rôles Super Admin, Admin, Modérateur et Support, modération et audit logs.
 - [ ] Ajouter vérification des emails administrateurs via variables d’environnement/Edge Function.
