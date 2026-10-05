@@ -12,7 +12,8 @@
 - [x] Ajouter le schéma Storage sécurisé, pages, groupes, commentaires, likes, signalements et audit logs.
 - [x] Ajouter l’interface de création de groupes, pièces jointes Storage et panneau `/admin` protégé par rôle.
 - [x] Ajouter le profil éditable, exploration avec abonnements et commentaires persistants.
-- [ ] Ajouter l’interface de création de pages, présence en ligne et création directe de conversations.
+- [ ] Ajouter l’interface de création de pages et création directe de conversations.
+- [x] Ajouter la présence en ligne avec Supabase Realtime Presence (`avani:presence`).
 - [ ] Ajouter pages : création, abonnements, publications comme page et administrateurs.
 - [ ] Ajouter `/admin` avec rôles Super Admin, Admin, Modérateur et Support, modération et audit logs.
 - [ ] Ajouter vérification des emails administrateurs via variables d’environnement/Edge Function.

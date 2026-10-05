@@ -53,6 +53,12 @@ supabase.channel(`conversation:${conversationId}`)
 
 Pour une production à grande échelle, ajouter présence (`presence`) pour le statut en ligne et broadcast pour l’indicateur de saisie; conserver Postgres Changes pour l’historique durable. Toujours retirer le channel au démontage React.
 
+## Présence en ligne
+
+Le hook `src/lib/usePresence.ts` ouvre le canal partagé `avani:presence` avec une clé utilisateur stable, publie `{ user_id, online_at }` avec `track()` et recalcule le nombre de clés présentes sur les événements `sync`, `join` et `leave`. Le channel est retiré et l’état est dépublié au démontage ou à la déconnexion. La présence ne nécessite pas de table SQL : elle est gérée par Supabase Realtime.
+
+Pour vérifier les données persistées, utiliser la Data API avec une clé publishable active. Un retour `401 Unregistered API key` signifie que la clé n’est pas enregistrée pour ce projet; ce n’est pas un problème RLS et aucune ligne ne peut être confirmée tant que la clé n’est pas remplacée depuis Supabase Settings → API.
+
 ## Edge Functions
 
 `supabase/functions/messages/index.ts` est le point de départ pour une API serveur optionnelle. Les routes recommandées sont `POST /messages` (validation et insertion), `POST /conversations` (création atomique), `POST /attachments/sign` (URL Storage courte) et `POST /moderation/report`. Elles doivent valider le JWT via `Authorization: Bearer`, utiliser la clé serveur uniquement côté Edge Function et déléguer les droits métier à RLS.
