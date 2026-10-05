@@ -10,7 +10,9 @@
 - [x] Ajouter une migration SQL avec profils, follows, posts, conversations, messages, notifications, rôles admin et RLS.
 - [x] Ajouter la messagerie Realtime avec historique, envoi de messages et abonnement aux nouveaux messages.
 - [x] Ajouter le schéma Storage sécurisé, pages, groupes, commentaires, likes, signalements et audit logs.
-- [ ] Ajouter l’interface de création de pages/groupes, pièces jointes, présence en ligne et panneau `/admin`.
+- [x] Ajouter l’interface de création de groupes, pièces jointes Storage et panneau `/admin` protégé par rôle.
+- [x] Ajouter le profil éditable, exploration avec abonnements et commentaires persistants.
+- [ ] Ajouter l’interface de création de pages, présence en ligne et création directe de conversations.
 - [ ] Ajouter pages : création, abonnements, publications comme page et administrateurs.
 - [ ] Ajouter `/admin` avec rôles Super Admin, Admin, Modérateur et Support, modération et audit logs.
 - [ ] Ajouter vérification des emails administrateurs via variables d’environnement/Edge Function.

@@ -1,0 +1,69 @@
+import { requireSupabase } from './supabase'
+import type { ProfileRecord } from './api'
+
+export async function updateMyProfile(userId: string, values: Pick<ProfileRecord, 'full_name' | 'username' | 'bio'>) {
+  const { data, error } = await requireSupabase().from('profiles').update(values).eq('id', userId).select('id, username, full_name, avatar_url, bio, verified_type').single()
+  if (error) throw error
+  return data as ProfileRecord
+}
+
+export async function toggleFollow(followerId: string, followingId: string, following: boolean) {
+  const client = requireSupabase()
+  const result = following
+    ? await client.from('follows').delete().eq('follower_id', followerId).eq('following_id', followingId)
+    : await client.from('follows').insert({ follower_id: followerId, following_id: followingId })
+  if (result.error) throw result.error
+  return !following
+}
+
+export async function createGroup(ownerId: string, name: string, description: string, visibility: 'private' | 'public') {
+  const client = requireSupabase()
+  const { data, error } = await client.from('groups').insert({ owner_id: ownerId, name: name.trim(), description: description.trim() || null, visibility }).select('id, name, description, visibility, created_at').single()
+  if (error) throw error
+  const { error: memberError } = await client.from('group_members').insert({ group_id: data.id, user_id: ownerId, role: 'owner' })
+  if (memberError) throw memberError
+  return data
+}
+
+export async function listMyGroups(userId: string) {
+  const { data, error } = await requireSupabase().from('group_members').select('group:groups(id, name, description, visibility, created_at, owner_id)').eq('user_id', userId)
+  if (error) throw error
+  return (data ?? []).map((row: any) => row.group)
+}
+
+export async function isAdmin(userId: string) {
+  const { data, error } = await requireSupabase().from('admin_roles').select('role').eq('user_id', userId).maybeSingle()
+  if (error) throw error
+  return data as { role: string } | null
+}
+
+export async function getAdminStats() {
+  const client = requireSupabase()
+  const [users, pages, posts, reports] = await Promise.all([
+    client.from('profiles').select('id', { count: 'exact', head: true }),
+    client.from('pages').select('id', { count: 'exact', head: true }),
+    client.from('posts').select('id', { count: 'exact', head: true }),
+    client.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'open'),
+  ])
+  const error = users.error || pages.error || posts.error || reports.error
+  if (error) throw error
+  return { users: users.count ?? 0, pages: pages.count ?? 0, posts: posts.count ?? 0, reports: reports.count ?? 0 }
+}
+
+export async function createComment(postId: string | number, authorId: string, body: string) {
+  const { data, error } = await requireSupabase().from('comments').insert({ post_id: String(postId), author_id: authorId, body: body.trim() }).select('id, body, created_at').single()
+  if (error) throw error
+  return data
+}
+
+export async function uploadPrivateFile(userId: string, file: File) {
+  if (file.size > 50 * 1024 * 1024) throw new Error('La taille maximale est de 50 Mo.')
+  const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/-+/g, '-')
+  const path = `${userId}/${crypto.randomUUID()}-${safeName}`
+  const client = requireSupabase()
+  const { error: uploadError } = await client.storage.from('files').upload(path, file, { upsert: false, contentType: file.type })
+  if (uploadError) throw uploadError
+  const { data, error } = await client.from('files').insert({ owner_id: userId, storage_path: path, original_name: file.name, mime_type: file.type || 'application/octet-stream', size_bytes: file.size }).select('id, original_name, storage_path, created_at').single()
+  if (error) throw error
+  return data
+}
