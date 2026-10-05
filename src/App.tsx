@@ -7,6 +7,7 @@ import { MessagesPanel } from './components/MessagesPanel'
 import { createPost, getMyProfile, type ProfileRecord } from './lib/api'
 import { createComment, uploadPrivateFile } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { useNotifications } from './lib/useNotifications'
 
 type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'profile' | 'admin'
 type Post = { id: string | number; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean }
@@ -33,6 +34,7 @@ function App() {
   const [sessionUser, setSessionUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
+  const { notifications, unreadCount, markAllRead } = useNotifications(sessionUser?.id ?? null)
 
   const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', profile: 'Votre profil', admin: 'Administration' }[active]), [active])
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400) }
@@ -50,7 +52,7 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-mark">AV</span><span>AVANI<span className="brand-pro">PRO</span></span></div>
+        <div className="brand"><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span>AVANI<span className="brand-pro">PRO</span></span></div>
         <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatar}</div><div><strong>{displayName}</strong><span>{displayUsername}</span></div>{profile?.verified_type && <span className="verified">✓</span>}</div>
         <nav className="nav-stack" aria-label="Navigation principale">
           <NavButton active={active === 'feed'} onClick={() => setActive('feed')} icon="⌂" label="Feed" badge="12" />
@@ -64,7 +66,7 @@ function App() {
       </aside>
 
       <main className="main-content">
-        <header className="topbar"><div><span className="eyebrow">JEUDI · 04 OCTOBRE 2026</span><h1>{sectionTitle}</h1></div><div className="top-actions"><label className="search"><span>⌕</span><input placeholder="Rechercher une idée, une personne…" /></label><button className="icon-button notification-trigger" aria-label="Notifications" onClick={() => setNotificationsOpen(!notificationsOpen)}>♢<i /></button>{sessionUser ? <button className="auth-button" onClick={signOut}>Se déconnecter</button> : <button className="auth-button" onClick={openAuth}>Se connecter</button>}<div className="avatar avatar-sm avatar-gradient">{displayAvatar}</div></div>{notificationsOpen && <div className="notification-popover"><div className="popover-head"><strong>Notifications</strong><span>Tout marquer lu</span></div><div className="notification-row"><span className="notif-icon violet">♥</span><div><strong>Maya Chen</strong> a aimé votre publication.<small>Il y a 8 min</small></div></div><div className="notification-row"><span className="notif-icon cyan">↗</span><div><strong>Kofi Mensah</strong> vous suit désormais.<small>Il y a 28 min</small></div></div><div className="notification-row"><span className="notif-icon blue">✦</span><div>Bienvenue sur <strong>Avani Pro</strong>.<small>Aujourd’hui</small></div></div></div>}</header>
+        <header className="topbar"><div><span className="eyebrow">JEUDI · 04 OCTOBRE 2026</span><h1>{sectionTitle}</h1></div><div className="top-actions"><label className="search"><span>⌕</span><input placeholder="Rechercher une idée, une personne…" /></label><button className="icon-button notification-trigger" aria-label="Notifications" onClick={() => { setNotificationsOpen(!notificationsOpen); if (!notificationsOpen) void markAllRead() }}>♢{unreadCount > 0 && <b className="notification-count">{unreadCount > 9 ? '9+' : unreadCount}</b>}<i /></button>{sessionUser ? <button className="auth-button" onClick={signOut}>Se déconnecter</button> : <button className="auth-button" onClick={openAuth}>Se connecter</button>}<div className="avatar avatar-sm avatar-gradient">{displayAvatar}</div></div>{notificationsOpen && <div className="notification-popover"><div className="popover-head"><strong>Notifications en temps réel</strong><button onClick={() => void markAllRead()}>Tout marquer lu</button></div>{notifications.length === 0 ? <p className="empty-copy">Aucune notification pour le moment.</p> : notifications.slice(0, 8).map(notification => <div className="notification-row" key={notification.id}><span className={`notif-icon ${notification.type === 'new_like' ? 'violet' : notification.type === 'new_message' ? 'cyan' : 'blue'}`}>{notification.type === 'new_like' ? '♥' : notification.type === 'new_message' ? '↗' : '✦'}</span><div>{notification.payload.message || 'Nouvelle activité sur Avani Pro.'}<small>{new Date(notification.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small></div></div>)}</div>}</header>
 
         {active === 'feed' && <>
           <section className="signal-banner"><div className="signal-orb"><span>✦</span></div><div><span className="eyebrow">VOTRE IMPACT CETTE SEMAINE</span><strong>Votre signal progresse de 24%</strong><p>Continuez à partager les idées qui font avancer votre communauté.</p></div><button className="ghost-button" onClick={() => flash('Votre impact est calculé à partir de vos publications et interactions.')}>Voir le rapport <span>↗</span></button></section>

@@ -17,6 +17,8 @@ Dans Supabase Dashboard → SQL Editor, exécuter `supabase/migrations/001_avani
 
 Puis exécuter `supabase/migrations/002_social_features.sql` pour les pages, groupes, commentaires, likes, fichiers, signalements, audit logs et buckets Storage. Le trigger `auth.users` crée automatiquement un profil et une notification de bienvenue. L’email admin ne doit pas être stocké en clair dans le client : attribuer un rôle dans `admin_roles` via une migration privée ou une Edge Function protégée.
 
+Puis exécuter `supabase/migrations/003_realtime_notifications.sql`. Cette migration ajoute les triggers qui créent une notification pour un nouveau message, un nouvel abonné, un commentaire et un j’aime. Le hook `src/lib/useNotifications.ts` charge les 25 dernières notifications et écoute les INSERT Supabase Realtime filtrés par `user_id`.
+
 ## Routes client / API
 
 Avec Supabase, le frontend appelle la Data API via `supabase-js` :
