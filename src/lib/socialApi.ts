@@ -67,3 +67,39 @@ export async function uploadPrivateFile(userId: string, file: File) {
   if (error) throw error
   return data
 }
+
+export type PageRecord = { id: string; owner_id: string; name: string; slug: string; category: string; description: string | null; verified: boolean; followers_count: number; created_at: string }
+
+export async function createPage(ownerId: string, values: Pick<PageRecord, 'name' | 'slug' | 'category' | 'description'>) {
+  const client = requireSupabase()
+  const { data, error } = await client.from('pages').insert({ owner_id: ownerId, name: values.name.trim(), slug: values.slug.toLowerCase().trim(), category: values.category, description: values.description?.trim() || null }).select('id, owner_id, name, slug, category, description, verified, followers_count, created_at').single()
+  if (error) throw error
+  const { error: memberError } = await client.from('page_members').insert({ page_id: data.id, user_id: ownerId, role: 'admin' })
+  if (memberError) throw memberError
+  return data as PageRecord
+}
+
+export async function listMyPages(ownerId: string) {
+  const { data, error } = await requireSupabase().from('pages').select('id, owner_id, name, slug, category, description, verified, followers_count, created_at').eq('owner_id', ownerId).order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as PageRecord[]
+}
+
+export async function togglePageFollow(pageId: string, userId: string, following: boolean) {
+  const client = requireSupabase()
+  const result = following ? await client.from('page_followers').delete().eq('page_id', pageId).eq('user_id', userId) : await client.from('page_followers').insert({ page_id: pageId, user_id: userId })
+  if (result.error) throw result.error
+  return !following
+}
+
+export async function listOpenReports() {
+  const { data, error } = await requireSupabase().from('reports').select('id, reason, status, post_id, comment_id, created_at').in('status', ['open', 'reviewing']).order('created_at', { ascending: false }).limit(20)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function listAuditLogs() {
+  const { data, error } = await requireSupabase().from('audit_logs').select('id, action, entity_type, entity_id, created_at').order('created_at', { ascending: false }).limit(20)
+  if (error) throw error
+  return data ?? []
+}

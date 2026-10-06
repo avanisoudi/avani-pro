@@ -39,3 +39,12 @@ export async function sendMessage(conversationId: string, senderId: string, body
   if (error) throw error
   return data as MessageRecord
 }
+
+export async function createDirectConversation(userId: string, contactId: string, contactName: string) {
+  const client = requireSupabase()
+  const { data: conversation, error } = await client.from('conversations').insert({ title: contactName, is_group: false, created_by: userId }).select('id, title, is_group, updated_at').single()
+  if (error) throw error
+  const { error: membersError } = await client.from('conversation_members').insert([{ conversation_id: conversation.id, user_id: userId }, { conversation_id: conversation.id, user_id: contactId }])
+  if (membersError) throw membersError
+  return conversation as ConversationRecord
+}

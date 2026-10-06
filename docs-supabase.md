@@ -19,6 +19,10 @@ Puis exécuter `supabase/migrations/002_social_features.sql` pour les pages, gro
 
 Puis exécuter `supabase/migrations/003_realtime_notifications.sql`. Cette migration ajoute les triggers qui créent une notification pour un nouveau message, un nouvel abonné, un commentaire et un j’aime. Le hook `src/lib/useNotifications.ts` charge les 25 dernières notifications et écoute les INSERT Supabase Realtime filtrés par `user_id`.
 
+La fonction `supabase/functions/admin-bootstrap/index.ts` protège l’attribution de rôles avec `ADMIN_EMAILS`, une liste d’emails séparés par des virgules configurée uniquement dans les secrets Edge Functions. Le JWT de l’utilisateur est vérifié avant l’upsert dans `admin_roles`; le client React ne reçoit jamais la clé service.
+
+Le smoke test public se lance avec `npm run test:smoke` ou `SMOKE_URL=https://... npm run test:smoke`. Il vérifie le HTML, le manifeste des routes, le logo, la carte de partage et l’asset cloche.
+
 ## Routes client / API
 
 Avec Supabase, le frontend appelle la Data API via `supabase-js` :

@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import './App.css'
 import { AuthModal } from './components/AuthModal'
-import { AdminPanel, ExplorePanel, GroupsPanel, ProfilePanel } from './components/FeaturePanels'
+import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
 import { createPost, getMyProfile, type ProfileRecord } from './lib/api'
 import { createComment, uploadPrivateFile } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { useNotifications } from './lib/useNotifications'
 
-type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'profile' | 'admin'
+type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin'
 type Post = { id: string | number; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean }
 
 const postsSeed: Post[] = [
@@ -36,7 +36,7 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false)
   const { notifications, unreadCount, markAllRead } = useNotifications(sessionUser?.id ?? null)
 
-  const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', profile: 'Votre profil', admin: 'Administration' }[active]), [active])
+  const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', pages: 'Vos pages', profile: 'Votre profil', admin: 'Administration' }[active]), [active])
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400) }
   const toggleLike = (id: string | number) => setPosts(current => current.map(post => post.id === id ? { ...post, liked: !post.liked, stats: { ...post.stats, likes: post.stats.likes + (post.liked ? -1 : 1) } } : post))
   const displayName = profile?.full_name || sessionUser?.user_metadata?.full_name || 'Alex Morgan'
@@ -59,6 +59,7 @@ function App() {
           <NavButton active={active === 'explore'} onClick={() => setActive('explore')} icon="⌕" label="Explorer" />
           <NavButton active={active === 'messages'} onClick={() => setActive('messages')} icon="◌" label="Messages" badge="3" />
           <NavButton active={active === 'groups'} onClick={() => setActive('groups')} icon="◒" label="Groupes" />
+          <NavButton active={active === 'pages'} onClick={() => setActive('pages')} icon="◆" label="Pages" />
           <NavButton active={active === 'profile'} onClick={() => setActive('profile')} icon="◎" label="Mon profil" />
           <NavButton active={active === 'admin'} onClick={() => setActive('admin')} icon="◆" label="Admin" />
         </nav>
@@ -75,10 +76,11 @@ function App() {
           <section className="post-list">{posts.map(post => <PostCard key={post.id} post={post} user={sessionUser} onLike={() => toggleLike(post.id)} onShare={() => flash('Lien de publication copié')} onComment={() => flash('Ouvrez le fil de commentaires sous la publication.')} />)}</section>
         </>}
         {active === 'messages' && <MessagesPanel user={sessionUser} onAction={flash} />}
-        {active === 'explore' && <ExplorePanel user={sessionUser} onAction={flash} />}
+        {active === 'explore' && <ExplorePanel user={sessionUser} onAction={flash} onMessage={() => { setActive('messages'); flash('Conversation créée. Ouvrez Messages pour écrire.') }} />}
         {active === 'groups' && <GroupsPanel user={sessionUser} onAction={flash} />}
+        {active === 'pages' && <PagesPanel user={sessionUser} onAction={flash} />}
         {active === 'profile' && <ProfilePanel key={`${profile?.id ?? 'profile'}-${profile?.full_name ?? ''}-${profile?.username ?? ''}`} user={sessionUser} profile={profile} onProfile={setProfile} />}
-        {active === 'admin' && <AdminPanel user={sessionUser} />}
+        {active === 'admin' && <AdminPanel user={sessionUser} onAction={flash} />}
       </main>
 
       <aside className="right-rail"><details className="rail-card rail-detail network-card" open><summary className="card-heading"><span>Votre réseau</span><button type="button" onClick={event => { event.preventDefault(); setActive('explore') }}>Voir tout ↗</button></summary><div className="network-stat"><strong>2,849</strong><span>connexions actives</span><div className="mini-avatars"><span>MC</span><span>SA</span><span>KM</span><b>+2.8k</b></div></div><div className="network-progress"><div><span>Force du réseau</span><strong>78%</strong></div><div className="progress-track"><i /></div></div></details><details className="rail-card rail-detail" open><summary className="card-heading"><span>À découvrir</span><button type="button" onClick={event => { event.preventDefault(); setActive('explore') }}>Actualiser ↻</button></summary><div className="suggestion-list">{suggestions.map(person => <div className="suggestion" key={person.name}><div className="avatar avatar-md avatar-soft">{person.avatar}</div><div className="suggestion-copy"><strong>{person.name}{person.name === 'Kofi Mensah' && <span className="verified">✓</span>}</strong><span>{person.role}</span><small>{person.mutual}</small></div><button className={followed.includes(person.name) ? 'follow-button following' : 'follow-button'} onClick={() => { setFollowed(current => current.includes(person.name) ? current.filter(name => name !== person.name) : [...current, person.name]); flash(followed.includes(person.name) ? `Vous ne suivez plus ${person.name}` : `Vous suivez maintenant ${person.name}`) }}>{followed.includes(person.name) ? '✓' : '+'}</button></div>)}</div></details><details className="rail-card rail-detail trends" open><summary className="card-heading"><span>Conversations en vue</span><span className="live-label"><i /> LIVE</span></summary>{['Design systems', 'Build in public', 'Future of work'].map((trend, index) => <button className="trend-row" key={trend} onClick={() => flash(`Exploration de #${trend.toLowerCase().replaceAll(' ', '')}`)}><span>0{index + 1}</span><div><strong>#{trend}</strong><small>{[1240, 842, 634][index].toLocaleString('fr-FR')} conversations</small></div><b>↗</b></button>)}</details><footer className="footer-links">À propos · Règles · Confidentialité · Aide<br /><span>© 2026 Avani Pro, Inc.</span></footer></aside>
