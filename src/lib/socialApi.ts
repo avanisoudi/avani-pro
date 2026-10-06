@@ -16,6 +16,12 @@ export async function toggleFollow(followerId: string, followingId: string, foll
   return !following
 }
 
+export async function listDiscoverableProfiles(currentUserId: string) {
+  const { data, error } = await requireSupabase().from('profiles').select('id, username, full_name, avatar_url, bio, verified_type').neq('id', currentUserId).order('created_at', { ascending: false }).limit(12)
+  if (error) throw error
+  return (data ?? []) as ProfileRecord[]
+}
+
 export async function createGroup(ownerId: string, name: string, description: string, visibility: 'private' | 'public') {
   const client = requireSupabase()
   const { data, error } = await client.from('groups').insert({ owner_id: ownerId, name: name.trim(), description: description.trim() || null, visibility }).select('id, name, description, visibility, created_at').single()
