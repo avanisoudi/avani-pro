@@ -20,3 +20,7 @@
 - [x] Ajouter `/admin` avec contrôle des rôles, statistiques, modération des signalements et audit logs.
 - [x] Ajouter vérification des emails administrateurs via `ADMIN_EMAILS` et Edge Function protégée.
 - [x] Ajouter un smoke test de production pour les routes et assets critiques.
+- [x] Hydrater le feed depuis Supabase à chaque connexion et persister likes, sauvegardes et partages.
+- [x] Ajouter le stockage des comptes officiels, badges admin et rôles super_admin.
+- [x] Ajouter une section Réglages avec préférences persistantes de session.
+- [x] Versionner la plateforme en 1.0.0.

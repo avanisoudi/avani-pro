@@ -13,29 +13,25 @@ export async function createPost(authorId: string, body: string, postType = 'tex
 }
 
 export async function getMyProfile(user: User) {
-  const client = requireSupabase()
-  const { data, error } = await client.from('profiles').select('id, username, full_name, avatar_url, bio, verified_type').eq('id', user.id).maybeSingle()
+  const { data, error } = await requireSupabase().from('profiles').select('id, username, full_name, avatar_url, bio, verified_type').eq('id', user.id).maybeSingle()
   if (error) throw error
   return data as ProfileRecord | null
 }
 
 export async function listConversations(userId: string) {
-  const client = requireSupabase()
-  const { data, error } = await client.from('conversation_members').select('conversation:conversations(id, title, is_group, updated_at), profile:profiles(id, username, full_name, avatar_url, bio, verified_type)').eq('user_id', userId)
+  const { data, error } = await requireSupabase().from('conversation_members').select('conversation:conversations(id, title, is_group, updated_at), profile:profiles(id, username, full_name, avatar_url, bio, verified_type)').eq('user_id', userId)
   if (error) throw error
   return (data ?? []).map((row: any) => ({ ...row.conversation, conversation_members: [{ user_id: row.user_id, profile: row.profile }] })) as ConversationRecord[]
 }
 
 export async function listMessages(conversationId: string) {
-  const client = requireSupabase()
-  const { data, error } = await client.from('messages').select('id, conversation_id, sender_id, body, attachment_path, created_at, sender:profiles!messages_sender_id_fkey(username, full_name, avatar_url)').eq('conversation_id', conversationId).order('created_at', { ascending: true }).limit(100)
+  const { data, error } = await requireSupabase().from('messages').select('id, conversation_id, sender_id, body, attachment_path, created_at, sender:profiles!messages_sender_id_fkey(username, full_name, avatar_url)').eq('conversation_id', conversationId).order('created_at', { ascending: true }).limit(100)
   if (error) throw error
   return (data ?? []).map((row: any) => ({ ...row, sender: Array.isArray(row.sender) ? row.sender[0] : row.sender })) as MessageRecord[]
 }
 
 export async function sendMessage(conversationId: string, senderId: string, body: string) {
-  const client = requireSupabase()
-  const { data, error } = await client.from('messages').insert({ conversation_id: conversationId, sender_id: senderId, body: body.trim() }).select('id, conversation_id, sender_id, body, attachment_path, created_at').single()
+  const { data, error } = await requireSupabase().from('messages').insert({ conversation_id: conversationId, sender_id: senderId, body: body.trim() }).select('id, conversation_id, sender_id, body, attachment_path, created_at').single()
   if (error) throw error
   return data as MessageRecord
 }
@@ -47,4 +43,44 @@ export async function createDirectConversation(userId: string, contactId: string
   const { error: membersError } = await client.from('conversation_members').insert([{ conversation_id: conversation.id, user_id: userId }, { conversation_id: conversation.id, user_id: contactId }])
   if (membersError) throw membersError
   return conversation as ConversationRecord
+}
+
+export type FeedPostRecord = { id: string; body: string; post_type: string; created_at: string; author: ProfileRecord; likes: number; comments: number; shares: number; liked: boolean; saved: boolean }
+
+export async function listFeedPosts(userId?: string | null) {
+  const client = requireSupabase()
+  const [{ data: posts, error: postsError }, { data: likes, error: likesError }, { data: comments, error: commentsError }, { data: shares, error: sharesError }, savedResult, likedResult] = await Promise.all([
+    client.from('posts').select('id, body, post_type, created_at, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url, bio, verified_type)').order('created_at', { ascending: false }).limit(50),
+    client.from('likes').select('post_id'),
+    client.from('comments').select('post_id'),
+    client.from('post_shares').select('post_id'),
+    userId ? client.from('saved_posts').select('post_id').eq('user_id', userId) : Promise.resolve({ data: [], error: null }),
+    userId ? client.from('likes').select('post_id').eq('user_id', userId) : Promise.resolve({ data: [], error: null }),
+  ])
+  if (postsError) throw postsError
+  if (likesError) throw likesError
+  if (commentsError) throw commentsError
+  if (sharesError) throw sharesError
+  const countBy = (rows: { post_id: string }[] | null) => (rows ?? []).reduce<Record<string, number>>((counts, row) => { counts[row.post_id] = (counts[row.post_id] ?? 0) + 1; return counts }, {})
+  const likeCounts = countBy(likes); const commentCounts = countBy(comments); const shareCounts = countBy(shares); const likedIds = new Set((likedResult.data ?? []).map((row: { post_id: string }) => row.post_id)); const savedIds = new Set((savedResult.data ?? []).map((row: { post_id: string }) => row.post_id))
+  return (posts ?? []).map((row: any) => ({ id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at, author: Array.isArray(row.author) ? row.author[0] : row.author, likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0, liked: likedIds.has(row.id), saved: savedIds.has(row.id) })) as FeedPostRecord[]
+}
+
+export async function togglePostLike(postId: string, userId: string, liked: boolean) {
+  const client = requireSupabase()
+  const result = liked ? await client.from('likes').delete().eq('post_id', postId).eq('user_id', userId) : await client.from('likes').insert({ post_id: postId, user_id: userId })
+  if (result.error) throw result.error
+  return !liked
+}
+
+export async function toggleSavedPost(postId: string, userId: string, saved: boolean) {
+  const client = requireSupabase()
+  const result = saved ? await client.from('saved_posts').delete().eq('post_id', postId).eq('user_id', userId) : await client.from('saved_posts').insert({ post_id: postId, user_id: userId })
+  if (result.error) throw result.error
+  return !saved
+}
+
+export async function recordPostShare(postId: string, userId: string) {
+  const { error } = await requireSupabase().from('post_shares').insert({ post_id: postId, user_id: userId })
+  if (error) throw error
 }

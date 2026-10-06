@@ -6,6 +6,7 @@
     { "path": "/groups", "title": "Avani Pro — Groupes" },
     { "path": "/pages", "title": "Avani Pro — Pages" },
     { "path": "/profile/:username", "title": "Avani Pro — Profil" },
-    { "path": "/admin", "title": "Avani Pro — Administration" }
+    { "path": "/admin", "title": "Avani Pro — Administration" },
+    { "path": "/settings", "title": "Avani Pro — Réglages" }
   ]
 }

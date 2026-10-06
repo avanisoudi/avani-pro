@@ -23,6 +23,8 @@ La fonction `supabase/functions/admin-bootstrap/index.ts` protège l’attributi
 
 Le smoke test public se lance avec `npm run test:smoke` ou `SMOKE_URL=https://... npm run test:smoke`. Il vérifie le HTML, le manifeste des routes, le logo, la carte de partage et l’asset cloche.
 
+La migration `004_persistent_interactions.sql` ajoute `saved_posts` et `post_shares`. Le feed est maintenant hydraté depuis `posts`, `profiles`, `likes`, `comments`, `post_shares` et `saved_posts` à chaque connexion. La migration `005_admin_accounts.sql` attribue automatiquement le rôle `super_admin` et le badge `admin` aux cinq emails officiels fournis par le propriétaire du projet, y compris pour les comptes déjà créés.
+
 ## Routes client / API
 
 Avec Supabase, le frontend appelle la Data API via `supabase-js` :
