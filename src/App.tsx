@@ -37,7 +37,7 @@ function App() {
   const { notifications, unreadCount, markAllRead } = useNotifications(sessionUser?.id ?? null)
 
   const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', pages: 'Vos pages', profile: 'Votre profil', admin: 'Administration', settings: 'Réglages' }[active]), [active])
-  const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400) }
+  const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 8000) }
   const toggleLike = async (id: string | number) => { const current = posts.find(post => post.id === id); if (!current) return; const nextLiked = !current.liked; setPosts(currentPosts => currentPosts.map(post => post.id === id ? { ...post, liked: nextLiked, stats: { ...post.stats, likes: post.stats.likes + (nextLiked ? 1 : -1) } } : post)); if (sessionUser && typeof id === 'string') { try { await togglePostLike(id, sessionUser.id, current.liked ?? false) } catch { flash('Le j’aime n’a pas pu être synchronisé avec Supabase.') } } }
   const displayName = profile?.full_name || sessionUser?.user_metadata?.full_name || 'Alex Morgan'
   const displayUsername = profile?.username ? `@${profile.username}` : sessionUser?.email ? `@${sessionUser.email.split('@')[0]}` : '@alexmorgan'

@@ -22,6 +22,8 @@ Créer `.env.local` à partir de `.env.example` avec `VITE_SUPABASE_URL` et `VIT
 3. Dans Render → **Environment**, ajouter `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`, puis relancer le déploiement.
 4. Pour les messages, l’application charge l’historique depuis `messages` et s’abonne aux INSERT Realtime avec RLS. Les nouveaux messages, follows, commentaires et likes produisent des notifications grâce à la migration 003. Les publications créées par un utilisateur connecté sont enregistrées dans `posts`. Les détails API/Edge Functions sont dans `docs-supabase.md`.
 
+5. Dans Supabase → **Authentication → Providers → Google**, activez Google et renseignez le Client ID/Secret Google. Ajoutez les URLs `https://avani-pro.onrender.com` et `http://localhost:5173` dans les Redirect URLs. Avani Pro utilise ensuite le bouton **Continuer avec Google** via Supabase OAuth. L’inscription email se déroule en deux étapes : prénom/nom/mot de passe, puis email.
+
 ## Déployer sur Render
 
 Créer un **Static Site** avec la commande `npm install && npm run build` et le dossier publié `dist`. Ajouter les variables Supabase dans l’onglet Environment et une réécriture `/*` vers `/index.html` pour le fallback SPA. Le fichier `render.yaml` fournit déjà cette configuration.

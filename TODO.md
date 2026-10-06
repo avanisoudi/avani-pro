@@ -24,3 +24,6 @@
 - [x] Ajouter le stockage des comptes officiels, badges admin et rôles super_admin.
 - [x] Ajouter une section Réglages avec préférences persistantes de session.
 - [x] Versionner la plateforme en 1.0.0.
+- [x] Refaire l’inscription en deux étapes : prénom/nom/mot de passe puis email.
+- [x] Ajouter Google OAuth via Supabase Auth.
+- [x] Faire disparaître les notifications toast après 8 secondes.
