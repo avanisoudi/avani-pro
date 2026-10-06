@@ -25,6 +25,8 @@ Le smoke test public se lance avec `npm run test:smoke` ou `SMOKE_URL=https://..
 
 La migration `004_persistent_interactions.sql` ajoute `saved_posts` et `post_shares`. Le feed est maintenant hydraté depuis `posts`, `profiles`, `likes`, `comments`, `post_shares` et `saved_posts` à chaque connexion. La migration `005_admin_accounts.sql` attribue automatiquement le rôle `super_admin` et le badge `admin` aux cinq emails officiels fournis par le propriétaire du projet, y compris pour les comptes déjà créés.
 
+La migration `006_group_chat.sql` ajoute `groups.conversation_id` et les policies de membres. La création d’un groupe crée aussi une ligne `conversations` avec `is_group=true` et ajoute le propriétaire à `conversation_members`. Le groupe est ensuite visible dans `MessagesPanel`, avec historique Postgres, envoi durable, abonnement Realtime et invitation de profils dans le groupe et son chat.
+
 Le parcours d’inscription est en deux étapes dans `AuthModal.tsx`, avec Google OAuth Supabase. Les toasts d’interface restent visibles 8 secondes puis disparaissent automatiquement. La persistance de session est activée par `persistSession`, `autoRefreshToken` et `detectSessionInUrl` dans `src/lib/supabase.ts`.
 
 ## Routes client / API

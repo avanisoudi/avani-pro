@@ -24,7 +24,11 @@ export async function listDiscoverableProfiles(currentUserId: string) {
 
 export async function createGroup(ownerId: string, name: string, description: string, visibility: 'private' | 'public') {
   const client = requireSupabase()
-  const { data, error } = await client.from('groups').insert({ owner_id: ownerId, name: name.trim(), description: description.trim() || null, visibility }).select('id, name, description, visibility, created_at').single()
+  const { data: conversation, error: conversationError } = await client.from('conversations').insert({ title: name.trim(), is_group: true, created_by: ownerId }).select('id, title, is_group, updated_at').single()
+  if (conversationError) throw conversationError
+  const { error: conversationMemberError } = await client.from('conversation_members').insert({ conversation_id: conversation.id, user_id: ownerId })
+  if (conversationMemberError) throw conversationMemberError
+  const { data, error } = await client.from('groups').insert({ owner_id: ownerId, name: name.trim(), description: description.trim() || null, visibility, conversation_id: conversation.id }).select('id, name, description, visibility, conversation_id, created_at').single()
   if (error) throw error
   const { error: memberError } = await client.from('group_members').insert({ group_id: data.id, user_id: ownerId, role: 'owner' })
   if (memberError) throw memberError
@@ -32,9 +36,17 @@ export async function createGroup(ownerId: string, name: string, description: st
 }
 
 export async function listMyGroups(userId: string) {
-  const { data, error } = await requireSupabase().from('group_members').select('group:groups(id, name, description, visibility, created_at, owner_id)').eq('user_id', userId)
+  const { data, error } = await requireSupabase().from('group_members').select('group:groups(id, name, description, visibility, conversation_id, created_at, owner_id)').eq('user_id', userId)
   if (error) throw error
   return (data ?? []).map((row: any) => row.group)
+}
+
+export async function addGroupMember(groupId: string, conversationId: string, memberId: string) {
+  const client = requireSupabase()
+  const { error: groupError } = await client.from('group_members').insert({ group_id: groupId, user_id: memberId, role: 'member' })
+  if (groupError) throw groupError
+  const { error: conversationError } = await client.from('conversation_members').insert({ conversation_id: conversationId, user_id: memberId })
+  if (conversationError) throw conversationError
 }
 
 export async function isAdmin(userId: string) {

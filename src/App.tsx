@@ -34,6 +34,7 @@ function App() {
   const [sessionUser, setSessionUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
+  const [initialConversationId, setInitialConversationId] = useState<string | undefined>()
   const { notifications, unreadCount, markAllRead } = useNotifications(sessionUser?.id ?? null)
 
   const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', pages: 'Vos pages', profile: 'Votre profil', admin: 'Administration', settings: 'Réglages' }[active]), [active])
@@ -76,9 +77,9 @@ function App() {
           <div className="feed-filter"><div><button className="filter-active">Pour vous</button><button>Abonnements</button><button>Tendances</button></div><button className="sort-button">Les plus récents ↕</button></div>
           <section className="post-list">{posts.map(post => <PostCard key={post.id} post={post} user={sessionUser} onLike={() => void toggleLike(post.id)} onShare={async () => { if (sessionUser && typeof post.id === 'string') { try { await recordPostShare(post.id, sessionUser.id); setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, shares: item.stats.shares + 1 } } : item)) } catch { flash('Le partage n’a pas pu être enregistré.') } } else flash('Connectez-vous pour enregistrer ce partage.') }} onSave={async () => { if (!sessionUser || typeof post.id !== 'string') { flash('Connectez-vous pour sauvegarder cette publication.'); return }; try { const next = await toggleSavedPost(post.id, sessionUser.id, post.saved ?? false); setPosts(current => current.map(item => item.id === post.id ? { ...item, saved: next } : item)); flash(next ? 'Publication sauvegardée.' : 'Publication retirée des sauvegardes.') } catch { flash('La sauvegarde n’a pas pu être enregistrée.') } }} onComment={() => flash('Ouvrez le fil de commentaires sous la publication.')} />)}</section>
         </>}
-        {active === 'messages' && <MessagesPanel user={sessionUser} onAction={flash} />}
+        {active === 'messages' && <MessagesPanel user={sessionUser} onAction={flash} initialConversationId={initialConversationId} />}
         {active === 'explore' && <ExplorePanel user={sessionUser} onAction={flash} onMessage={() => { setActive('messages'); flash('Conversation créée. Ouvrez Messages pour écrire.') }} />}
-        {active === 'groups' && <GroupsPanel user={sessionUser} onAction={flash} />}
+        {active === 'groups' && <GroupsPanel user={sessionUser} onAction={flash} onOpenMessages={conversationId => { setInitialConversationId(conversationId); setActive('messages') }} />}
         {active === 'pages' && <PagesPanel user={sessionUser} onAction={flash} />}
         {active === 'profile' && <ProfilePanel key={`${profile?.id ?? 'profile'}-${profile?.full_name ?? ''}-${profile?.username ?? ''}`} user={sessionUser} profile={profile} onProfile={setProfile} />}
         {active === 'admin' && <AdminPanel user={sessionUser} onAction={flash} />}

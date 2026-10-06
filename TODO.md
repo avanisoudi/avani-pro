@@ -27,3 +27,7 @@
 - [x] Refaire l’inscription en deux étapes : prénom/nom/mot de passe puis email.
 - [x] Ajouter Google OAuth via Supabase Auth.
 - [x] Faire disparaître les notifications toast après 8 secondes.
+- [x] Relier chaque groupe à une conversation persistante avec messages Realtime.
+- [x] Ajouter invitation de membres, historique de groupe et ouverture directe du chat.
+- [x] Ajouter les assets SVG dédiés aux groupes et conversations.
+- [x] Publier la version 1.1.0 avec les groupes persistants et les invitations de membres.
