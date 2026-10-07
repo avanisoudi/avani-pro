@@ -187,3 +187,28 @@ export async function deleteStory(storyId: string, userId: string) {
   if (deleteError) throw deleteError
   await client.storage.from('story-media').remove([data.media_path])
 }
+
+export async function listFollowingIds(userId: string) {
+  const { data, error } = await requireSupabase().from('follows').select('following_id').eq('follower_id', userId)
+  if (error) throw error
+  return (data ?? []).map((row: any) => row.following_id as string)
+}
+
+export async function getFeatureFlags() {
+  const { data, error } = await requireSupabase().from('feature_flags').select('key, enabled, description')
+  if (error) throw error
+  return (data ?? []) as Array<{ key: string; enabled: boolean; description: string | null }>
+}
+
+export async function getMySettings(userId: string) {
+  const client = requireSupabase()
+  const { data, error } = await client.from('user_settings').select('user_id, profile_visibility, message_permission, mention_permission, story_visibility, appearance, language, notification_preferences, updated_at').eq('user_id', userId).maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function saveMySettings(userId: string, values: Record<string, unknown>) {
+  const { data, error } = await requireSupabase().from('user_settings').upsert({ user_id: userId, ...values, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }).select().single()
+  if (error) throw error
+  return data
+}
