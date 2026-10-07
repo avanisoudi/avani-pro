@@ -233,8 +233,8 @@ function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReac
       aria-expanded={open}
       aria-label={reaction ? `Réaction actuelle : ${current[2]}. Modifier ou retirer la réaction` : 'J’aime. Ouvrir les réactions'}
       onClick={() => {
-        if (reaction) onReact(reaction)
-        else setOpen(value => !value)
+        onReact(reaction ?? 'like')
+        setOpen(false)
       }}
       onPointerDown={event => {
         if (event.pointerType === 'touch') setOpen(true)
