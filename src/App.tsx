@@ -120,7 +120,7 @@ function App() {
   const openAuth = () => { if (!isSupabaseConfigured) { flash('Ajoutez vos variables Supabase dans Render pour activer la connexion.'); return }; setAuthOpen(true) }
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); setProfile(null); flash('Vous êtes déconnecté de votre espace sécurisé.') }
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!sessionUser) { openAuth(); return }; try { await uploadPrivateFile(sessionUser.id, file); flash(`Fichier « ${file.name} » sécurisé dans votre espace.`) } catch (error) { flash(error instanceof Error ? error.message : 'Le fichier n’a pas pu être envoyé.') } }
-  const handleStoryAdded = async (file: File) => { if (!sessionUser) { openAuth(); return }; try { await uploadPrivateFile(sessionUser.id, file); flash(`Votre story « ${file.name} » est publiée pendant 24 h.`) } catch (error) { flash(error instanceof Error ? error.message : 'La story n’a pas pu être envoyée.') } }
+ 
 
   if (!sessionUser) return <><PublicHome onAuth={openAuth} />{authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={flash} />}{toast && <div className="toast"><span>✦</span>{toast}</div>}</>
 
@@ -131,9 +131,9 @@ function App() {
         <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</div><div><strong>{displayName}{profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}</strong><span>{displayUsername}</span></div></div>
         <nav className="nav-stack" aria-label="Navigation principale">
           <span className="nav-section-label">Espace personnel</span>
-          <NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Accueil" badge="12" />
+          <NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Accueil" />
           <NavButton active={active === 'explore'} onClick={() => navigateTo('/search', 'explore')} icon="explore" label="Explorer" />
-          <NavButton active={active === 'messages'} onClick={() => navigateTo('/messages', 'messages')} icon="messages" label="Messages" badge="3" />
+          <NavButton active={active === 'messages'} onClick={() => navigateTo('/messages', 'messages')} icon="messages" label="Messages" />
           <NavButton active={active === 'notifications'} onClick={() => navigateTo('/notifications', 'notifications')} icon="explore" label="Notifications" />
           <span className="nav-section-label">Communautés</span>
           <NavButton active={active === 'groups'} onClick={() => navigateTo('/groups', 'groups')} icon="groups" label="Groupes" />
