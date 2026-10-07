@@ -271,11 +271,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .post-actions .reaction-selected.reaction-sad{color:#eab308}
 .post-actions .reaction-selected.reaction-angry{color:#e53935}
 .post-actions .reaction-selected:hover{filter:saturate(1.08)}
-.post-actions .reaction-selected.reaction-like{background:#e7f3ff!important}
-.post-actions .reaction-selected.reaction-love{background:#fff0f4!important}
-.post-actions .reaction-selected.reaction-haha,.post-actions .reaction-selected.reaction-wow{background:#fff8e7!important}
-.post-actions .reaction-selected.reaction-sad{background:#fffbea!important}
-.post-actions .reaction-selected.reaction-angry{background:#fff0f0!important}
+.post-actions .reaction-action>button{background:transparent!important;border:0!important;box-shadow:none!important}
+.post-actions .reaction-action>button.reaction-selected{background:transparent!important;border:0!important;box-shadow:none!important}
+.post-actions .reaction-selected.reaction-like{background:transparent!important}
+.post-actions .reaction-selected.reaction-love{background:transparent!important}
+.post-actions .reaction-selected.reaction-haha,.post-actions .reaction-selected.reaction-wow{background:transparent!important}
+.post-actions .reaction-selected.reaction-sad{background:transparent!important}
+.post-actions .reaction-selected.reaction-angry{background:transparent!important}
 .reaction-chip{background:var(--surface)!important}
 .reaction-chip.reaction-like{color:#1877f2}
 .reaction-chip.reaction-love{color:#e91e63}
