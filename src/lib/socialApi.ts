@@ -152,3 +152,38 @@ export async function updateComment(commentId: string, authorId: string, body: s
   if (error) throw error
   return data as { id: string; body: string; updated_at: string }
 }
+
+export type StoryRecord = { id: string; author_id: string; media_path: string; media_type: 'image' | 'video'; caption: string | null; privacy: 'public' | 'followers' | 'private'; created_at: string; expires_at: string; author?: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url' | 'verified_type'>; media_url?: string }
+
+export async function listActiveStories(userId: string) {
+  const client = requireSupabase()
+  const { data, error } = await client.from('stories').select('id, author_id, media_path, media_type, caption, privacy, created_at, expires_at, author:profiles!stories_author_id_fkey(id, username, full_name, avatar_url, verified_type)').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: true }).limit(100)
+  if (error) throw error
+  const rows = (data ?? []).map((row: any) => ({ ...row, author: Array.isArray(row.author) ? row.author[0] : row.author })) as StoryRecord[]
+  const paths = [...new Set(rows.map(row => row.media_path))]
+  const signed = await Promise.all(paths.map(async path => { const result = await client.storage.from('story-media').createSignedUrl(path, 60 * 60); return [path, result.data?.signedUrl ?? null] as const }))
+  const urls = new Map(signed)
+  return rows.filter(row => row.author_id === userId || row.privacy !== 'private').map(row => ({ ...row, media_url: urls.get(row.media_path) ?? undefined }))
+}
+
+export async function createStory(userId: string, file: File, caption: string, privacy: 'public' | 'followers' | 'private') {
+  if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) throw new Error('Choisissez une photo ou une vidéo.')
+  if (file.size > 50 * 1024 * 1024) throw new Error('La story doit faire moins de 50 Mo.')
+  const extension = file.name.split('.').pop()?.toLowerCase() || (file.type.startsWith('video/') ? 'mp4' : 'jpg')
+  const path = userId + '/' + crypto.randomUUID() + '.' + extension
+  const client = requireSupabase()
+  const { error: uploadError } = await client.storage.from('story-media').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' })
+  if (uploadError) throw uploadError
+  const { data, error } = await client.from('stories').insert({ author_id: userId, media_path: path, media_type: file.type.startsWith('video/') ? 'video' : 'image', caption: caption.trim() || null, privacy }).select('id, author_id, media_path, media_type, caption, privacy, created_at, expires_at').single()
+  if (error) { await client.storage.from('story-media').remove([path]); throw error }
+  return data as StoryRecord
+}
+
+export async function deleteStory(storyId: string, userId: string) {
+  const client = requireSupabase()
+  const { data, error } = await client.from('stories').select('media_path').eq('id', storyId).eq('author_id', userId).single()
+  if (error) throw error
+  const { error: deleteError } = await client.from('stories').delete().eq('id', storyId).eq('author_id', userId)
+  if (deleteError) throw deleteError
+  await client.storage.from('story-media').remove([data.media_path])
+}
