@@ -1,7 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import { requireSupabase } from './supabase'
 
-export type ProfileRecord = { id: string; username: string; full_name: string; avatar_url: string | null; bio: string | null; verified_type: string | null }
+export type ProfileRecord = { id: string; username: string; full_name: string; avatar_url: string | null; bio: string | null; verified_type: string | null; followers_count?: number; following_count?: number }
 export type MessageRecord = { id: string; conversation_id: string; sender_id: string; body: string; attachment_path: string | null; created_at: string; sender?: Pick<ProfileRecord, 'username' | 'full_name' | 'avatar_url'> }
 export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; conversation_members?: { user_id: string; profile: ProfileRecord }[] }
 
@@ -13,7 +13,7 @@ export async function createPost(authorId: string, body: string, postType = 'tex
 }
 
 export async function getMyProfile(user: User) {
-  const { data, error } = await requireSupabase().from('profiles').select('id, username, full_name, avatar_url, bio, verified_type').eq('id', user.id).maybeSingle()
+  const { data, error } = await requireSupabase().from('profiles').select('id, username, full_name, avatar_url, bio, verified_type, followers_count, following_count').eq('id', user.id).maybeSingle()
   if (error) throw error
   return data as ProfileRecord | null
 }
