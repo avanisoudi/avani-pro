@@ -80,10 +80,23 @@ export async function getAdminStats() {
   return { users: users.count ?? 0, pages: pages.count ?? 0, posts: posts.count ?? 0, reports: reports.count ?? 0 }
 }
 
-export async function createComment(postId: string | number, authorId: string, body: string) {
-  const { data, error } = await requireSupabase().from('comments').insert({ post_id: String(postId), author_id: authorId, body: body.trim() }).select('id, body, created_at').single()
+export type CommentRecord = { id: string; post_id: string; author_id: string; parent_id: string | null; body: string; created_at: string; author?: Pick<ProfileRecord, 'username' | 'full_name' | 'avatar_url' | 'verified_type'> }
+
+export async function listComments(postId: string) {
+  const { data, error } = await requireSupabase().from('comments').select('id, post_id, author_id, parent_id, body, created_at, author:profiles!comments_author_id_fkey(username, full_name, avatar_url, verified_type)').eq('post_id', postId).order('created_at', { ascending: true }).limit(100)
   if (error) throw error
-  return data
+  return (data ?? []).map((row: any) => ({ ...row, author: Array.isArray(row.author) ? row.author[0] : row.author })) as CommentRecord[]
+}
+
+export async function createComment(postId: string | number, authorId: string, body: string, parentId?: string | null) {
+  const { data, error } = await requireSupabase().from('comments').insert({ post_id: String(postId), author_id: authorId, body: body.trim(), parent_id: parentId ?? null }).select('id, post_id, author_id, parent_id, body, created_at').single()
+  if (error) throw error
+  return data as CommentRecord
+}
+
+export async function deleteComment(commentId: string, authorId: string) {
+  const { error } = await requireSupabase().from('comments').delete().eq('id', commentId).eq('author_id', authorId)
+  if (error) throw error
 }
 
 export async function uploadPrivateFile(userId: string, file: File) {
