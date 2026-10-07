@@ -289,3 +289,21 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .reaction-user-type.reaction-haha,.reaction-user-type.reaction-wow{color:#f59e0b}
 .reaction-user-type.reaction-sad{color:#eab308}
 .reaction-user-type.reaction-angry{color:#e53935}
+
+
+/* Avani Pro asset system — local, deterministic, no remote media dependency */
+:root{
+  --avani-violet:#6d5dfc;
+  --avani-blue:#3b82f6;
+  --avani-teal:#14b8a6;
+}
+.public-home{background-image:linear-gradient(rgba(255,255,255,.97),rgba(255,255,255,.97)),url('/assets/cover-default.svg');background-size:cover;background-position:center top}
+.public-hero{position:relative;isolation:isolate;overflow:hidden}
+.public-hero::after{content:"";position:absolute;inset:0;background:url('/assets/cover-default.svg') center/cover no-repeat;opacity:.055;pointer-events:none;z-index:-1}
+.brand-mark{overflow:hidden}
+.brand-mark img{display:block;width:100%;height:100%;object-fit:contain}
+.hero-visual{background-image:url('/assets/cover-default.svg');background-size:cover;background-position:center;}
+.story-card.story-self:not(:has(img)){background-image:url('/assets/story-placeholder.svg');background-size:cover;background-position:center}
+.avatar-default-asset{background:url('/assets/avatar-default.svg') center/cover no-repeat}
+.empty-feed-asset{background:url('/assets/empty-feed.svg') center/contain no-repeat;min-height:260px}
+.empty-messages-asset{background:url('/assets/empty-messages.svg') center/contain no-repeat;min-height:260px}
