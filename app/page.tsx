@@ -1,47 +1,51 @@
+const services = [
+  { number: '01', title: 'Stratégie & conseil', text: 'Clarifier votre vision, révéler vos priorités et tracer une feuille de route qui fait avancer votre activité.' },
+  { number: '02', title: 'Identité de marque', text: 'Donner à votre entreprise une présence singulière, cohérente et mémorable sur tous vos supports.' },
+  { number: '03', title: 'Expériences digitales', text: 'Concevoir des sites et outils élégants, utiles et pensés pour transformer chaque visite en opportunité.' },
+]
+
 export default function Page() {
   return (
-    <main
-      style={{
-        colorScheme: 'light dark',
-        position: 'relative',
-        display: 'flex',
-        minHeight: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'light-dark(#fff, #000)',
-        color: 'light-dark(#000, #fff)',
-      }}
-    >
-      <svg
-        aria-hidden="true"
-        style={{ width: 80, height: 80 }}
-        width={80}
-        height={80}
-        fill="none"
-        viewBox="0 0 20 20"
-        xmlns="http://www.w3.org/2000/svg"
-        stroke="currentColor"
-        strokeWidth="0.5"
-      >
-        <path
-          d="M14.2 14.2H17V6.9375C17 4.76288 15.2371 3 13.0625 3H5.8V5.8M14.2 14.2V7.79063L7.79062 14.2H14.2ZM14.2 14.2V17H6.9375C4.76288 17 3 15.2371 3 13.0625V5.8H5.8M5.8 5.8V12.2313L12.2313 5.8H5.8Z"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <p
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: 'calc(50% + 56px)',
-          transform: 'translateX(-50%)',
-          whiteSpace: 'nowrap',
-          fontSize: '14px',
-          fontWeight: 500,
-          color: 'light-dark(#71717a, #a1a1aa)',
-        }}
-      >
-        Your v0 generation will show here.
-      </p>
+    <main className="site-shell">
+      <nav className="nav container" aria-label="Navigation principale">
+        <a className="brand" href="#top" aria-label="Avani Pro, accueil"><span>avani</span><b>pro</b></a>
+        <div className="nav-links">
+          <a href="#expertise">Notre expertise</a>
+          <a href="#methode">Notre méthode</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <a className="nav-cta" href="#contact">Parlons de votre projet <span aria-hidden="true">↗</span></a>
+      </nav>
+
+      <section className="hero container" id="top">
+        <div className="hero-copy">
+          <p className="eyebrow"><span className="eyebrow-line" /> Agence conseil & création</p>
+          <h1>Donner de la <em>valeur</em><br />à vos ambitions.</h1>
+          <p className="hero-text">Avani Pro accompagne les entreprises qui veulent faire mieux, avec plus de clarté, de sens et d&apos;impact.</p>
+          <div className="hero-actions">
+            <a className="button button-dark" href="#contact">Découvrir notre approche <span aria-hidden="true">↗</span></a>
+            <a className="text-link" href="#expertise">Voir nos expertises <span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+        <div className="hero-art" aria-label="Illustration abstraite représentant la croissance" role="img">
+          <div className="sun" />
+          <div className="arch arch-one" /><div className="arch arch-two" /><div className="arch arch-three" />
+          <div className="art-note">La différence<br /><strong>se construit.</strong></div>
+          <div className="art-number">01 <span>—</span> 03</div>
+        </div>
+      </section>
+
+      <section className="trust-bar"><div className="container trust-inner"><span>Ils nous font confiance</span><strong>Maison Lune</strong><strong>atelier nord</strong><strong>ORIGIN</strong><strong>unéo</strong><strong>Studio 17</strong></div></section>
+
+      <section className="expertise container" id="expertise">
+        <div className="section-intro"><p className="eyebrow"><span className="eyebrow-line" /> Ce que nous faisons</p><h2>De l&apos;idée juste<br /><em>à l&apos;impact réel.</em></h2></div>
+        <div className="service-list">{services.map((service) => <article className="service" key={service.number}><span className="service-number">{service.number}</span><div><h3>{service.title}</h3><p>{service.text}</p></div><span className="service-arrow" aria-hidden="true">↗</span></article>)}</div>
+      </section>
+
+      <section className="method" id="methode"><div className="container method-grid"><div><p className="eyebrow light"><span className="eyebrow-line" /> Notre conviction</p><h2>Les belles idées<br /><em>méritent d&apos;aller loin.</em></h2></div><div className="method-copy"><p>Nous croyons aux collaborations simples, aux choix audacieux et aux résultats qui durent. Chaque projet commence par une écoute attentive et se construit avec exigence.</p><a className="button button-light" href="#contact">En savoir plus <span aria-hidden="true">↗</span></a></div></div></section>
+
+      <section className="contact container" id="contact"><div><p className="eyebrow"><span className="eyebrow-line" /> Un projet en tête ?</p><h2>Faisons quelque chose<br /><em>de remarquable.</em></h2></div><a className="contact-mail" href="mailto:bonjour@avanipro.fr">bonjour@avanipro.fr <span aria-hidden="true">↗</span></a></section>
+      <footer className="footer container"><a className="brand" href="#top"><span>avani</span><b>pro</b></a><p>© 2026 Avani Pro. Tous droits réservés.</p><p>Paris · France</p></footer>
     </main>
   )
 }
