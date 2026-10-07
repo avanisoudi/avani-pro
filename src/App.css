@@ -95,3 +95,11 @@ body{background:var(--av-bg);color:var(--av-text)}
 @media(max-width:760px){
 .topbar{height:60px;padding:0 12px;grid-template-columns:1fr auto;gap:8px}.topbar-brand{gap:8px}.topbar-brand .brand{font-size:15px}.topbar-brand .brand-mark{width:30px;height:30px}.topbar-brand .search{width:auto;flex:1;min-width:0}.topbar-brand .search input{font-size:11px}.top-actions .auth-button,.create-top{display:none}.top-actions{gap:5px}.main-content{width:100%;padding:74px 10px 76px}.mobile-tabbar{position:fixed;z-index:60;display:flex;bottom:0;left:0;right:0;height:62px;align-items:center;justify-content:space-around;padding:5px;background:rgba(255,255,255,.97);border-top:1px solid var(--av-line);backdrop-filter:blur(16px)}.mobile-tabbar .nav-button{display:grid;place-items:center;gap:2px;padding:4px 8px;border:0;background:transparent;color:#758198;font-size:8px}.mobile-tabbar .nav-button.active{color:var(--av-violet)}.mobile-tabbar .nav-button b{display:none}.stories-row{overflow-x:auto}.workspace-overview{grid-template-columns:1fr 1fr}.workspace-overview>button{grid-column:1/-1}.post-card,.composer-card,.stories-section{border-radius:13px}.feature-panel{padding:14px}.right-rail{display:none}
 }
+
+
+/* Facebook-style verified badge placement: immediately after the display name. */
+.verified-badge { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; margin-left:4px; vertical-align:-2px; flex:0 0 16px; line-height:1; }
+.verified-badge svg { display:block; width:16px; height:16px; }
+.post-author > strong, .profile-mini strong { display:inline-flex; align-items:center; min-width:0; }
+.post-author > strong .verified-badge, .profile-mini strong .verified-badge { margin-left:4px; }
+.verified-badge-check { fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
