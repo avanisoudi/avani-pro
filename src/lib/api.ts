@@ -45,32 +45,47 @@ export async function createDirectConversation(userId: string, contactId: string
   return conversation as ConversationRecord
 }
 
-export type FeedPostRecord = { id: string; body: string; post_type: string; created_at: string; author: ProfileRecord; likes: number; comments: number; shares: number; liked: boolean; saved: boolean }
+export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry'
+export type ReactionCounts = Record<ReactionType, number>
+export type FeedPostRecord = { id: string; body: string; post_type: string; created_at: string; author: ProfileRecord; likes: number; comments: number; shares: number; liked: boolean; saved: boolean; reaction?: ReactionType; reactionCounts?: ReactionCounts }
 
 export async function listFeedPosts(userId?: string | null) {
   const client = requireSupabase()
   const [{ data: posts, error: postsError }, { data: likes, error: likesError }, { data: comments, error: commentsError }, { data: shares, error: sharesError }, savedResult, likedResult] = await Promise.all([
     client.from('posts').select('id, body, post_type, created_at, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url, bio, verified_type)').order('created_at', { ascending: false }).limit(50),
-    client.from('likes').select('post_id'),
+    client.from('likes').select('post_id, user_id, reaction_type'),
     client.from('comments').select('post_id'),
     client.from('post_shares').select('post_id'),
     userId ? client.from('saved_posts').select('post_id').eq('user_id', userId) : Promise.resolve({ data: [], error: null }),
-    userId ? client.from('likes').select('post_id').eq('user_id', userId) : Promise.resolve({ data: [], error: null }),
+    userId ? client.from('likes').select('post_id, reaction_type').eq('user_id', userId) : Promise.resolve({ data: [], error: null }),
   ])
   if (postsError) throw postsError
   if (likesError) throw likesError
   if (commentsError) throw commentsError
   if (sharesError) throw sharesError
   const countBy = (rows: { post_id: string }[] | null) => (rows ?? []).reduce<Record<string, number>>((counts, row) => { counts[row.post_id] = (counts[row.post_id] ?? 0) + 1; return counts }, {})
-  const likeCounts = countBy(likes); const commentCounts = countBy(comments); const shareCounts = countBy(shares); const likedIds = new Set((likedResult.data ?? []).map((row: { post_id: string }) => row.post_id)); const savedIds = new Set((savedResult.data ?? []).map((row: { post_id: string }) => row.post_id))
-  return (posts ?? []).map((row: any) => ({ id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at, author: Array.isArray(row.author) ? row.author[0] : row.author, likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0, liked: likedIds.has(row.id), saved: savedIds.has(row.id) })) as FeedPostRecord[]
+  const likeRows = (likes ?? []) as Array<{ post_id: string; user_id: string; reaction_type: ReactionType }>
+  const likeCounts = countBy(likeRows); const commentCounts = countBy(comments); const shareCounts = countBy(shares)
+  const likedRows = (likedResult.data ?? []) as Array<{ post_id: string; reaction_type: ReactionType }>
+  const myReactions = new Map(likedRows.map(row => [row.post_id, row.reaction_type]))
+  const reactionCountsByPost = likeRows.reduce<Record<string, ReactionCounts>>((all, row) => {
+    const current = all[row.post_id] ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+    current[row.reaction_type] = (current[row.reaction_type] ?? 0) + 1
+    all[row.post_id] = current
+    return all
+  }, {})
+  return (posts ?? []).map((row: any) => ({ id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at, author: Array.isArray(row.author) ? row.author[0] : row.author, likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0, liked: myReactions.has(row.id), reaction: myReactions.get(row.id), reactionCounts: reactionCountsByPost[row.id] ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }, saved: savedIds.has(row.id) })) as FeedPostRecord[]
+}
+
+export async function setPostReaction(postId: string, userId: string, reaction: ReactionType | null) {
+  const client = requireSupabase()
+  const result = reaction ? await client.from('likes').upsert({ post_id: postId, user_id: userId, reaction_type: reaction }, { onConflict: 'post_id,user_id' }) : await client.from('likes').delete().eq('post_id', postId).eq('user_id', userId)
+  if (result.error) throw result.error
+  return reaction
 }
 
 export async function togglePostLike(postId: string, userId: string, liked: boolean) {
-  const client = requireSupabase()
-  const result = liked ? await client.from('likes').delete().eq('post_id', postId).eq('user_id', userId) : await client.from('likes').insert({ post_id: postId, user_id: userId })
-  if (result.error) throw result.error
-  return !liked
+  return setPostReaction(postId, userId, liked ? null : 'like')
 }
 
 export async function toggleSavedPost(postId: string, userId: string, saved: boolean) {
@@ -84,7 +99,6 @@ export async function recordPostShare(postId: string, userId: string) {
   const { error } = await requireSupabase().from('post_shares').insert({ post_id: postId, user_id: userId })
   if (error) throw error
 }
-
 
 export async function updatePost(postId: string, authorId: string, body: string) {
   const { data, error } = await requireSupabase().from('posts').update({ body: body.trim(), updated_at: new Date().toISOString() }).eq('id', postId).eq('author_id', authorId).select('id, body, updated_at').single()
