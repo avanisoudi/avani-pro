@@ -84,3 +84,15 @@ export async function recordPostShare(postId: string, userId: string) {
   const { error } = await requireSupabase().from('post_shares').insert({ post_id: postId, user_id: userId })
   if (error) throw error
 }
+
+
+export async function updatePost(postId: string, authorId: string, body: string) {
+  const { data, error } = await requireSupabase().from('posts').update({ body: body.trim(), updated_at: new Date().toISOString() }).eq('id', postId).eq('author_id', authorId).select('id, body, updated_at').single()
+  if (error) throw error
+  return data as { id: string; body: string; updated_at: string }
+}
+
+export async function deletePost(postId: string, authorId: string) {
+  const { error } = await requireSupabase().from('posts').delete().eq('id', postId).eq('author_id', authorId)
+  if (error) throw error
+}
