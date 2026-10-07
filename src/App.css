@@ -170,3 +170,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 
 
 .saved-list{display:grid;gap:10px}.saved-card{display:flex;align-items:flex-start;gap:11px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)}.saved-card>div:nth-child(2){flex:1;min-width:0}.saved-card strong,.saved-card small,.saved-card p{display:block}.saved-card strong{font-size:11px}.saved-card small{margin-top:3px;color:var(--muted);font-size:8px}.saved-card p{margin:7px 0 0;color:var(--text-soft);font-size:10px;line-height:1.55}.saved-card>button{border:0;background:transparent;color:var(--warning);font-size:16px}.comment-edit textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:11px;background:var(--surface-2);color:var(--text);padding:9px;font-size:10px;outline:0}.comment-edit>div{display:flex;justify-content:flex-end;gap:6px;margin-top:7px}.comment-edit .message-button{min-height:30px}.comment-edit .primary-button{padding:7px 10px;font-size:9px}
+
+
+.reaction-action{position:relative;display:flex;align-items:center}
+.reaction-picker{position:absolute;left:0;bottom:calc(100% + 6px);display:flex;gap:4px;padding:7px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);box-shadow:0 12px 28px rgba(0,0,0,.22);opacity:0;pointer-events:none;transform:translateY(5px) scale(.96);transition:opacity .15s ease,transform .15s ease;z-index:20}
+.reaction-action:hover .reaction-picker,.reaction-action:focus-within .reaction-picker{opacity:1;pointer-events:auto;transform:none}
+.reaction-picker button{width:30px!important;height:30px;padding:0!important;border:0!important;border-radius:50%;background:transparent;font-size:18px!important;line-height:1;display:grid;place-items:center}
+.reaction-picker button:hover,.reaction-picker button.active{background:var(--accent-bg);transform:scale(1.12)}
+.reaction-summary{min-height:22px;display:flex;align-items:center;gap:2px;padding-top:6px;color:var(--muted)}
+.reaction-summary span{font-size:13px}
+.reaction-summary small{margin-left:4px;font-size:9px}
