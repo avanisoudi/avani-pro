@@ -240,7 +240,7 @@ function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReac
         if (event.pointerType === 'touch') setOpen(true)
       }}
     >
-      <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span> {current[2]}
+      <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span>
     </button>
   </div>
 }
