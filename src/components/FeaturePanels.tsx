@@ -4,7 +4,6 @@ import type { ProfileRecord } from '../lib/api'
 import { createDirectConversation } from '../lib/api'
 import { addGroupMember, createGroup, createPage, getAdminStats, isAdmin, listAuditLogs, listDiscoverableProfiles, listMyGroups, listMyPages, listOpenReports, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
 
-const fallbackPeople: PersonCard[] = []
 type PersonCard = { id: string; name: string; role: string; avatar: string; mutual: string }
 
 export function ProfilePanel({ user, profile, onProfile }: { user: User | null; profile: ProfileRecord | null; onProfile: (profile: ProfileRecord) => void }) {
