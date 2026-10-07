@@ -5,6 +5,21 @@ import { uploadPrivateFile } from '../lib/socialApi'
 import { useNotifications } from '../lib/useNotifications'
 import type { ProfileRecord } from '../lib/api'
 
+export function SavedPanel({ user, onAction }: { user: User | null; onAction: (message: string) => void }) {
+  const [posts, setPosts] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    if (!user) return
+    setLoading(true)
+    requireSupabase().from('saved_posts').select('post:posts(id, body, post_type, created_at, author:profiles!posts_author_id_fkey(full_name, username, avatar_url, verified_type))').eq('user_id', user.id).then(({ data, error }) => {
+      if (error) onAction('Impossible de charger vos publications enregistrées.')
+      setPosts((data ?? []).map((row: any) => Array.isArray(row.post) ? row.post[0] : row.post).filter(Boolean))
+    }).finally(() => setLoading(false))
+  }, [user, onAction])
+  if (!user) return <section className="feature-panel feature-empty"><div className="placeholder-orb">☆</div><span className="eyebrow">ENREGISTRÉS</span><h2>Vos publications enregistrées</h2><p>Connectez-vous pour retrouver les contenus que vous souhaitez conserver.</p></section>
+  return <section className="feature-panel"><div className="feature-header"><div><span className="eyebrow">VOTRE BIBLIOTHÈQUE</span><h2>Enregistrés</h2><p>Retrouvez les publications que vous avez décidé de garder à portée de main.</p></div><span className="feature-count">{posts.length} contenus</span></div>{loading ? <div className="empty-state">Chargement…</div> : posts.length === 0 ? <div className="empty-state">Aucun contenu enregistré pour le moment.</div> : <div className="saved-list">{posts.map(post => <article className="saved-card" key={post.id}><div className="avatar avatar-md avatar-soft">{post.author?.avatar_url ? <img src={post.author.avatar_url} alt="" /> : (post.author?.full_name || 'AV').split(/\s+/).map((part: string) => part[0]).join('').slice(0,2).toUpperCase()}</div><div><strong>{post.author?.full_name || 'Membre Avani Pro'}{post.author?.verified_type && <span className="verified">✓</span>}</strong><small>@{post.author?.username || 'avani'} · {new Date(post.created_at).toLocaleDateString('fr-FR')}</small><p>{post.body}</p></div><button onClick={() => onAction('Cette publication reste dans vos contenus enregistrés.')} aria-label="Publication enregistrée">★</button></article>)}</div>}</section>
+}
+
 export function FilesPanel({ user, onAction }: { user: User | null; onAction: (message: string) => void }) {
   const [files, setFiles] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
