@@ -85,7 +85,24 @@ function App() {
   useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); if (path.startsWith('/groups')) setActive('groups'); else if (path.startsWith('/pages')) setActive('pages'); else if (path.startsWith('/messages')) setActive('messages'); else if (path.startsWith('/notifications')) setActive('notifications'); else if (path.startsWith('/files')) setActive('files'); else if (path.startsWith('/saved')) setActive('saved'); else if (path.startsWith('/admin')) setActive('admin'); else if (path.startsWith('/settings') || path.startsWith('/u/')) setActive('profile'); else if (path.startsWith('/search')) setActive('explore'); else setActive('feed') }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 8000) }
-  const reactToPost = async (id: string | number, reaction: ReactionType) => { const current = posts.find(post => post.id === id); if (!current || !sessionUser || typeof id !== 'string') return; const nextReaction = current.reaction === reaction ? null : reaction; const counts = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0, ...(current.reactionCounts ?? {}) } as Record<ReactionType, number>; if (current.reaction) counts[current.reaction] = Math.max(0, counts[current.reaction] - 1); if (nextReaction) counts[nextReaction] += 1; setPosts(items => items.map(post => post.id === id ? { ...post, liked: Boolean(nextReaction), reaction: nextReaction ?? undefined, reactionCounts: counts, stats: { ...post.stats, likes: post.stats.likes + (nextReaction ? (current.reaction ? 0 : 1) : -1) } } : post)); try { await setPostReaction(id, sessionUser.id, nextReaction) } catch { flash('La réaction n’a pas pu être synchronisée avec Supabase.'); void listFeedPosts(sessionUser.id).then(feed => setPosts(feed.map(post => ({ id: post.id, authorId: post.author?.id, name: post.author?.full_name || 'Membre Avani Pro', handle: post.author?.username ? '@' + post.author.username : '@avani', role: post.author?.bio || 'Membre Avani Pro', avatar: (post.author?.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase(), avatarUrl: post.author?.avatar_url ?? null, time: new Date(post.created_at).toLocaleDateString('fr-FR'), body: post.body, tags: post.body.match(/#[\w-]+/g) ?? ['#avani-pro'], stats: { likes: post.likes, comments: post.comments, shares: post.shares }, kind: post.post_type === 'image' ? 'image' : post.post_type === 'link' ? 'link' : 'thought', liked: post.liked, reaction: post.reaction, reactionCounts: post.reactionCounts, saved: post.saved, verifiedType: post.author?.verified_type }))))) } }
+  const reactToPost = async (id: string | number, reaction: ReactionType) => {
+    const current = posts.find(post => post.id === id)
+    if (!current || !sessionUser || typeof id !== 'string') return
+    const nextReaction = current.reaction === reaction ? null : reaction
+    const counts = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0, ...(current.reactionCounts ?? {}) } as Record<ReactionType, number>
+    if (current.reaction) counts[current.reaction] = Math.max(0, counts[current.reaction] - 1)
+    if (nextReaction) counts[nextReaction] += 1
+    setPosts(items => items.map(post => post.id === id ? { ...post, liked: Boolean(nextReaction), reaction: nextReaction ?? undefined, reactionCounts: counts, stats: { ...post.stats, likes: post.stats.likes + (nextReaction ? (current.reaction ? 0 : 1) : -1) } } : post))
+    try {
+      await setPostReaction(id, sessionUser.id, nextReaction)
+    } catch {
+      flash('La réaction n’a pas pu être synchronisée avec Supabase.')
+      try {
+        const feed = await listFeedPosts(sessionUser.id)
+        setPosts(feed.map(post => ({ id: post.id, authorId: post.author?.id, name: post.author?.full_name || 'Membre Avani Pro', handle: post.author?.username ? '@' + post.author.username : '@avani', role: post.author?.bio || 'Membre Avani Pro', avatar: (post.author?.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase(), avatarUrl: post.author?.avatar_url ?? null, time: new Date(post.created_at).toLocaleDateString('fr-FR'), body: post.body, tags: post.body.match(/#[\w-]+/g) ?? ['#avani-pro'], stats: { likes: post.likes, comments: post.comments, shares: post.shares }, kind: post.post_type === 'image' ? 'image' : post.post_type === 'link' ? 'link' : 'thought', liked: post.liked, reaction: post.reaction, reactionCounts: post.reactionCounts, saved: post.saved, verifiedType: post.author?.verified_type })))
+      } catch { flash('Impossible de rafraîchir le feed après cette erreur.') }
+    }
+  }
   const displayName = profile?.full_name || sessionUser?.user_metadata?.full_name || 'Alex Morgan'
   const displayUsername = profile?.username ? `@${profile.username}` : sessionUser?.email ? `@${sessionUser.email.split('@')[0]}` : '@alexmorgan'
   const displayAvatar = displayName.split(/\s+/).filter(Boolean).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase() || 'AV'
