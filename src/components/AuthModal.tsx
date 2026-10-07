@@ -10,7 +10,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [signupStep, setSignupStep] = useState<1 | 2>(1)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
