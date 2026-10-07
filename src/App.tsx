@@ -228,7 +228,7 @@ function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReac
     </div>}
     <button
       type="button"
-      className={reaction ? 'liked' : ''}
+      className={reaction ? `reaction-selected reaction-${current[0]}` : 'reaction-selected reaction-like'}
       aria-haspopup="true"
       aria-expanded={open}
       aria-label={reaction ? `Réaction actuelle : ${current[2]}. Modifier ou retirer la réaction` : 'J’aime. Ouvrir les réactions'}
@@ -240,7 +240,7 @@ function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReac
         if (event.pointerType === 'touch') setOpen(true)
       }}
     >
-      <SvgIcon name="like"/> {current[2]}
+      <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span> {current[2]}
     </button>
   </div>
 }
@@ -280,7 +280,7 @@ function ReactionModal({ post, onClose }: { post: Post; onClose: () => void }) {
         {!loading && !error && users.map(item => <div className="reaction-user-row" key={`${item.user_id}-${item.reaction_type}`}>
           <div className="avatar avatar-md avatar-soft">{item.user?.avatar_url ? <img src={item.user.avatar_url} alt="" /> : (item.user?.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()}</div>
           <div><strong>{item.user?.full_name || 'Membre Avani Pro'}</strong><span>@{item.user?.username || 'membre'}</span></div>
-          <span className="reaction-user-type">{reactionMeta.find(meta => meta[0] === item.reaction_type)?.[1]}</span>
+          <span className={`reaction-user-type reaction-${item.reaction_type}`} aria-label={reactionMeta.find(meta => meta[0] === item.reaction_type)?.[2]}>{reactionMeta.find(meta => meta[0] === item.reaction_type)?.[1]}</span>
         </div>)}
       </div>
     </div>
@@ -304,7 +304,7 @@ function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCo
     <div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
     <div className="post-social-summary">
       <div className="reaction-summary">
-        {topReactions.map(key => <span key={key}>{icons[key]}</span>)}
+        {topReactions.map(key => <span key={key} className={`reaction-chip reaction-${key}`} title={reactionMeta.find(item => item[0] === key)?.[2]}>{icons[key]}</span>)}
         <button type="button" className="reaction-total" onClick={() => setReactionModalOpen(true)} title={`${formatReactionCount(reactionTotal)} réactions`}>{formatReactionCount(reactionTotal)} réaction{reactionTotal > 1 ? 's' : ''}</button>
       </div>
       <div className="social-summary-right">
