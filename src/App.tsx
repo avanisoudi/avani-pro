@@ -4,12 +4,13 @@ import './App.css'
 import { AuthModal } from './components/AuthModal'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
+import { FilesPanel, NotificationsPanel, PublicProfilePanel, SearchPanel } from './components/AdvancedPanels'
 import { createPost, getMyProfile, listFeedPosts, recordPostShare, togglePostLike, toggleSavedPost, type ProfileRecord } from './lib/api'
 import { createComment, uploadPrivateFile } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { useNotifications } from './lib/useNotifications'
 
-type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings'
+type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'notifications'
 type Post = { id: string | number; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean; saved?: boolean; verifiedType?: string | null }
 
 const postsSeed: Post[] = [
@@ -25,7 +26,10 @@ const suggestions = [
 ]
 
 function App() {
-  const [active, setActive] = useState<NavKey>('feed')
+  const initialPath = typeof window === 'undefined' ? '/' : window.location.pathname
+  const initialNav: NavKey = initialPath.startsWith('/groups') ? 'groups' : initialPath.startsWith('/pages') ? 'pages' : initialPath.startsWith('/messages') ? 'messages' : initialPath.startsWith('/notifications') ? 'notifications' : initialPath.startsWith('/search') ? 'explore' : initialPath.startsWith('/files') ? 'files' : initialPath.startsWith('/admin') ? 'admin' : initialPath.startsWith('/settings') || initialPath.startsWith('/u/') ? 'profile' : 'feed'
+  const [active, setActive] = useState<NavKey>(initialNav)
+  const [pathname, setPathname] = useState(initialPath)
   const [posts, setPosts] = useState(postsSeed)
   const [composer, setComposer] = useState('')
   const [toast, setToast] = useState('')
@@ -36,8 +40,10 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false)
   const [initialConversationId, setInitialConversationId] = useState<string | undefined>()
   const { notifications, unreadCount, markAllRead } = useNotifications(sessionUser?.id ?? null)
+  const navigateTo = (path: string, screen: NavKey) => { window.history.pushState({}, '', path); setPathname(path); setActive(screen) }
+  useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); if (path.startsWith('/groups')) setActive('groups'); else if (path.startsWith('/pages')) setActive('pages'); else if (path.startsWith('/messages')) setActive('messages'); else if (path.startsWith('/notifications')) setActive('notifications'); else if (path.startsWith('/files')) setActive('files'); else if (path.startsWith('/admin')) setActive('admin'); else if (path.startsWith('/settings') || path.startsWith('/u/')) setActive('profile'); else if (path.startsWith('/search')) setActive('explore'); else setActive('feed') }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
-  const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', pages: 'Vos pages', profile: 'Votre profil', admin: 'Administration', settings: 'Réglages' }[active]), [active])
+  const sectionTitle = useMemo(() => ({ feed: 'Votre signal', explore: 'Explorer', messages: 'Messages', groups: 'Vos communautés', pages: 'Vos pages', profile: 'Votre profil', admin: 'Administration', settings: 'Réglages', files: 'Fichiers', notifications: 'Notifications' }[active]), [active])
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 8000) }
   const toggleLike = async (id: string | number) => { const current = posts.find(post => post.id === id); if (!current) return; const nextLiked = !current.liked; setPosts(currentPosts => currentPosts.map(post => post.id === id ? { ...post, liked: nextLiked, stats: { ...post.stats, likes: post.stats.likes + (nextLiked ? 1 : -1) } } : post)); if (sessionUser && typeof id === 'string') { try { await togglePostLike(id, sessionUser.id, current.liked ?? false) } catch { flash('Le j’aime n’a pas pu être synchronisé avec Supabase.') } } }
   const displayName = profile?.full_name || sessionUser?.user_metadata?.full_name || 'Alex Morgan'
@@ -57,15 +63,17 @@ function App() {
         <div className="brand"><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span>AVANI<span className="brand-pro">PRO</span></span></div>
         <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatar}</div><div><strong>{displayName}</strong><span>{displayUsername}</span></div>{profile?.verified_type && <span className="verified">✓</span>}</div>
         <nav className="nav-stack" aria-label="Navigation principale">
-          <NavButton active={active === 'feed'} onClick={() => setActive('feed')} icon="home" label="Feed" badge="12" />
-          <NavButton active={active === 'explore'} onClick={() => setActive('explore')} icon="explore" label="Explorer" />
-          <NavButton active={active === 'messages'} onClick={() => setActive('messages')} icon="messages" label="Messages" badge="3" />
-          <NavButton active={active === 'groups'} onClick={() => setActive('groups')} icon="groups" label="Groupes" />
-          <NavButton active={active === 'pages'} onClick={() => setActive('pages')} icon="pages" label="Pages" />
-          <NavButton active={active === 'profile'} onClick={() => setActive('profile')} icon="profile" label="Mon profil" />
-          <NavButton active={active === 'admin'} onClick={() => setActive('admin')} icon="admin" label="Admin" />
+          <NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Feed" badge="12" />
+          <NavButton active={active === 'explore'} onClick={() => navigateTo('/search', 'explore')} icon="explore" label="Explorer" />
+          <NavButton active={active === 'messages'} onClick={() => navigateTo('/messages', 'messages')} icon="messages" label="Messages" badge="3" />
+          <NavButton active={active === 'groups'} onClick={() => navigateTo('/groups', 'groups')} icon="groups" label="Groupes" />
+          <NavButton active={active === 'pages'} onClick={() => navigateTo('/pages', 'pages')} icon="pages" label="Pages" />
+          <NavButton active={active === 'profile'} onClick={() => navigateTo('/settings', 'profile')} icon="profile" label="Mon profil" />
+          <NavButton active={active === 'admin'} onClick={() => navigateTo('/admin', 'admin')} icon="admin" label="Admin" />
+          <NavButton active={active === 'files'} onClick={() => navigateTo('/files', 'files')} icon="save" label="Fichiers" />
+          <NavButton active={active === 'notifications'} onClick={() => navigateTo('/notifications', 'notifications')} icon="explore" label="Alertes" />
         </nav>
-          <div className="sidebar-bottom"><button className={`nav-button muted ${active === 'settings' ? 'active' : ''}`} onClick={() => setActive('settings')}><SvgIcon name="settings" /> Réglages</button><div className="security-note"><span className="pulse-dot" /> Espace sécurisé<br /><small>Chiffrement actif</small></div></div>
+          <div className="sidebar-bottom"><button className={`nav-button muted ${active === 'settings' ? 'active' : ''}`} onClick={() => navigateTo('/settings', 'settings')}><SvgIcon name="settings" /> Réglages</button><div className="security-note"><span className="pulse-dot" /> Espace sécurisé<br /><small>Chiffrement actif</small></div></div>
       </aside>
 
       <main className="main-content">
@@ -77,12 +85,14 @@ function App() {
           <div className="feed-filter"><div><button className="filter-active">Pour vous</button><button>Abonnements</button><button>Tendances</button></div><button className="sort-button">Les plus récents ↕</button></div>
           <section className="post-list">{posts.map(post => <PostCard key={post.id} post={post} user={sessionUser} onLike={() => void toggleLike(post.id)} onShare={async () => { if (sessionUser && typeof post.id === 'string') { try { await recordPostShare(post.id, sessionUser.id); setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, shares: item.stats.shares + 1 } } : item)) } catch { flash('Le partage n’a pas pu être enregistré.') } } else flash('Connectez-vous pour enregistrer ce partage.') }} onSave={async () => { if (!sessionUser || typeof post.id !== 'string') { flash('Connectez-vous pour sauvegarder cette publication.'); return }; try { const next = await toggleSavedPost(post.id, sessionUser.id, post.saved ?? false); setPosts(current => current.map(item => item.id === post.id ? { ...item, saved: next } : item)); flash(next ? 'Publication sauvegardée.' : 'Publication retirée des sauvegardes.') } catch { flash('La sauvegarde n’a pas pu être enregistrée.') } }} onComment={() => flash('Ouvrez le fil de commentaires sous la publication.')} />)}</section>
         </>}
-        {active === 'messages' && <MessagesPanel user={sessionUser} onAction={flash} initialConversationId={initialConversationId} />}
-        {active === 'explore' && <ExplorePanel user={sessionUser} onAction={flash} onMessage={() => { setActive('messages'); flash('Conversation créée. Ouvrez Messages pour écrire.') }} />}
-        {active === 'groups' && <GroupsPanel user={sessionUser} onAction={flash} onOpenMessages={conversationId => { setInitialConversationId(conversationId); setActive('messages') }} />}
+        {active === 'messages' && <MessagesPanel user={sessionUser} onAction={flash} initialConversationId={pathname.match(/^\/messages\/([^/]+)/)?.[1] ?? initialConversationId} />}
+        {active === 'explore' && (pathname.startsWith('/search') ? <SearchPanel user={sessionUser} onAction={flash} /> : <ExplorePanel user={sessionUser} onAction={flash} onMessage={conversationId => { setInitialConversationId(conversationId); navigateTo(`/messages/${conversationId}`, 'messages'); flash('Conversation créée. Ouvrez Messages pour écrire.') }} />)}
+        {active === 'groups' && <GroupsPanel user={sessionUser} onAction={flash} onOpenMessages={conversationId => { setInitialConversationId(conversationId); navigateTo(`/messages/${conversationId}`, 'messages') }} />}
         {active === 'pages' && <PagesPanel user={sessionUser} onAction={flash} />}
-        {active === 'profile' && <ProfilePanel key={`${profile?.id ?? 'profile'}-${profile?.full_name ?? ''}-${profile?.username ?? ''}`} user={sessionUser} profile={profile} onProfile={setProfile} />}
+        {active === 'profile' && (pathname.startsWith('/u/') ? <PublicProfilePanel user={sessionUser} username={decodeURIComponent(pathname.slice(3).split('/')[0])} onAction={flash} /> : <ProfilePanel key={`${profile?.id ?? 'profile'}-${profile?.full_name ?? ''}-${profile?.username ?? ''}`} user={sessionUser} profile={profile} onProfile={setProfile} />)}
         {active === 'admin' && <AdminPanel user={sessionUser} onAction={flash} />}
+        {active === 'files' && <FilesPanel user={sessionUser} onAction={flash} />}
+        {active === 'notifications' && <NotificationsPanel user={sessionUser} />}
         {active === 'settings' && <SettingsPanel user={sessionUser} onAction={flash} />}
       </main>
 

@@ -33,3 +33,5 @@
 - [x] Publier la version 1.1.0 avec les groupes persistants et les invitations de membres.
 - [x] Remplacer les symboles textuels par le pack d’icônes sociales original Avani Pro.
 - [x] Publier la version 1.2.0 avec le sprite `social-icons.svg` et le smoke test associé.
+- [x] Fusionner les routes avancées Recherche, Fichiers, Notifications et Profil public.
+- [x] Conserver Supabase/Render comme backend et cible de déploiement uniques.

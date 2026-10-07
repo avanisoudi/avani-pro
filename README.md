@@ -2,7 +2,7 @@
 
 Réseau social professionnel nouvelle génération — interface React + TypeScript + Vite, prête pour une connexion Supabase.
 
-La version 1.2.0 introduit un système d’assets sociaux originaux (`public/social-icons.svg`) pour le feed, les réactions, le partage, les commentaires, la recherche, les groupes, les pages, le profil, l’administration et les réglages. Le langage visuel reprend les conventions d’usage des réseaux sociaux modernes sans reproduire les marques ou icônes propriétaires d’une plateforme tierce.
+La version 1.3.0 fusionne les parcours avancés d’`Avani_Pro_2` dans cette structure Supabase/Render : routes de recherche, fichiers, notifications, profils publics, conversations profondes, groupes et pages. Le langage visuel reprend les conventions d’usage des réseaux sociaux modernes sans reproduire les marques ou icônes propriétaires d’une plateforme tierce.
 
 ## Démarrer
 
