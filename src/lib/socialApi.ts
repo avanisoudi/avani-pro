@@ -146,3 +146,9 @@ export async function listAuditLogs() {
   if (error) throw error
   return data ?? []
 }
+
+export async function updateComment(commentId: string, authorId: string, body: string) {
+  const { data, error } = await requireSupabase().from('comments').update({ body: body.trim(), updated_at: new Date().toISOString() }).eq('id', commentId).eq('author_id', authorId).select('id, body, updated_at').single()
+  if (error) throw error
+  return data as { id: string; body: string; updated_at: string }
+}
