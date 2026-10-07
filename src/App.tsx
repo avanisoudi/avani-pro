@@ -240,7 +240,7 @@ function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReac
         if (event.pointerType === 'touch') setOpen(true)
       }}
     >
-      <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span>
+      {current[0] === 'like' ? <img className="reaction-button-asset" src="/assets/reaction-like.svg" alt="" aria-hidden="true" /> : <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span>}
     </button>
   </div>
 }
@@ -294,9 +294,7 @@ function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCo
   const [reactionModalOpen, setReactionModalOpen] = useState(false)
   const submitEdit = (event: React.FormEvent) => { event.preventDefault(); if (draft.trim()) onSaveEdit(draft.trim()) }
   const openComments = () => { setCommentsOpen(true); onComment() }
-  const icons: Record<ReactionType, string> = { like: '👍', love: '❤️', haha: '😂', wow: '😮', sad: '😢', angry: '😡' }
   const counts = post.reactionCounts ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
-  const topReactions = Object.entries(counts).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([key]) => key as ReactionType)
   const reactionTotal = Object.values(counts).reduce((sum, value) => sum + value, 0)
   return <article className="post-card">
     <div className="post-header"><div className={`avatar avatar-md ${post.kind === 'image' ? 'avatar-cyan' : 'avatar-soft'}`}>{post.avatarUrl ? <img src={post.avatarUrl} alt={`Photo de profil de ${post.name}`} /> : post.avatar}</div><div className="post-author"><strong>{post.name}{post.verifiedType && <VerifiedBadge type={post.verifiedType} />}</strong><span>{post.handle} · {post.time} · Public</span><small>{post.role}</small></div><div>{user?.id === post.authorId && <div className="post-menu"><button className="more-button" aria-label="Options de la publication" onClick={() => setMenuOpen(!menuOpen)}>•••</button>{menuOpen && <div className="post-menu-popover"><button onClick={() => { setMenuOpen(false); onEdit() }}>Modifier</button><button className="danger-action" onClick={() => { setMenuOpen(false); onDelete() }}>Supprimer</button></div>}</div>}</div></div>
