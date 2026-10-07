@@ -369,7 +369,7 @@ function CommentBox({ postId, user, initialCount = 0, open, onOpenChange, onActi
     if (!user || comment.author_id !== user.id) return
     try {
       await deleteComment(comment.id, user.id)
-      setComments(current => { const removed = current.filter(item => item.id === comment.id || item.parent_id === comment.id).length; const next = current.filter(item => item.id !== comment.id && item.parent_id !== comment.id); onCountChange(Math.max(0, next.length)); return next })
+      setComments(current => { const next = current.filter(item => item.id !== comment.id && item.parent_id !== comment.id); onCountChange(Math.max(0, next.length)); return next })
     } catch { onAction() }
   }
 
