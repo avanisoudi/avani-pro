@@ -4,13 +4,13 @@ import './App.css'
 import { AuthModal } from './components/AuthModal'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
-import { FilesPanel, NotificationsPanel, PublicProfilePanel, SearchPanel } from './components/AdvancedPanels'
+import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchPanel } from './components/AdvancedPanels'
 import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, recordPostShare, togglePostLike, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord } from './lib/api'
 import { createComment, deleteComment, listComments, updateComment, uploadPrivateFile, type CommentRecord } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { useNotifications } from './lib/useNotifications'
 
-type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'notifications'
+type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'saved' | 'notifications'
 type Post = { id: string | number; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean; saved?: boolean; verifiedType?: string | null; avatarUrl?: string | null }
 
 function PublicHome({ onAuth }: { onAuth: () => void }) {
@@ -97,7 +97,7 @@ function App() {
   const { notifications, unreadCount, markAllRead } = useNotifications(sessionUser?.id ?? null)
   useEffect(() => { document.documentElement.dataset.theme = theme; window.localStorage.setItem('avani:theme', theme) }, [theme])
   const navigateTo = (path: string, screen: NavKey) => { window.history.pushState({}, '', path); setPathname(path); setActive(screen) }
-  useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); if (path.startsWith('/groups')) setActive('groups'); else if (path.startsWith('/pages')) setActive('pages'); else if (path.startsWith('/messages')) setActive('messages'); else if (path.startsWith('/notifications')) setActive('notifications'); else if (path.startsWith('/files')) setActive('files'); else if (path.startsWith('/admin')) setActive('admin'); else if (path.startsWith('/settings') || path.startsWith('/u/')) setActive('profile'); else if (path.startsWith('/search')) setActive('explore'); else setActive('feed') }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
+  useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); if (path.startsWith('/groups')) setActive('groups'); else if (path.startsWith('/pages')) setActive('pages'); else if (path.startsWith('/messages')) setActive('messages'); else if (path.startsWith('/notifications')) setActive('notifications'); else if (path.startsWith('/files')) setActive('files'); else if (path.startsWith('/saved')) setActive('saved'); else if (path.startsWith('/admin')) setActive('admin'); else if (path.startsWith('/settings') || path.startsWith('/u/')) setActive('profile'); else if (path.startsWith('/search')) setActive('explore'); else setActive('feed') }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 8000) }
   const toggleLike = async (id: string | number) => { const current = posts.find(post => post.id === id); if (!current) return; const nextLiked = !current.liked; setPosts(currentPosts => currentPosts.map(post => post.id === id ? { ...post, liked: nextLiked, stats: { ...post.stats, likes: post.stats.likes + (nextLiked ? 1 : -1) } } : post)); if (sessionUser && typeof id === 'string') { try { await togglePostLike(id, sessionUser.id, current.liked ?? false) } catch { flash('Le j’aime n’a pas pu être synchronisé avec Supabase.') } } }
@@ -155,7 +155,7 @@ function App() {
           <NavButton active={active === 'groups'} onClick={() => navigateTo('/groups', 'groups')} icon="groups" label="Groupes" />
           <NavButton active={active === 'pages'} onClick={() => navigateTo('/pages', 'pages')} icon="pages" label="Pages" />
           <NavButton active={active === 'profile'} onClick={() => navigateTo('/settings', 'profile')} icon="profile" label="Mon profil" />
-          <NavButton active={active === 'files'} onClick={() => navigateTo('/files', 'files')} icon="save" label="Fichiers" />
+          <NavButton active={active === 'files'} onClick={() => navigateTo('/files', 'files')} icon="save" label="Fichiers" /><NavButton active={active === 'saved'} onClick={() => navigateTo('/saved', 'saved')} icon="save" label="Enregistrés" />
           <span className="nav-section-label nav-section-admin">Gestion</span>
           <NavButton active={active === 'admin'} onClick={() => navigateTo('/admin', 'admin')} icon="admin" label="Administration" />
         </nav>
@@ -179,7 +179,7 @@ function App() {
         {active === 'pages' && <PagesPanel user={sessionUser} onAction={flash} />}
         {active === 'profile' && (pathname.startsWith('/u/') ? <PublicProfilePanel user={sessionUser} username={decodeURIComponent(pathname.slice(3).split('/')[0])} onAction={flash} /> : <ProfilePanel key={`${profile?.id ?? 'profile'}-${profile?.full_name ?? ''}-${profile?.username ?? ''}`} user={sessionUser} profile={profile} onProfile={setProfile} />)}
         {active === 'admin' && <AdminPanel user={sessionUser} onAction={flash} />}
-        {active === 'files' && <FilesPanel user={sessionUser} onAction={flash} />}
+        {active === 'files' && <FilesPanel user={sessionUser} onAction={flash} />}\n        {active === 'saved' && <SavedPanel user={sessionUser} onAction={flash} />}
         {active === 'notifications' && <NotificationsPanel user={sessionUser} />}
         {active === 'settings' && <SettingsPanel user={sessionUser} onAction={flash} />}
       </main>
