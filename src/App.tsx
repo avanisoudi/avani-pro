@@ -36,6 +36,26 @@ const suggestions = [
   { name: 'Le Lab Product', role: 'Communauté · 4.2k membres', avatar: 'LP', mutual: 'Tendance cette semaine' },
 ]
 
+const stories = [
+  { name: 'Votre story', avatar: 'AV', tone: 'story-self', isOwn: true },
+  { name: 'Maya Chen', avatar: 'MC', tone: 'story-maya' },
+  { name: 'Sofia Alvarez', avatar: 'SA', tone: 'story-sofia' },
+  { name: 'Kofi Mensah', avatar: 'KM', tone: 'story-kofi' },
+  { name: 'Nexa Studio', avatar: 'NS', tone: 'story-nexa' },
+  { name: 'Le Lab Product', avatar: 'LP', tone: 'story-lab' },
+]
+
+function Stories({ onAction }: { onAction: (message: string) => void }) {
+  return <section className="stories-section" aria-label="Stories">
+    <div className="stories-heading"><div><strong>Stories</strong><span>Les moments de votre réseau</span></div><button onClick={() => onAction('Toutes les stories de votre réseau sont à jour.')}>Voir tout</button></div>
+    <div className="stories-row">
+      {stories.map(story => <button className={`story-card ${story.tone}`} key={story.name} onClick={() => onAction(story.isOwn ? 'Ajoutez une photo ou une vidéo à votre story.' : `Story de ${story.name} ouverte.`)} aria-label={story.isOwn ? 'Ajouter à votre story' : `Voir la story de ${story.name}`}>
+        <span className="story-shade" /><span className={`story-avatar ${story.isOwn ? 'story-avatar-own' : ''}`}>{story.isOwn ? '+' : story.avatar}</span><strong>{story.name}</strong>
+      </button>)}
+    </div>
+  </section>
+}
+
 function App() {
   const initialPath = typeof window === 'undefined' ? '/' : window.location.pathname
   const initialNav: NavKey = initialPath.startsWith('/groups') ? 'groups' : initialPath.startsWith('/pages') ? 'pages' : initialPath.startsWith('/messages') ? 'messages' : initialPath.startsWith('/notifications') ? 'notifications' : initialPath.startsWith('/search') ? 'explore' : initialPath.startsWith('/files') ? 'files' : initialPath.startsWith('/admin') ? 'admin' : initialPath.startsWith('/settings') || initialPath.startsWith('/u/') ? 'profile' : 'feed'
@@ -94,6 +114,7 @@ function App() {
         <header className="topbar"><div><span className="eyebrow">JEUDI · 04 OCTOBRE 2026</span><h1>{sectionTitle}</h1></div><div className="top-actions"><label className="search"><SvgIcon name="search" /><input placeholder="Rechercher une idée, une personne…" /></label><button className="icon-button notification-trigger" aria-label="Notifications" onClick={() => { setNotificationsOpen(!notificationsOpen); if (!notificationsOpen) void markAllRead() }}><img className="notification-bell-icon" src="/notification-bell.svg" alt="Notifications" />{unreadCount > 0 && <b className="notification-count">{unreadCount > 9 ? '9+' : unreadCount}</b>}<i /></button>{sessionUser ? <button className="auth-button" onClick={signOut}>Se déconnecter</button> : <button className="auth-button" onClick={openAuth}>Se connecter</button>}<div className="avatar avatar-sm avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</div></div>{notificationsOpen && <div className="notification-popover"><div className="popover-head"><strong>Notifications en temps réel</strong><button onClick={() => void markAllRead()}>Tout marquer lu</button></div>{notifications.length === 0 ? <p className="empty-copy">Aucune notification pour le moment.</p> : notifications.slice(0, 8).map(notification => <div className="notification-row" key={notification.id}><span className={`notif-icon ${notification.type === 'new_like' ? 'violet' : notification.type === 'new_message' ? 'cyan' : 'blue'}`}><SvgIcon name={notification.type === 'new_like' ? 'like' : notification.type === 'new_message' ? 'messages' : 'explore'} /></span><div>{notification.payload.message || 'Nouvelle activité sur Avani Pro.'}<small>{new Date(notification.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small></div></div>)}</div>}</header>
 
         {active === 'feed' && <>
+          <Stories onAction={flash} />
           <section className="signal-banner"><div className="signal-orb"><span>✦</span></div><div><span className="eyebrow">VOTRE IMPACT CETTE SEMAINE</span><strong>Votre signal progresse de 24%</strong><p>Continuez à partager les idées qui font avancer votre communauté.</p></div><button className="ghost-button" onClick={() => flash('Votre impact est calculé à partir de vos publications et interactions.')}>Voir le rapport <span>↗</span></button></section>
           <section className="workspace-overview" aria-label="Résumé de votre espace"><div><span>RÉSEAU</span><strong>2,849</strong><small>connexions actives</small></div><div><span>GROUPES</span><strong>12</strong><small>conversations suivies</small></div><div><span>PUBLICATIONS</span><strong>24</strong><small>ce mois-ci</small></div><button onClick={() => navigateTo('/groups', 'groups')}>Ouvrir mes groupes <span>↗</span></button></section>
           <section className="composer-card"><div className="avatar avatar-md avatar-gradient">{displayAvatar}</div><div className="composer-body"><textarea value={composer} onChange={event => setComposer(event.target.value)} placeholder={sessionUser ? `Qu’est-ce qui mérite d’être partagé, ${displayName.split(' ')[0]} ?` : 'Qu’est-ce qui mérite d’être partagé aujourd’hui ?'} rows={2} /><div className="composer-footer"><div className="composer-tools"><label className="upload-control"><SvgIcon name="pages" /><span>Image</span><input type="file" accept="image/*,video/*" onChange={handleFile} /></label><label className="upload-control"><SvgIcon name="save" /><span>Fichier</span><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt" onChange={handleFile} /></label><button onClick={() => flash('Collez une URL dans le texte de votre publication pour la partager.')}><SvgIcon name="share" /><span>Lien</span></button></div><button className="primary-button" onClick={publish}>Publier <span>↗</span></button></div></div></section>
