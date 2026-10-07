@@ -302,8 +302,9 @@ function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCo
     <div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
     <div className="post-social-summary">
       <div className="reaction-summary">
-        {topReactions.map(key => <span key={key} className={`reaction-chip reaction-${key}`} title={reactionMeta.find(item => item[0] === key)?.[2]}>{icons[key]}</span>)}
-        <button type="button" className="reaction-total" onClick={() => setReactionModalOpen(true)} title={`${formatReactionCount(reactionTotal)} réactions`}>{formatReactionCount(reactionTotal)} réaction{reactionTotal > 1 ? 's' : ''}</button>
+        <button type="button" className="reaction-total" onClick={() => setReactionModalOpen(true)} title={`${formatReactionCount(reactionTotal)} likes`}>
+          {formatReactionCount(reactionTotal)} like{reactionTotal > 1 ? 's' : ''}
+        </button>
       </div>
       <div className="social-summary-right">
         {post.stats.comments > 0 && <button type="button" onClick={openComments}>{formatReactionCount(post.stats.comments)} commentaire{post.stats.comments > 1 ? 's' : ''}</button>}
