@@ -107,7 +107,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand"><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span>AVANI<span className="brand-pro">PRO</span></span></div>
-        <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</div><div><strong>{profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}{displayName}</strong><span>{displayUsername}</span></div></div>
+        <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</div><div><strong>{displayName}{profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}</strong><span>{displayUsername}</span></div></div>
         <nav className="nav-stack" aria-label="Navigation principale">
           <span className="nav-section-label">Espace personnel</span>
           <NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Accueil" badge="12" />
