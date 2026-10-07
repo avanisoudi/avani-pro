@@ -307,3 +307,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .avatar-default-asset{background:url('/assets/avatar-default.svg') center/cover no-repeat}
 .empty-feed-asset{background:url('/assets/empty-feed.svg') center/contain no-repeat;min-height:260px}
 .empty-messages-asset{background:url('/assets/empty-messages.svg') center/contain no-repeat;min-height:260px}
+
+
+/* Facebook-inspired reaction controls: icon-first, count-driven */
+.post-actions .reaction-action>button{font-size:0;gap:0}
+.post-actions .reaction-action>button .reaction-button-emoji{font-size:21px;line-height:1;transform-origin:center;transition:transform 120ms ease,filter 120ms ease}
+.post-actions .reaction-action>button:hover .reaction-button-emoji{transform:scale(1.08)}
+.post-actions .reaction-action>button.reaction-selected{min-width:46px}
+.reaction-tabs button{display:inline-flex;align-items:center;gap:5px}
+.reaction-tabs button b{margin-left:0;font-variant-numeric:tabular-nums}
+.reaction-total{font-variant-numeric:tabular-nums}
