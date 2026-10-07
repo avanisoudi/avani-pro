@@ -245,7 +245,7 @@ function CommentBox({ postId, user, onAction }: { postId: string | number; user:
   const initials = (comment: CommentRecord) => authorName(comment).split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'AV'
 
   return <div className="comment-box">
-    <div className="comment-summary"><button className="comment-toggle" onClick={() => setOpen(value => !value)} aria-expanded={open}><span className="comment-icon">◌</span>{open ? 'Masquer les commentaires' : `\${comments.length} commentaire\${comments.length > 1 ? 's' : ''}`}</button></div>
+    <div className="comment-summary"><button className="comment-toggle" onClick={() => setOpen(value => !value)} aria-expanded={open}><span className="comment-icon">◌</span>{open ? 'Masquer les commentaires' : `${comments.length} commentaire${comments.length > 1 ? 's' : ''}`}</button></div>
     {open && <div className="comment-list">
       {loading && <p className="empty-copy">Chargement des commentaires…</p>}
       {!loading && roots.length === 0 && <p className="empty-copy">Aucun commentaire. Soyez le premier à répondre.</p>}
