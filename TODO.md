@@ -31,3 +31,5 @@
 - [x] Ajouter invitation de membres, historique de groupe et ouverture directe du chat.
 - [x] Ajouter les assets SVG dédiés aux groupes et conversations.
 - [x] Publier la version 1.1.0 avec les groupes persistants et les invitations de membres.
+- [x] Remplacer les symboles textuels par le pack d’icônes sociales original Avani Pro.
+- [x] Publier la version 1.2.0 avec le sprite `social-icons.svg` et le smoke test associé.

@@ -1,6 +1,8 @@
-# AVANI PRO
+# AVANI PRO — v1.2.0
 
 Réseau social professionnel nouvelle génération — interface React + TypeScript + Vite, prête pour une connexion Supabase.
+
+La version 1.2.0 introduit un système d’assets sociaux originaux (`public/social-icons.svg`) pour le feed, les réactions, le partage, les commentaires, la recherche, les groupes, les pages, le profil, l’administration et les réglages. Le langage visuel reprend les conventions d’usage des réseaux sociaux modernes sans reproduire les marques ou icônes propriétaires d’une plateforme tierce.
 
 ## Démarrer
 
