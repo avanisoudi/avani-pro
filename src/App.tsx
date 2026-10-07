@@ -62,7 +62,9 @@ function App() {
   const [posts, setPosts] = useState<Post[]>([])
   const [composer, setComposer] = useState('')
   const [toast, setToast] = useState('')
-  const [followed, setFollowed] = useState<string[]>([])\n  const [networkPeople, setNetworkPeople] = useState<ProfileRecord[]>([])\n  const [networkGroups, setNetworkGroups] = useState<any[]>([])
+  const [followed, setFollowed] = useState<string[]>([])
+  const [networkPeople, setNetworkPeople] = useState<ProfileRecord[]>([])
+  const [networkGroups, setNetworkGroups] = useState<any[]>([])
   const [suggestionTab, setSuggestionTab] = useState<'people' | 'groups'>('people')
   const [feedFilter, setFeedFilter] = useState<'all' | 'following' | 'trending'>('all')
   const [feedQuery, setFeedQuery] = useState('')
@@ -163,7 +165,8 @@ function App() {
         {active === 'pages' && <PagesPanel user={sessionUser} onAction={flash} />}
         {active === 'profile' && (pathname.startsWith('/u/') ? <PublicProfilePanel user={sessionUser} username={decodeURIComponent(pathname.slice(3).split('/')[0])} onAction={flash} /> : <ProfilePanel key={`${profile?.id ?? 'profile'}-${profile?.full_name ?? ''}-${profile?.username ?? ''}`} user={sessionUser} profile={profile} onProfile={setProfile} />)}
         {active === 'admin' && <AdminPanel user={sessionUser} onAction={flash} />}
-        {active === 'files' && <FilesPanel user={sessionUser} onAction={flash} />}\n        {active === 'saved' && <SavedPanel user={sessionUser} onAction={flash} />}
+        {active === 'files' && <FilesPanel user={sessionUser} onAction={flash} />}
+        {active === 'saved' && <SavedPanel user={sessionUser} onAction={flash} />}
         {active === 'notifications' && <NotificationsPanel user={sessionUser} />}
         {active === 'settings' && <SettingsPanel user={sessionUser} onAction={flash} />}
       </main>
