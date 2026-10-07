@@ -75,6 +75,26 @@ export async function listFeedPosts(userId?: string | null) {
   const likeCounts = countBy(likeRows), commentCounts = countBy(comments), shareCounts = countBy(shares)
   return (posts ?? []).map((row: any) => ({ id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at, author: Array.isArray(row.author) ? row.author[0] : row.author, likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0, liked: myReactions.has(row.id), reaction: myReactions.get(row.id) ?? null, reactionCounts: reactionCountsByPost[row.id] ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }, saved: savedIds.has(row.id) })) as FeedPostRecord[]
 }
+export type ReactionUserRecord = { user_id: string; reaction_type: ReactionType; created_at: string; user: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url'> | null }
+
+export async function listReactionUsers(postId: string, reactionType?: ReactionType | 'all') {
+  const client = requireSupabase()
+  let query = client
+    .from('likes')
+    .select('user_id, reaction_type, created_at, user:profiles!likes_user_id_fkey(id, username, full_name, avatar_url)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: false })
+  if (reactionType && reactionType !== 'all') query = query.eq('reaction_type', reactionType)
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []).map((row: any) => ({
+    user_id: row.user_id,
+    reaction_type: row.reaction_type,
+    created_at: row.created_at,
+    user: Array.isArray(row.user) ? row.user[0] ?? null : row.user ?? null,
+  })) as ReactionUserRecord[]
+}
+
 export async function setPostReaction(postId: string, userId: string, reaction: ReactionType | null) {
   const client = requireSupabase()
   const result = reaction ? await client.from('likes').upsert({ post_id: postId, user_id: userId, reaction_type: reaction }, { onConflict: 'post_id,user_id' }) : await client.from('likes').delete().eq('post_id', postId).eq('user_id', userId)
