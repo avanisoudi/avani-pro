@@ -5,8 +5,8 @@ import { AuthModal } from './components/AuthModal'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
 import { FilesPanel, NotificationsPanel, PublicProfilePanel, SearchPanel } from './components/AdvancedPanels'
-import { createPost, getMyProfile, listFeedPosts, recordPostShare, togglePostLike, toggleSavedPost, type ProfileRecord } from './lib/api'
-import { createComment, uploadPrivateFile } from './lib/socialApi'
+import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, recordPostShare, togglePostLike, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord } from './lib/api'
+import { createComment, deleteComment, listComments, updateComment, uploadPrivateFile, type CommentRecord } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { useNotifications } from './lib/useNotifications'
 
@@ -112,8 +112,23 @@ function App() {
       .filter(post => feedFilter !== 'trending' || post.stats.likes >= 150)
       .filter(post => !query || `${post.name} ${post.body} ${post.tags.join(' ')}`.toLowerCase().includes(query))
   }, [feedFilter, feedQuery, followed, posts])
-  const updatePost = async (id: string | number, body: string) => { setPosts(current => current.map(post => post.id === id ? { ...post, body, time: 'modifié à l’instant' } : post)); setEditingPostId(null); flash('Publication modifiée.') }
-  const deletePost = (id: string | number) => { setPosts(current => current.filter(post => post.id !== id)); flash('Publication supprimée de votre fil.') }
+  const updatePost = async (id: string | number, body: string) => {
+    if (typeof id !== 'string' || !sessionUser) { flash('Cette publication ne peut pas être modifiée hors connexion.'); return }
+    try {
+      await updatePostRecord(id, sessionUser.id, body)
+      setPosts(current => current.map(post => post.id === id ? { ...post, body, time: 'modifié à l’instant' } : post))
+      setEditingPostId(null)
+      flash('Publication modifiée.')
+    } catch (error) { flash(error instanceof Error ? error.message : 'La publication n’a pas pu être modifiée.') }
+  }
+  const deletePost = async (id: string | number) => {
+    if (typeof id !== 'string' || !sessionUser) { flash('Cette publication ne peut pas être supprimée hors connexion.'); return }
+    try {
+      await deletePostRecord(id, sessionUser.id)
+      setPosts(current => current.filter(post => post.id !== id))
+      flash('Publication supprimée.')
+    } catch (error) { flash(error instanceof Error ? error.message : 'La publication n’a pas pu être supprimée.') }
+  }
   const publish = async () => { if (!composer.trim()) return; if (isSupabaseConfigured && !sessionUser) { openAuth(); return }; const body = composer.trim(); try { const persisted = sessionUser ? await createPost(sessionUser.id, body) : null; setPosts(current => [{ id: persisted?.id ?? Date.now(), name: displayName, handle: displayUsername, role: 'Membre Avani Pro', avatar: displayAvatar, time: 'à l’instant', body, tags: ['#nouveau'], stats: { likes: 0, comments: 0, shares: 0 }, kind: 'thought' }, ...current]); setComposer(''); flash(sessionUser ? 'Publication enregistrée dans votre feed' : 'Publication partagée avec votre réseau') } catch (caught) { flash(caught instanceof Error ? caught.message : 'La publication n’a pas pu être enregistrée.') } }
   useEffect(() => { if (!supabase) return; supabase.auth.getSession().then(({ data }) => { setSessionUser(data.session?.user ?? null); if (!data.session) setProfile(null) }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { setSessionUser(session?.user ?? null); if (!session) setProfile(null) }); return () => subscription.unsubscribe() }, [])
   useEffect(() => { if (!supabase) return; listFeedPosts(sessionUser?.id).then(feed => { if (feed.length) setPosts(feed.map(post => ({ id: post.id, name: post.author?.full_name || 'Membre Avani Pro', handle: post.author?.username ? `@${post.author.username}` : '@avani', role: post.author?.bio || 'Membre Avani Pro', avatar: (post.author?.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase(), avatarUrl: post.author?.avatar_url ?? null, time: new Date(post.created_at).toLocaleDateString('fr-FR'), body: post.body, tags: post.body.match(/#[\w-]+/g) ?? ['#avani-pro'], stats: { likes: post.likes, comments: post.comments, shares: post.shares }, kind: post.post_type === 'image' ? 'image' : post.post_type === 'link' ? 'link' : 'thought', liked: post.liked, saved: post.saved, verifiedType: post.author?.verified_type }))) }).catch(() => undefined) }, [sessionUser])
@@ -180,5 +195,72 @@ function VerifiedBadge({ type = 'verified' }: { type?: string | null }) { const 
 function SvgIcon({ name }: { name: string }) { return <svg className="svg-icon" aria-hidden="true"><use href={`/social-icons.svg#${name}`} /></svg> }
 function NavButton({ active, onClick, icon, label, badge }: { active: boolean; onClick: () => void; icon: string; label: string; badge?: string }) { return <button className={`nav-button ${active ? 'active' : ''}`} onClick={onClick}><SvgIcon name={icon} />{label}{badge && <b>{badge}</b>}</button> }
 function PostCard({ post, user, onLike, onShare, onSave, onComment, onEdit, onDelete, onView, editing, onCancelEdit, onSaveEdit }: { post: Post; user: User | null; onLike: () => void; onShare: () => void; onSave: () => void; onComment: () => void; onEdit: () => void; onDelete: () => void; onView: () => void; editing: boolean; onCancelEdit: () => void; onSaveEdit: (body: string) => void }) { const [draft, setDraft] = useState(post.body); const [menuOpen, setMenuOpen] = useState(false); const submitEdit = (event: React.FormEvent) => { event.preventDefault(); if (draft.trim()) onSaveEdit(draft.trim()) }; return <article className="post-card"><div className="post-header"><div className={`avatar avatar-md ${post.kind === 'image' ? 'avatar-cyan' : 'avatar-soft'}`}>{post.avatarUrl ? <img src={post.avatarUrl} alt={`Photo de profil de ${post.name}`} /> : post.avatar}</div><div className="post-author"><strong>{post.name}{(post.verifiedType || post.name === 'Maya Chen') && <VerifiedBadge type={post.verifiedType ?? 'creator'} />}</strong><span>{post.handle} · {post.time} · Public</span><small>{post.role}</small></div><div className="post-menu"><button className="more-button" aria-label="Options de la publication" onClick={() => setMenuOpen(!menuOpen)}>•••</button>{menuOpen && <div className="post-menu-popover"><button onClick={() => { setMenuOpen(false); onView() }}>Voir la publication</button><button onClick={() => { setMenuOpen(false); onEdit() }}>Modifier</button><button className="danger-action" onClick={() => { setMenuOpen(false); onDelete() }}>Supprimer</button></div>}</div></div>{editing ? <form className="post-edit-form" onSubmit={submitEdit}><textarea value={draft} onChange={event => setDraft(event.target.value)} aria-label="Modifier la publication" /><div><button type="button" className="message-button" onClick={onCancelEdit}>Annuler</button><button className="primary-button">Enregistrer</button></div></form> : <p className="post-body">{post.body}</p>}{post.kind === 'image' && <div className="post-visual"><div className="visual-grid"><span>NX</span><span>STUDIO</span></div><div><strong>Prototype the future.</strong><small>nexa.studio / sprint-03</small></div></div>}{post.kind === 'link' && <div className="link-preview"><span>AV</span><div><strong>La communauté avant la plateforme</strong><small>avani.pro · 4 min de lecture</small></div><b>↗</b></div>}<div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div><div className="post-actions"><button className={post.liked ? 'liked' : ''} onClick={onLike}><SvgIcon name="like" /> {post.stats.likes}</button><button onClick={onComment}><SvgIcon name="comment" /> {post.stats.comments}</button><button onClick={() => void onShare()}><SvgIcon name="share" /> {post.stats.shares}</button><button className={post.saved ? 'save-action saved' : 'save-action'} onClick={() => void onSave()}><SvgIcon name="save" /></button></div><CommentBox postId={post.id} user={user} onAction={onComment} /></article> }
-function CommentBox({ postId, user, onAction }: { postId: string | number; user: User | null; onAction: () => void }) { const [body, setBody] = useState(''); const [replyTo, setReplyTo] = useState<string | null>(null); const [open, setOpen] = useState(false); const [sort, setSort] = useState<'pertinents' | 'recents'>('pertinents'); const [likedComments, setLikedComments] = useState<string[]>([]); const [busy, setBusy] = useState(false); const [comments, setComments] = useState([{ id: 'maya', name: 'Maya Chen', avatar: 'MC', body: 'Très juste. Cette approche peut vraiment aider les équipes à avancer ensemble.', time: 'il y a 12 min', replies: ['J’adore cette direction, merci pour le partage.'] }, { id: 'samir', name: 'Samir Alami', avatar: 'SA', body: 'Quels outils recommandez-vous pour commencer ?', time: 'il y a 8 min', replies: [] }]); const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!body.trim()) return; if (!user) { onAction(); return }; setBusy(true); try { await createComment(postId, user.id, body); setComments(current => [...current, { id: `new-${Date.now()}`, name: 'Vous', avatar: 'VO', body: body.trim(), time: 'à l’instant', replies: [] }]); setBody(''); setReplyTo(null); setOpen(true) } catch { onAction() } finally { setBusy(false) } }; return <div className="comment-box"><div className="comment-summary"><button className="comment-toggle" onClick={() => setOpen(!open)} aria-expanded={open}><span className="comment-icon">◌</span>{open ? 'Masquer les commentaires' : `${comments.length + postId.toString().length} commentaires`}</button>{open && <select className="comment-sort" value={sort} onChange={event => setSort(event.target.value as 'pertinents' | 'recents')} aria-label="Trier les commentaires"><option value="pertinents">Les plus pertinents</option><option value="recents">Les plus récents</option></select>}</div>{open && <><div className="comment-list">{comments.map(comment => <div className="comment-thread" key={comment.id}><div className="comment-row"><div className="avatar avatar-xs avatar-soft">{comment.avatar}</div><div className="comment-content"><div className="comment-bubble"><strong>{comment.name}</strong><p>{comment.body}</p></div><div className="comment-meta"><small>{comment.time}</small><button onClick={() => { setReplyTo(comment.id); setOpen(true) }}>Répondre</button><button className={likedComments.includes(comment.id) ? 'comment-liked' : ''} onClick={() => setLikedComments(current => current.includes(comment.id) ? current.filter(id => id !== comment.id) : [...current, comment.id])}>{likedComments.includes(comment.id) ? 'J’aime' : 'J’aime'}</button></div>{comment.replies.map((reply, index) => <div className="reply-row" key={`${comment.id}-${index}`}><div className="avatar avatar-xs avatar-gradient">AV</div><div><div className="comment-bubble"><strong>Avani Pro</strong><p>{reply}</p></div><div className="comment-meta"><small>il y a 4 min</small><button>J’aime</button></div></div></div>)}</div></div></div>)}</div><form className="comment-form" onSubmit={submit}><div className="avatar avatar-xs avatar-gradient">{user ? 'VO' : '?'}</div><input value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Écrivez votre réponse…' : 'Écrivez un commentaire…'} aria-label={replyTo ? 'Votre réponse' : 'Votre commentaire'} /><button className="primary-button" disabled={busy}>{replyTo ? 'Répondre' : 'Publier'}</button></form></>}</div> }
+function CommentBox({ postId, user, onAction }: { postId: string | number; user: User | null; onAction: () => void }) {
+  const [comments, setComments] = useState<CommentRecord[]>([])
+  const [body, setBody] = useState('')
+  const [replyTo, setReplyTo] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingBody, setEditingBody] = useState('')
+
+  useEffect(() => {
+    if (!open || typeof postId !== 'string') return
+    setLoading(true)
+    listComments(postId).then(setComments).catch(() => onAction()).finally(() => setLoading(false))
+  }, [open, postId, onAction])
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!body.trim()) return
+    if (!user) { onAction(); return }
+    setBusy(true)
+    try {
+      const created = await createComment(postId, user.id, body, replyTo)
+      setComments(current => [...current, { ...created, author: { username: user.user_metadata?.username ?? '', full_name: user.user_metadata?.full_name ?? 'Vous', avatar_url: null, verified_type: null } }])
+      setBody('')
+      setReplyTo(null)
+      setOpen(true)
+    } catch { onAction() } finally { setBusy(false) }
+  }
+
+  const saveEdit = async (comment: CommentRecord) => {
+    if (!user || comment.author_id !== user.id || !editingBody.trim()) return
+    try {
+      await updateComment(comment.id, user.id, editingBody)
+      setComments(current => current.map(item => item.id === comment.id ? { ...item, body: editingBody.trim() } : item))
+      setEditingId(null); setEditingBody('')
+    } catch { onAction() }
+  }
+
+  const remove = async (comment: CommentRecord) => {
+    if (!user || comment.author_id !== user.id) return
+    try {
+      await deleteComment(comment.id, user.id)
+      setComments(current => current.filter(item => item.id !== comment.id && item.parent_id !== comment.id))
+    } catch { onAction() }
+  }
+
+  const roots = comments.filter(comment => !comment.parent_id)
+  const repliesFor = (id: string) => comments.filter(comment => comment.parent_id === id)
+  const authorName = (comment: CommentRecord) => comment.author?.full_name || (comment.author_id === user?.id ? 'Vous' : 'Membre Avani Pro')
+  const initials = (comment: CommentRecord) => authorName(comment).split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'AV'
+
+  return <div className="comment-box">
+    <div className="comment-summary"><button className="comment-toggle" onClick={() => setOpen(value => !value)} aria-expanded={open}><span className="comment-icon">◌</span>{open ? 'Masquer les commentaires' : `\${comments.length} commentaire\${comments.length > 1 ? 's' : ''}`}</button></div>
+    {open && <div className="comment-list">
+      {loading && <p className="empty-copy">Chargement des commentaires…</p>}
+      {!loading && roots.length === 0 && <p className="empty-copy">Aucun commentaire. Soyez le premier à répondre.</p>}
+      {!loading && roots.map(comment => <div className="comment-thread" key={comment.id}>
+        <div className="comment-row"><div className="avatar avatar-xs avatar-soft">{comment.author?.avatar_url ? <img src={comment.author.avatar_url} alt="" /> : initials(comment)}</div><div className="comment-content">
+          {editingId === comment.id ? <div className="comment-edit"><textarea value={editingBody} onChange={event => setEditingBody(event.target.value)} aria-label="Modifier le commentaire" /><div><button className="message-button" type="button" onClick={() => setEditingId(null)}>Annuler</button><button className="primary-button" type="button" onClick={() => void saveEdit(comment)}>Enregistrer</button></div></div> : <div className="comment-bubble"><strong>{authorName(comment)}{comment.author?.verified_type && <span className="verified">✓</span>}</strong><p>{comment.body}</p></div>}
+          <div className="comment-meta"><small>{new Date(comment.created_at).toLocaleString('fr-FR')}</small>{user && <button onClick={() => { setReplyTo(comment.id); setBody(''); setOpen(true) }}>Répondre</button>}{user?.id === comment.author_id && <><button onClick={() => { setEditingId(comment.id); setEditingBody(comment.body) }}>Modifier</button><button onClick={() => void remove(comment)}>Supprimer</button></>}</div>
+          {repliesFor(comment.id).map(reply => <div className="reply-row" key={reply.id}><div className="avatar avatar-xs avatar-gradient">{reply.author?.avatar_url ? <img src={reply.author.avatar_url} alt="" /> : initials(reply)}</div><div><div className="comment-bubble"><strong>{authorName(reply)}{reply.author?.verified_type && <span className="verified">✓</span>}</strong><p>{reply.body}</p></div><div className="comment-meta"><small>{new Date(reply.created_at).toLocaleString('fr-FR')}</small>{user?.id === reply.author_id && <><button onClick={() => { setEditingId(reply.id); setEditingBody(reply.body) }}>Modifier</button><button onClick={() => void remove(reply)}>Supprimer</button></>}</div></div></div>)}
+        </div></div>
+      </div>)}
+      <form className="comment-form" onSubmit={submit}><div className="avatar avatar-xs avatar-gradient">{user ? 'VO' : '?'}</div><input value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Écrivez votre réponse…' : 'Écrivez un commentaire…'} aria-label={replyTo ? 'Votre réponse' : 'Votre commentaire'} /><button className="primary-button" disabled={busy}>{busy ? 'Envoi…' : replyTo ? 'Répondre' : 'Publier'}</button></form>
+    </div>}
+  </div>
+}
 export default App
