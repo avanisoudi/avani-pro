@@ -43,3 +43,55 @@
 @media(max-width:800px){.public-nav{padding:18px 20px}.public-nav-actions a{display:none}.public-hero{display:block;padding:60px 20px 72px}.hero-copy h1{font-size:48px}.hero-copy>p{font-size:13px}.hero-visual{min-height:350px;margin-top:50px}.public-section{display:block;padding:58px 20px}.public-section>p{margin-top:25px}.public-features{grid-template-columns:1fr;padding:0 20px 65px}.public-bottom{display:block;padding:52px 20px}.public-bottom .primary-button{margin-top:24px}.public-footer{padding:24px 20px}.public-nav .brand{font-size:17px}.public-nav-actions .primary-button{padding:10px 12px;font-size:10px}}
 .post-menu{position:relative;margin-left:auto}.post-menu-popover{position:absolute;right:0;top:30px;z-index:5;display:grid;min-width:160px;padding:6px;border:1px solid var(--line);border-radius:12px;background:#17213b;box-shadow:0 14px 34px rgba(0,0,0,.3)}.post-menu-popover button{border:0;background:transparent;color:var(--soft);padding:9px 11px;text-align:left;font-size:11px;cursor:pointer;border-radius:7px}.post-menu-popover button:hover{background:rgba(79,124,255,.12);color:var(--white)}.post-menu-popover .danger-action{color:#ff8b9b}.post-edit-form{display:grid;gap:10px;margin:12px 0}.post-edit-form textarea{width:100%;min-height:90px;box-sizing:border-box;border:1px solid var(--blue);border-radius:12px;background:var(--panel-2);color:var(--white);padding:12px;resize:vertical;outline:0}.post-edit-form>div{display:flex;justify-content:flex-end;gap:8px}.empty-feed{display:grid;gap:6px;place-items:center;padding:42px 20px;border:1px dashed #334675;border-radius:16px;background:rgba(16,21,38,.65);text-align:center}.empty-feed strong{color:var(--white);font:600 15px 'Space Grotesk'}.empty-feed span{color:var(--muted);font-size:11px}.messages-heading>div{display:grid;gap:3px}.messages-heading small{color:var(--muted);font-size:10px}.message-search{display:flex;align-items:center;gap:7px;margin:12px 14px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:rgba(8,12,25,.45);color:var(--muted)}.message-search input{width:100%;border:0;outline:0;background:transparent;color:var(--white);font:inherit;font-size:11px}.thread-actions{display:flex;align-items:center;gap:10px}.thread-actions>button{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer}.conversation-details{display:grid;gap:6px;margin:0 16px 12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(79,124,255,.08);color:var(--muted);font-size:11px}.conversation-details strong{color:var(--white)}.conversation-details button{justify-self:start;border:0;background:transparent;color:var(--cyan);padding:0;cursor:pointer;font-size:11px}.password-field{position:relative;display:flex;align-items:center}.password-field input{padding-right:84px}.password-toggle{position:absolute;right:10px;border:0;background:transparent;color:var(--cyan);font:500 11px inherit;cursor:pointer}.password-toggle:hover{text-decoration:underline}
 
+
+/* AVANI PRO UI/UX REDESIGN 2026 */
+:root{--av-bg:#f5f7fb;--av-surface:#fff;--av-text:#172033;--av-muted:#66718a;--av-line:#e4e8f1;--av-violet:#6d45ff;--av-blue:#3677ff;--av-cyan:#18c7d8}
+body{background:var(--av-bg);color:var(--av-text)}
+.app-shell{display:block;min-height:100vh;background:var(--av-bg)}
+.sidebar{display:none}
+.topbar{position:fixed;z-index:50;inset:0 0 auto;height:68px;display:grid;grid-template-columns:minmax(330px,1fr) auto minmax(330px,1fr);align-items:center;gap:22px;padding:0 24px;background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-bottom:1px solid var(--av-line);box-shadow:0 4px 20px rgba(38,47,72,.06)}
+.topbar-brand{display:flex;align-items:center;gap:16px;min-width:0}
+.topbar-brand .brand{font-size:18px;color:#1b2340}
+.topbar-brand .brand-mark{width:34px;height:34px}
+.topbar-brand .search{width:min(330px,100%);height:40px;border-radius:12px;background:#f1f4f9;border:1px solid #e2e7f0;color:#6c7890}
+.topbar-brand .search input{color:#26314a}
+.topbar-nav{display:flex;align-items:center;justify-content:center;gap:4px;height:100%}
+.topbar-nav button{position:relative;height:100%;padding:0 17px;border:0;background:transparent;color:#657089;font-size:12px;font-weight:600}
+.topbar-nav button:hover,.topbar-nav button.active{color:var(--av-violet)}
+.topbar-nav button.active:after{content:'';position:absolute;left:18px;right:18px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:linear-gradient(90deg,var(--av-violet),var(--av-cyan))}
+.top-actions{justify-content:flex-end}
+.create-top{border:1px solid #dfe4ef;background:#fff;color:#34405c;border-radius:10px;padding:9px 13px;font-size:11px;font-weight:600}
+.main-content{width:min(860px,calc(100% - 420px));margin:0 auto;padding:94px 0 40px}
+.main-content>.topbar{margin:0}
+.right-rail{display:block;position:fixed;right:24px;top:92px;width:280px;max-height:calc(100vh - 110px);overflow:auto}
+.right-rail .rail-card{background:#fff;border:1px solid var(--av-line);box-shadow:0 6px 22px rgba(38,47,72,.05);border-radius:16px}
+.right-rail .card-heading{color:#27314a}
+.composer-card,.post-card,.stories-section,.workspace-overview,.feature-panel{background:#fff!important;border-color:var(--av-line)!important;box-shadow:0 5px 22px rgba(38,47,72,.05)}
+.composer-card{border-radius:16px}
+.post-card{border-radius:16px}
+.stories-section{border-radius:16px}
+.workspace-overview{border-radius:16px}
+.post-body,.comment-content,.suggestion-copy{color:#35415b}
+.post-header strong,.post-author strong,.post-card h3{color:#182139}
+.post-author span,.post-author small,.comment-meta,.suggestion-copy span,.suggestion-copy small{color:#7a859b}
+.feed-filter{background:#fff;border:1px solid var(--av-line);border-radius:12px;padding:4px}
+.feed-filter button{color:#69758e}
+.feed-filter .filter-active{color:var(--av-violet);background:#f0ecff;border-radius:8px}
+.composer-body textarea,.comment-box input,.global-search-input,.message-search,.group-search{background:#f7f9fc;color:#24304a;border-color:#e0e5ef}
+.post-actions{border-top-color:#edf0f5}
+.post-actions button{color:#68758e}
+.post-actions button:hover,.post-actions button.liked{color:var(--av-violet)}
+.top-actions .auth-button{border:1px solid #dfe4ef;background:#fff;color:#526078}
+.mobile-tabbar{display:none}
+@media(prefers-color-scheme:dark){
+:root{--av-bg:#080c18;--av-surface:#101625;--av-text:#e8edff;--av-muted:#91a0bd;--av-line:#202b43}
+body{background:var(--av-bg);color:var(--av-text)}
+.topbar{background:rgba(10,15,28,.94);border-color:#202b43}
+.topbar-brand .brand{color:#eef2ff}.topbar-brand .search,.composer-body textarea,.comment-box input,.global-search-input,.message-search,.group-search{background:#0d1424;color:#edf2ff;border-color:#263453}
+.create-top,.top-actions .auth-button{background:#121b2e;color:#dbe4ff;border-color:#2a3857}
+.composer-card,.post-card,.stories-section,.workspace-overview,.feature-panel,.right-rail .rail-card{background:#101625!important;border-color:#202b43!important}
+}
+@media(max-width:1180px){.right-rail{display:none}.main-content{width:min(860px,calc(100% - 40px))}.topbar{grid-template-columns:1fr auto}.topbar-nav{display:none}}
+@media(max-width:760px){
+.topbar{height:60px;padding:0 12px;grid-template-columns:1fr auto;gap:8px}.topbar-brand{gap:8px}.topbar-brand .brand{font-size:15px}.topbar-brand .brand-mark{width:30px;height:30px}.topbar-brand .search{width:auto;flex:1;min-width:0}.topbar-brand .search input{font-size:11px}.top-actions .auth-button,.create-top{display:none}.top-actions{gap:5px}.main-content{width:100%;padding:74px 10px 76px}.mobile-tabbar{position:fixed;z-index:60;display:flex;bottom:0;left:0;right:0;height:62px;align-items:center;justify-content:space-around;padding:5px;background:rgba(255,255,255,.97);border-top:1px solid var(--av-line);backdrop-filter:blur(16px)}.mobile-tabbar .nav-button{display:grid;place-items:center;gap:2px;padding:4px 8px;border:0;background:transparent;color:#758198;font-size:8px}.mobile-tabbar .nav-button.active{color:var(--av-violet)}.mobile-tabbar .nav-button b{display:none}.stories-row{overflow-x:auto}.workspace-overview{grid-template-columns:1fr 1fr}.workspace-overview>button{grid-column:1/-1}.post-card,.composer-card,.stories-section{border-radius:13px}.feature-panel{padding:14px}.right-rail{display:none}
+}
