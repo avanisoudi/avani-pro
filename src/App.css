@@ -260,3 +260,32 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   .reaction-modal{width:100%;max-height:calc(100vh - 20px);border-radius:14px}
   .reaction-tabs button{padding:9px 8px}
 }
+
+/* Reaction palette: each reaction keeps its own identity */
+.reaction-button-emoji{font-size:18px;line-height:1;display:inline-block}
+.post-actions .reaction-selected{background:transparent!important}
+.post-actions .reaction-selected.reaction-like{color:#1877f2}
+.post-actions .reaction-selected.reaction-love{color:#e91e63}
+.post-actions .reaction-selected.reaction-haha{color:#f59e0b}
+.post-actions .reaction-selected.reaction-wow{color:#f59e0b}
+.post-actions .reaction-selected.reaction-sad{color:#eab308}
+.post-actions .reaction-selected.reaction-angry{color:#e53935}
+.post-actions .reaction-selected:hover{filter:saturate(1.08)}
+.post-actions .reaction-selected.reaction-like{background:#e7f3ff!important}
+.post-actions .reaction-selected.reaction-love{background:#fff0f4!important}
+.post-actions .reaction-selected.reaction-haha,.post-actions .reaction-selected.reaction-wow{background:#fff8e7!important}
+.post-actions .reaction-selected.reaction-sad{background:#fffbea!important}
+.post-actions .reaction-selected.reaction-angry{background:#fff0f0!important}
+.reaction-chip{background:var(--surface)!important}
+.reaction-chip.reaction-like{color:#1877f2}
+.reaction-chip.reaction-love{color:#e91e63}
+.reaction-chip.reaction-haha,.reaction-chip.reaction-wow{color:#f59e0b}
+.reaction-chip.reaction-sad{color:#eab308}
+.reaction-chip.reaction-angry{color:#e53935}
+.reaction-picker button{background:transparent!important}
+.reaction-picker button:hover,.reaction-picker button.active{background:var(--surface-2)!important}
+.reaction-user-type.reaction-like{color:#1877f2}
+.reaction-user-type.reaction-love{color:#e91e63}
+.reaction-user-type.reaction-haha,.reaction-user-type.reaction-wow{color:#f59e0b}
+.reaction-user-type.reaction-sad{color:#eab308}
+.reaction-user-type.reaction-angry{color:#e53935}
