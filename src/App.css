@@ -203,3 +203,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .reaction-picker button:hover,.reaction-picker button.active{background:#e7f3ff;filter:saturate(1.2);transform:translateY(-3px) scale(1.18)}
 .reaction-summary span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-size:12px}
 .settings-select{min-width:150px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text);padding:9px 11px;font-size:11px;font-weight:700;outline:0}
+
+/* Native file controls stay invisible: users interact only with the Avani Pro action labels. */
+.composer-file-input{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;opacity:0!important;pointer-events:none!important}
