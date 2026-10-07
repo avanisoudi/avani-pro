@@ -1,10 +1,22 @@
 import { requireSupabase } from './supabase'
 import type { ProfileRecord } from './api'
 
-export async function updateMyProfile(userId: string, values: Pick<ProfileRecord, 'full_name' | 'username' | 'bio'>) {
+export async function updateMyProfile(userId: string, values: Pick<ProfileRecord, 'full_name' | 'username' | 'bio'> | { avatar_url: string }) {
   const { data, error } = await requireSupabase().from('profiles').update(values).eq('id', userId).select('id, username, full_name, avatar_url, bio, verified_type').single()
   if (error) throw error
   return data as ProfileRecord
+}
+
+export async function uploadProfilePhoto(userId: string, file: File) {
+  if (!file.type.startsWith('image/')) throw new Error('Choisissez une image de profil.')
+  if (file.size > 5 * 1024 * 1024) throw new Error('La photo doit faire moins de 5 Mo.')
+  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${userId}/avatar-${crypto.randomUUID()}.${extension}`
+  const client = requireSupabase()
+  const { error: uploadError } = await client.storage.from('avatars').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' })
+  if (uploadError) throw uploadError
+  const { data: publicUrl } = client.storage.from('avatars').getPublicUrl(path)
+  return updateMyProfile(userId, { avatar_url: publicUrl.publicUrl })
 }
 
 export async function toggleFollow(followerId: string, followingId: string, following: boolean) {
