@@ -25,12 +25,6 @@ function PublicHome({ onAuth }: { onAuth: () => void }) {
   </main>
 }
 
-const postsSeed: Post[] = [
-  { id: 1, name: 'Maya Chen', handle: '@mayachen', role: 'Product strategist · Paris', avatar: 'MC', time: '12 min', body: 'La meilleure roadmap n’est pas celle qui contient le plus de features. C’est celle qui rend la prochaine décision évidente. ✦', tags: ['#product', '#leadership'], stats: { likes: 248, comments: 31, shares: 18 }, kind: 'thought' },
-  { id: 2, name: 'Nexa Studio', handle: '@nexastudio', role: 'Creative technology · Page', avatar: 'NS', time: '48 min', body: 'Nous ouvrons 3 places pour notre prochain sprint de prototypage IA. Partagez votre projet et construisons quelque chose d’utile, ensemble.', tags: ['#buildinpublic', '#ai'], stats: { likes: 189, comments: 24, shares: 42 }, kind: 'image' },
-  { id: 3, name: 'Thomas Leroy', handle: '@thomasl', role: 'Founder · Lyon', avatar: 'TL', time: '2 h', body: 'Nouveau chapitre : Avani Pro me rappelle que les communautés fortes commencent souvent par une conversation honnête.', tags: ['#founders', '#community'], stats: { likes: 96, comments: 12, shares: 7 }, kind: 'link' },
-]
-
 const suggestedGroups = [{ name: 'Design systems', members: '1,284 membres', topic: 'Design & produit', tone: 'group-violet' }, { name: 'Build in public', members: '846 membres', topic: 'Entrepreneurs', tone: 'group-cyan' }, { name: 'Future of work', members: '2,108 membres', topic: 'Carrière & innovation', tone: 'group-blue' }]
 const suggestions = [
   { name: 'Sofia Alvarez', role: 'UX Researcher', avatar: 'SA', mutual: '8 relations en commun' },
