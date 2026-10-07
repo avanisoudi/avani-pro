@@ -180,3 +180,5 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .reaction-summary{min-height:22px;display:flex;align-items:center;gap:2px;padding-top:6px;color:var(--muted)}
 .reaction-summary span{font-size:13px}
 .reaction-summary small{margin-left:4px;font-size:9px}
+
+.upload-primary{position:relative;overflow:hidden;cursor:pointer}.upload-primary .file-input-hidden{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.upload-primary.is-loading{cursor:wait;pointer-events:none}
