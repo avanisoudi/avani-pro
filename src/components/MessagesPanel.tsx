@@ -315,9 +315,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       <div className="messages-heading">
         <div><span className="eyebrow">MESSAGERIE</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => { setGroupMode(false); setNewConversationOpen(true) }}>＋ Discussion</button><button type="button" onClick={() => { setGroupMode(true); setNewConversationOpen(true) }}>＋ Groupe</button></div>
       </div>
-      <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label>
+      <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label><div className="message-filters"><button className="active" type="button">Toutes</button><button type="button" onClick={() => onAction('Les conversations publiques sont affichées ci-dessous.')}>Publics</button><button type="button" onClick={() => onAction('Créez une nouvelle discussion privée avec le bouton + Discussion.')}>Privés</button></div>
       {publicGroups.length > 0 && <div className="public-group-section">
-        <div className="public-group-heading"><span>COMMUNAUTÉ PUBLIQUE</span><small>Accessible à tous les membres</small></div>
+        <div className="public-group-heading"><div><span>COMMUNAUTÉ PUBLIQUE</span><small>Accessible à tous les membres Avani Pro</small></div><b>{publicGroups.length} espace{publicGroups.length > 1 ? 's' : ''}</b></div>
         {publicGroups.map(group => {
           const joined = conversations.some(item => item.id === group.id)
           return <div className={`public-group-row ${joined ? 'joined' : ''}`} key={group.id}>
@@ -339,7 +339,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     <div className="message-thread">
       {selected ? <>
         <div className="thread-head">
-          <div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION'}</span><strong>{selected.title || ''}</strong><small>{connection === 'connected' ? 'Connecté' : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'}</small></div>
+          <div className="thread-title"><div className="avatar avatar-md avatar-soft">{(selected.title || 'AV').slice(0, 2).toUpperCase()}</div><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? 'Connecté en temps réel' : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'}</small></div></div><div className="thread-head-actions"><button type="button" onClick={() => onAction(selected.is_group ? 'Les membres du groupe sont accessibles depuis cet espace.' : 'Cette conversation est privée entre ses membres.')}>ⓘ</button></div>
         </div>
 
         <div className="message-scroll" aria-live="polite">
