@@ -97,6 +97,13 @@ export async function deleteMessage(messageId: string, senderId: string) {
   return data as Pick<MessageRecord, 'id' | 'body' | 'deleted_at' | 'updated_at'>
 }
 
+export async function listMessageReactions(messageIds: string[]) {
+  if (!messageIds.length) return []
+  const { data, error } = await requireSupabase().from('message_reactions').select('message_id, user_id, reaction_type, created_at').in('message_id', messageIds)
+  if (error) throw error
+  return (data ?? []) as Array<{ message_id: string; user_id: string; reaction_type: ReactionType; created_at: string }>
+}
+
 export async function setMessageReaction(messageId: string, userId: string, reaction: ReactionType | null) {
   const client = requireSupabase()
   const result = reaction
