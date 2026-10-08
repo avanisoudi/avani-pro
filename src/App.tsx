@@ -323,19 +323,22 @@ function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCo
     <div className="post-header"><div className={`avatar avatar-md ${post.kind === 'image' ? 'avatar-cyan' : 'avatar-soft'}`}>{post.avatarUrl ? <img src={post.avatarUrl} alt={`Photo de profil de ${post.name}`} /> : post.avatar}</div><div className="post-author"><strong>{post.name}{post.verifiedType && <VerifiedBadge type={post.verifiedType} />}</strong><span>{post.handle} · {post.time} · Public</span><small>{post.role}</small></div><div>{user?.id === post.authorId && <div className="post-menu"><button className="more-button" aria-label="Options de la publication" onClick={() => setMenuOpen(!menuOpen)}>•••</button>{menuOpen && <div className="post-menu-popover"><button onClick={() => { setMenuOpen(false); onEdit() }}>Modifier</button><button className="danger-action" onClick={() => { setMenuOpen(false); onDelete() }}>Supprimer</button></div>}</div>}</div></div>
     {editing ? <form className="post-edit-form" onSubmit={submitEdit}><textarea value={draft} onChange={event => setDraft(event.target.value)} aria-label="Modifier la publication" /><div><button type="button" className="message-button" onClick={onCancelEdit}>Annuler</button><button className="primary-button">Enregistrer</button></div></form> : <>{displayBody && <p className="post-body">{displayBody}</p>}{imageMatch?.[1] && <img className="post-image" src={imageMatch[1]} alt={`Image publiée par ${post.name}`} />}</>}
     <div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
-    <div className="post-social-summary">
-      <button type="button" className="reaction-summary" onClick={() => setReactionModalOpen(true)} aria-label={`Voir les ${formatReactionCount(reactionTotal)} réactions`}>
-        <span className="reaction-stack" aria-hidden="true">
+    <div className="fb-engagement-summary">
+      <button type="button" className="fb-reaction-count" onClick={() => setReactionModalOpen(true)} aria-label={`Voir les ${formatReactionCount(reactionTotal)} réactions`}>
+        <span className="fb-reaction-icons" aria-hidden="true">
           {Object.entries(counts).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type]) => {
             const meta = reactionMeta.find(item => item[0] === type)
-            return meta ? <span className={`reaction-stack-icon reaction-stack-${type}`} key={type}>{meta[1]}</span> : null
+            if (!meta) return null
+            return type === 'like'
+              ? <img key={type} className="fb-reaction-icon fb-reaction-like" src={post.reaction === 'like' ? '/assets/reaction-like-blue.svg' : '/assets/reaction-like.svg'} alt="" />
+              : <span key={type} className={`fb-reaction-icon fb-reaction-${type}`}>{meta[1]}</span>
           })}
         </span>
-        {reactionTotal > 0 && <span className="reaction-total-number">{formatReactionCount(reactionTotal)}</span>}
+        {reactionTotal > 0 && <span className="fb-reaction-number">{formatReactionCount(reactionTotal)}</span>}
       </button>
-      <div className="social-summary-right">
+      <div className="fb-engagement-meta">
         {post.stats.comments > 0 && <button type="button" onClick={openComments}>{formatReactionCount(post.stats.comments)} commentaire{post.stats.comments > 1 ? "s" : ""}</button>}
-        {post.stats.shares > 0 && <span>{formatReactionCount(post.stats.shares)} partage{post.stats.shares > 1 ? "s" : ""}</span>}
+        {post.stats.shares > 0 && <button type="button" onClick={() => void onShare()}>{formatReactionCount(post.stats.shares)} partage{post.stats.shares > 1 ? "s" : ""}</button>}
       </div>
     </div>
     <div className="post-actions">
