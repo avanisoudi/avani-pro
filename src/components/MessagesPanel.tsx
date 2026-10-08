@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { listConversations, listMessages, markConversationRead, sendMessage, type ConversationRecord, type MessageRecord } from '../lib/api'
+import { listConversations, listMessages, listMessageReactions, markConversationRead, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ReactionType } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
@@ -20,6 +20,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [replyTo, setReplyTo] = useState<MessageRecord | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
+  const [messageReactions, setMessageReactions] = useState<Record<string, Record<ReactionType, number>>>({})
+  const [myReactions, setMyReactions] = useState<Record<string, ReactionType | null>>({})
   const typingTimeout = useRef<number | null>(null)
 
   const visibleConversations = useMemo(
@@ -49,17 +51,37 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     setMessages([])
     setTyping({})
     setHasOlder(true)
+    setMessageReactions({})
+    setMyReactions({})
     listMessages(selected.id)
       .then(items => {
         if (!cancelled) {
           setMessages(items)
           setHasOlder(items.length >= 50)
+          void refreshMessageReactions(items)
         }
       })
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les messages.') })
     void markConversationRead(selected.id, user.id).catch(() => undefined)
 
     const client = supabase
+    const refreshReactionsFor = async (messageIds: string[]) => {
+      if (!messageIds.length) return
+      try {
+        const rows = await listMessageReactions(messageIds)
+        setMessageReactions(current => {
+          const next = { ...current }
+          for (const id of messageIds) next[id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+          for (const row of rows) next[row.message_id][row.reaction_type] += 1
+          return next
+        })
+        setMyReactions(current => {
+          const next = { ...current }
+          for (const id of messageIds) next[id] = rows.find(row => row.message_id === id && row.user_id === user.id)?.reaction_type ?? null
+          return next
+        })
+      } catch { /* realtime reaction UI can recover on the next event/load */ }
+    }
     const channel = client.channel(`conversation:${selected.id}`, {
       config: { presence: { key: user.id } },
     })
@@ -77,6 +99,12 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selected.id}` }, payload => {
         const deleted = payload.old as MessageRecord
         setMessages(current => current.filter(message => message.id !== deleted.id))
+        setMessageReactions(current => { const next = { ...current }; delete next[deleted.id]; return next })
+        setMyReactions(current => { const next = { ...current }; delete next[deleted.id]; return next })
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, payload => {
+        const changed = (payload.new || payload.old) as { message_id?: string }
+        if (changed.message_id) void refreshReactionsFor([changed.message_id])
       })
       .on('broadcast', { event: 'typing' }, payload => {
         const data = payload.payload as { userId?: string; name?: string; active?: boolean }
@@ -172,6 +200,37 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
   }
 
+  const refreshMessageReactions = async (items: MessageRecord[]) => {
+    if (!items.length || !user) return
+    try {
+      const rows = await listMessageReactions(items.map(item => item.id))
+      const counts: Record<string, Record<ReactionType, number>> = {}
+      const mine: Record<string, ReactionType | null> = {}
+      for (const item of items) counts[item.id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+      for (const row of rows) {
+        if (!counts[row.message_id]) counts[row.message_id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+        counts[row.message_id][row.reaction_type] += 1
+        if (row.user_id === user.id) mine[row.message_id] = row.reaction_type
+      }
+      for (const item of items) if (!(item.id in mine)) mine[item.id] = null
+      setMessageReactions(counts)
+      setMyReactions(mine)
+    } catch { /* keep message rendering independent from reaction reads */ }
+  }
+
+  const reactToMessage = async (messageId: string, reaction: ReactionType) => {
+    if (!user) return
+    const nextReaction = myReactions[messageId] === reaction ? null : reaction
+    try {
+      await setMessageReaction(messageId, user.id, nextReaction)
+      await refreshMessageReactions(messages)
+    } catch (caught) {
+      onAction(caught instanceof Error ? caught.message : 'Réaction impossible.')
+    }
+  }
+
+  const reactionOptions: Array<[ReactionType, string]> = [['like', '👍'], ['love', '❤️'], ['haha', '😂'], ['wow', '😮'], ['sad', '😢'], ['angry', '😡']]
+
   const saveEdit = async () => {
     if (!editingId || !user || !editingBody.trim()) return
     const message = messages.find(item => item.id === editingId)
@@ -229,10 +288,19 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
             {editingId === message.id ? <div><textarea value={editingBody} onChange={event => setEditingBody(event.target.value)} aria-label="Modifier le message" /><button type="button" onClick={() => void saveEdit()}>Enregistrer</button><button type="button" onClick={() => { setEditingId(null); setEditingBody('') }}>Annuler</button></div> : <>
               <span id={`message-${message.id}`}>{message.deleted_at ? 'Ce message a été supprimé.' : message.body}</span>
               <small>{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</small>
-              {!message.deleted_at && <div className="message-meta-actions">
-                <button type="button" onClick={() => setReplyTo(message)}>Répondre</button>
+              {!message.deleted_at && <>
+                <div className="message-reactions" aria-label="Réactions au message">
+                  {reactionOptions.map(([type, emoji]) => {
+                    const count = messageReactions[message.id]?.[type] ?? 0
+                    const selectedReaction = myReactions[message.id] === type
+                    return <button key={type} type="button" className={`message-reaction ${selectedReaction ? 'selected' : ''}`} onClick={() => void reactToMessage(message.id, type)} aria-label={`Réagir ${type}${count ? `, ${count}` : ''}`} aria-pressed={selectedReaction}><span aria-hidden="true">{emoji}</span>{count > 0 && <small>{count}</small>}</button>
+                  })}
+                </div>
+                <div className="message-meta-actions">
+                  <button type="button" onClick={() => setReplyTo(message)}>Répondre</button>
                 {message.sender_id === user.id && <><button type="button" onClick={() => { setEditingId(message.id); setEditingBody(message.body) }}>Modifier</button><button type="button" onClick={() => void removeMessage(message)}>Supprimer</button></>}
-              </div>}
+                </div>
+              </>}
             </>}
           </div>)}
         </div>
