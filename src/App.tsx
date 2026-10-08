@@ -258,7 +258,10 @@ function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReac
         if (event.pointerType === 'touch') setOpen(true)
       }}
     >
-      {current[0] === 'like' ? <img className="reaction-button-asset" src={reaction === 'like' ? '/assets/reaction-like-blue.svg' : '/assets/reaction-like.svg'} alt="" aria-hidden="true" style={{ width: '21px', height: '21px', objectFit: 'contain' }} /> : <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span>}
+      <span className="reaction-button-content">
+        {current[0] === 'like' ? <img className="reaction-button-asset" src={reaction === 'like' ? '/assets/reaction-like-blue.svg' : '/assets/reaction-like.svg'} alt="" aria-hidden="true" /> : <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span>}
+        <span className="reaction-button-label">{current[2]}</span>
+      </span>
     </button>
   </div>
 }
