@@ -113,6 +113,33 @@ export async function setMessageReaction(messageId: string, userId: string, reac
   return reaction
 }
 
+export async function searchMessageContacts(userId: string, query: string) {
+  const client = requireSupabase()
+  const term = query.trim()
+  let request = client.from('profiles').select('id, username, full_name, avatar_url, bio, verified_type').neq('id', userId).order('full_name').limit(20)
+  if (term) request = request.or(`full_name.ilike.%${term}%,username.ilike.%${term}%`)
+  const { data, error } = await request
+  if (error) throw error
+  return (data ?? []) as ProfileRecord[]
+}
+
+export async function createGroupConversation(userId: string, title: string, memberIds: string[]) {
+  const name = title.trim()
+  const uniqueMembers = [...new Set(memberIds.filter(id => id && id !== userId))]
+  if (!name) throw new Error('Le nom du groupe est requis.')
+  if (!uniqueMembers.length) throw new Error('Ajoutez au moins une personne au groupe.')
+  const client = requireSupabase()
+  const { data: conversation, error } = await client.from('conversations').insert({ title: name, is_group: true, created_by: userId }).select('id, title, is_group, updated_at, last_message_id').single()
+  if (error) throw error
+  const members = [userId, ...uniqueMembers].map(memberId => ({ conversation_id: conversation.id, user_id: memberId }))
+  const { error: membersError } = await client.from('conversation_members').insert(members)
+  if (membersError) {
+    await client.from('conversations').delete().eq('id', conversation.id).eq('created_by', userId)
+    throw membersError
+  }
+  return conversation as ConversationRecord
+}
+
 export async function createDirectConversation(userId: string, contactId: string, contactName: string) {
   const client = requireSupabase()
   const { data: conversation, error } = await client.from('conversations').insert({ title: contactName, is_group: false, created_by: userId }).select('id, title, is_group, updated_at').single()
