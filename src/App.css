@@ -796,3 +796,19 @@
   .post-social-summary{padding-left:5px!important;padding-right:5px!important}
   .post-social-summary .social-summary-right{gap:7px!important;font-size:10px!important}
 }
+
+/* Facebook engagement summary — canonical layout */
+.fb-engagement-summary{display:flex!important;align-items:center!important;justify-content:space-between!important;width:100%!important;min-height:36px!important;padding:0 4px!important;margin:0!important;box-sizing:border-box!important;border-bottom:1px solid var(--line)!important}
+.fb-reaction-count{display:inline-flex!important;align-items:center!important;justify-content:flex-start!important;gap:5px!important;min-width:0!important;height:32px!important;padding:0 4px!important;margin:0!important;border:0!important;background:transparent!important;color:#8f9bb0!important;font:500 12px/1 'Space Grotesk',sans-serif!important;cursor:pointer!important}
+.fb-reaction-icons{display:inline-flex!important;align-items:center!important;height:22px!important;flex:0 0 auto!important}
+.fb-reaction-icon{width:19px!important;height:19px!important;min-width:19px!important;flex:0 0 19px!important;display:grid!important;place-items:center!important;margin-left:-4px!important;box-sizing:border-box!important;border:2px solid var(--surface,#10182b)!important;border-radius:50%!important;font-size:11px!important;line-height:1!important;overflow:hidden!important}
+.fb-reaction-icon:first-child{margin-left:0!important}
+.fb-reaction-like{object-fit:cover!important;padding:0!important;background:#1877f2!important}
+.fb-reaction-love{background:#fff!important}
+.fb-reaction-haha,.fb-reaction-wow,.fb-reaction-sad{background:#ffd66b!important}
+.fb-reaction-angry{background:#f44f44!important}
+.fb-reaction-number{display:inline-block!important;min-width:8px!important;color:#8f9bb0!important;white-space:nowrap!important}
+.fb-engagement-meta{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:12px!important;margin-left:auto!important;color:#8f9bb0!important;font:500 12px/1 'Space Grotesk',sans-serif!important}
+.fb-engagement-meta button{padding:0!important;margin:0!important;border:0!important;background:transparent!important;color:inherit!important;font:inherit!important;white-space:nowrap!important;cursor:pointer!important}
+.fb-engagement-meta button:hover,.fb-reaction-count:hover{color:#e8efff!important}
+@media(max-width:600px){.fb-engagement-summary{padding:0 2px!important}.fb-engagement-meta{gap:7px!important;font-size:11px!important}}
