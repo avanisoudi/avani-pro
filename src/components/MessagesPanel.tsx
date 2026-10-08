@@ -377,7 +377,6 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         </form>
       </> : <div className="empty-thread"><span>◌</span><p>Sélectionnez une conversation.</p></div>}
     </div>
-  </section>
     {newConversationOpen && <div className="message-dialog-backdrop" role="presentation"><div className="message-dialog" role="dialog" aria-modal="true" aria-label={groupMode ? 'Créer un groupe' : 'Nouvelle discussion'}>
       <div className="message-dialog-head"><div><span className="eyebrow">{groupMode ? 'NOUVEAU GROUPE' : 'NOUVELLE DISCUSSION'}</span><strong>{groupMode ? 'Créer un groupe' : 'Écrire à une personne'}</strong></div><button type="button" onClick={() => setNewConversationOpen(false)} aria-label="Fermer">×</button></div>
       {groupMode && <input className="message-dialog-input" value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Nom du groupe" aria-label="Nom du groupe" />}
