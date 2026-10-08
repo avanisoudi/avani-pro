@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { createDirectConversation, createGroupConversation, listConversations, listMessages, listMessageReactions, markConversationRead, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type ReactionType } from '../lib/api'
+import { createDirectConversation, createGroupConversation, joinPublicGroup, listConversations, listMessages, listPublicGroups, listMessageReactions, markConversationRead, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type ReactionType } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
 
 export function MessagesPanel({ user, onAction, initialConversationId }: { user: User | null; onAction: (message: string) => void; initialConversationId?: string }) {
   const [conversations, setConversations] = useState<ConversationRecord[]>([])
+  const [publicGroups, setPublicGroups] = useState<ConversationRecord[]>([])
+  const [joiningPublicGroup, setJoiningPublicGroup] = useState<string | null>(null)
   const [selected, setSelected] = useState<ConversationRecord | null>(null)
   const [messages, setMessages] = useState<MessageRecord[]>([])
   const [draft, setDraft] = useState('')
@@ -58,17 +60,34 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     () => conversations.filter(conversation => (conversation.title || '').toLowerCase().includes(search.toLowerCase())),
     [conversations, search],
   )
+  const joinGroup = async (group: ConversationRecord) => {
+    if (!user || joiningPublicGroup) return
+    setJoiningPublicGroup(group.id)
+    try {
+      const joined = await joinPublicGroup(user.id, group.id)
+      setConversations(current => [joined, ...current.filter(item => item.id !== joined.id)])
+      setSelected(joined)
+      onAction('Vous avez rejoint la communauté Avani Pro.')
+    } catch (caught) {
+      onAction(caught instanceof Error ? caught.message : 'Impossible de rejoindre ce groupe.')
+    } finally {
+      setJoiningPublicGroup(null)
+    }
+  }
+
 
   useEffect(() => {
     if (!user) return
     let cancelled = false
     setLoading(true)
     setError('')
-    listConversations(user.id)
-      .then(items => {
+    Promise.all([listConversations(user.id), listPublicGroups()])
+      .then(([items, groups]) => {
         if (cancelled) return
-        setConversations(items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)))
-        setSelected(items.find(item => item.id === initialConversationId) ?? items[0] ?? null)
+        const sortedItems = items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
+        setConversations(sortedItems)
+        setPublicGroups(groups)
+        setSelected(sortedItems.find(item => item.id === initialConversationId) ?? sortedItems[0] ?? null)
       })
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les conversations.') })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -297,7 +316,20 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         <div><span className="eyebrow">MESSAGERIE</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => { setGroupMode(false); setNewConversationOpen(true) }}>＋ Discussion</button><button type="button" onClick={() => { setGroupMode(true); setNewConversationOpen(true) }}>＋ Groupe</button></div>
       </div>
       <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label>
-      {conversations.length === 0 && <p className="empty-copy">Aucune conversation pour le moment.</p>}
+      {publicGroups.length > 0 && <div className="public-group-section">
+        <div className="public-group-heading"><span>COMMUNAUTÉ PUBLIQUE</span><small>Accessible à tous les membres</small></div>
+        {publicGroups.map(group => {
+          const joined = conversations.some(item => item.id === group.id)
+          return <div className={`public-group-row ${joined ? 'joined' : ''}`} key={group.id}>
+            <div className="avatar avatar-md avatar-soft">AV</div>
+            <div className="public-group-info"><strong>{group.title || ''}</strong><small>{joined ? 'Vous avez rejoint ce groupe' : 'Groupe public Avani Pro'}</small></div>
+            {joined
+              ? <button type="button" onClick={() => setSelected(conversations.find(item => item.id === group.id) || group)}>Ouvrir</button>
+              : <button type="button" onClick={() => void joinGroup(group)} disabled={joiningPublicGroup === group.id}>{joiningPublicGroup === group.id ? '…' : 'Rejoindre'}</button>}
+          </div>
+        })}
+      </div>}
+      {conversations.length === 0 && publicGroups.length === 0 && <p className="empty-copy">Aucune conversation pour le moment.</p>}
       {visibleConversations.map(conversation => <button className={`conversation-row ${selected?.id === conversation.id ? 'selected' : ''}`} key={conversation.id} onClick={() => setSelected(conversation)}>
         <div className="avatar avatar-md avatar-soft">{conversation.title?.slice(0, 2).toUpperCase() || ''}</div>
         <div><strong>{conversation.title || ''}</strong><small>{connection === 'connected' ? 'Temps réel actif' : connection === 'reconnecting' ? 'Reconnexion…' : ''}</small></div>
