@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import type { ProfileRecord } from '../lib/api'
 import { createDirectConversation, joinPublicGroup, listPublicGroups } from '../lib/api'
-import { addGroupMember, createGroup, createPage, getAdminStats, isAdmin, listAuditLogs, listDiscoverableProfiles, listMyGroups, listMyPages, listOpenReports, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
+import { addGroupMember, createGroup, createPage, getAdminStats, getMySettings, isAdmin, listAuditLogs, listDiscoverableProfiles, listMyGroups, listMyPages, listOpenReports, saveMySettings, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
 
 const fallbackPeople = [
   { id: 'maya', name: 'Maya Chen', role: 'Product strategist · Paris', avatar: 'MC', mutual: '12 relations en commun' },
@@ -62,10 +62,32 @@ export function AdminPanel({ user, onAction }: { user: User | null; onAction: (m
 }
 
 export function SettingsPanel({ user, theme, onThemeChange, onAction }: { user: User | null; theme: 'light' | 'dark'; onThemeChange: (theme: 'light' | 'dark') => void; onAction: (message: string) => void }) {
-  const [emailNotifications, setEmailNotifications] = useState(() => localStorage.getItem('avani:email-notifications') !== 'off')
-  const [compactMode, setCompactMode] = useState(() => localStorage.getItem('avani:compact-mode') === 'on')
-  const save = (key: string, value: boolean) => { localStorage.setItem(key, value ? 'on' : 'off'); onAction('Préférence enregistrée sur cet appareil.') }
-  return <section className="feature-panel settings-panel"><div className="feature-header"><div><span className="eyebrow">ESPACE PERSONNEL</span><h2>Réglages</h2><p>{user ? 'Gérez vos préférences de session et de notifications.' : 'Connectez-vous pour synchroniser vos préférences avec votre compte.'}</p></div><span className="admin-shield">⚙</span></div><div className="settings-list"><label><span><strong>Apparence</strong><small>Choisissez le thème d’Avani Pro.</small></span><select value={theme} onChange={event => { const next = event.target.value as 'light' | 'dark'; onThemeChange(next); localStorage.setItem('avani:theme', next); onAction('Préférence d’apparence enregistrée.') }}><option value="light">Clair</option><option value="dark">Sombre</option></select></label><label><span><strong>Notifications email</strong><small>Recevoir les alertes importantes de votre réseau.</small></span><input type="checkbox" checked={emailNotifications} onChange={event => { setEmailNotifications(event.target.checked); save('avani:email-notifications', event.target.checked) }} /></label><label><span><strong>Mode compact</strong><small>Réduire l’espacement du feed pour afficher plus de contenu.</small></span><input type="checkbox" checked={compactMode} onChange={event => { setCompactMode(event.target.checked); save('avani:compact-mode', event.target.checked) }} /></label></div></section>
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [compactMode, setCompactMode] = useState(false)
+  const [loading, setLoading] = useState(Boolean(user))
+  useEffect(() => {
+    if (!user) { setLoading(false); return }
+    getMySettings(user.id).then(settings => {
+      const prefs = (settings?.notification_preferences as Record<string, unknown> | null) ?? {}
+      setEmailNotifications(prefs.email !== false)
+      setCompactMode(Boolean(prefs.compact))
+      if (settings?.appearance === 'dark' || settings?.appearance === 'light') onThemeChange(settings.appearance)
+    }).catch(() => undefined).finally(() => setLoading(false))
+  }, [user, onThemeChange])
+  const save = async (next: { email?: boolean; compact?: boolean; appearance?: 'light' | 'dark' }) => {
+    if (!user) { onAction('Connectez-vous pour synchroniser vos préférences.'); return }
+    try {
+      await saveMySettings(user.id, {
+        appearance: next.appearance ?? theme,
+        notification_preferences: { email: next.email ?? emailNotifications, compact: next.compact ?? compactMode },
+      })
+      onAction('Préférence enregistrée dans votre compte.')
+    } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible d’enregistrer cette préférence.') }
+  }
+  return <section className="feature-panel settings-panel"><div className="feature-header"><div><span className="eyebrow">ESPACE PERSONNEL</span><h2>Réglages</h2><p>{user ? 'Préférences synchronisées avec votre compte.' : 'Connectez-vous pour synchroniser vos préférences avec votre compte.'}</p></div><span className="admin-shield">⚙</span></div><div className="settings-list">
+    <label><span><strong>Apparence</strong><small>Choisissez le thème d’Avani Pro.</small></span><select value={theme} disabled={loading} onChange={event => { const next = event.target.value as 'light' | 'dark'; onThemeChange(next); void save({ appearance: next }) }}><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+    <label><span><strong>Notifications email</strong><small>Recevoir les alertes importantes de votre réseau.</small></span><input type="checkbox" checked={emailNotifications} disabled={loading || !user} onChange={event => { const value = event.target.checked; setEmailNotifications(value); void save({ email: value }) }} /></label>
+    <label><span><strong>Mode compact</strong><small>Réduire l’espacement du feed pour afficher plus de contenu.</small></span><input type="checkbox" checked={compactMode} disabled={loading || !user} onChange={event => { const value = event.target.checked; setCompactMode(value); void save({ compact: value }) }} /></label>
+  </div></section>
 }
-
 function FeatureEmpty({ title, text, action }: { title: string; text: string; action: string }) { return <section className="feature-panel feature-empty"><div className="placeholder-orb">✦</div><span className="eyebrow">AVANI PRO · ESPACE SÉCURISÉ</span><h2>{title}</h2><p>{text}</p><button className="primary-button">{action} ↗</button></section> }
