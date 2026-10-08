@@ -324,14 +324,18 @@ function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCo
     {editing ? <form className="post-edit-form" onSubmit={submitEdit}><textarea value={draft} onChange={event => setDraft(event.target.value)} aria-label="Modifier la publication" /><div><button type="button" className="message-button" onClick={onCancelEdit}>Annuler</button><button className="primary-button">Enregistrer</button></div></form> : <>{displayBody && <p className="post-body">{displayBody}</p>}{imageMatch?.[1] && <img className="post-image" src={imageMatch[1]} alt={`Image publiée par ${post.name}`} />}</>}
     <div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
     <div className="post-social-summary">
-      <div className="reaction-summary">
-        <button type="button" className="reaction-total" onClick={() => setReactionModalOpen(true)} title={`${formatReactionCount(reactionTotal)} réaction${reactionTotal > 1 ? 's' : ''}`}>
-          {formatReactionCount(reactionTotal)} réaction{reactionTotal > 1 ? 's' : ''}
-        </button>
-      </div>
+      <button type="button" className="reaction-summary" onClick={() => setReactionModalOpen(true)} aria-label={`Voir les ${formatReactionCount(reactionTotal)} réactions`}>
+        <span className="reaction-stack" aria-hidden="true">
+          {Object.entries(counts).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type]) => {
+            const meta = reactionMeta.find(item => item[0] === type)
+            return meta ? <span className={`reaction-stack-icon reaction-stack-${type}`} key={type}>{meta[1]}</span> : null
+          })}
+        </span>
+        {reactionTotal > 0 && <span className="reaction-total-number">{formatReactionCount(reactionTotal)}</span>}
+      </button>
       <div className="social-summary-right">
-        {post.stats.comments > 0 && <button type="button" onClick={openComments}>{formatReactionCount(post.stats.comments)} commentaire{post.stats.comments > 1 ? 's' : ''}</button>}
-        {post.stats.shares > 0 && <span>{formatReactionCount(post.stats.shares)} partage{post.stats.shares > 1 ? 's' : ''}</span>}
+        {post.stats.comments > 0 && <button type="button" onClick={openComments}>{formatReactionCount(post.stats.comments)} commentaire{post.stats.comments > 1 ? "s" : ""}</button>}
+        {post.stats.shares > 0 && <span>{formatReactionCount(post.stats.shares)} partage{post.stats.shares > 1 ? "s" : ""}</span>}
       </div>
     </div>
     <div className="post-actions">
