@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { listConversations, listMessages, listMessageReactions, markConversationRead, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ReactionType } from '../lib/api'
+import { createDirectConversation, createGroupConversation, listConversations, listMessages, listMessageReactions, markConversationRead, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type ReactionType } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
@@ -20,9 +20,39 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [replyTo, setReplyTo] = useState<MessageRecord | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
+  const [newConversationOpen, setNewConversationOpen] = useState(false)
+  const [groupMode, setGroupMode] = useState(false)
+  const [contactQuery, setContactQuery] = useState('')
+  const [contacts, setContacts] = useState<ProfileRecord[]>([])
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([])
+  const [groupTitle, setGroupTitle] = useState('')
+  const [creatingConversation, setCreatingConversation] = useState(false)
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<ReactionType, number>>>({})
   const [myReactions, setMyReactions] = useState<Record<string, ReactionType | null>>({})
   const typingTimeout = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!newConversationOpen || !user) return
+    let active = true
+    void searchMessageContacts(user.id, contactQuery).then(rows => { if (active) setContacts(rows) }).catch(() => { if (active) setContacts([]) })
+    return () => { active = false }
+  }, [newConversationOpen, contactQuery, user])
+
+  const startConversation = async () => {
+    if (!user || !selectedContacts.length || creatingConversation) return
+    setCreatingConversation(true)
+    try {
+      const created = groupMode
+        ? await createGroupConversation(user.id, groupTitle, selectedContacts)
+        : await createDirectConversation(user.id, selectedContacts[0], contacts.find(item => item.id === selectedContacts[0])?.full_name || '')
+      setConversations(current => [created, ...current.filter(item => item.id !== created.id)])
+      setSelected(created)
+      setNewConversationOpen(false)
+      setSelectedContacts([]); setContactQuery(''); setGroupTitle('')
+    } catch (caught) {
+      onAction(caught instanceof Error ? caught.message : 'Impossible de créer la conversation.')
+    } finally { setCreatingConversation(false) }
+  }
 
   const visibleConversations = useMemo(
     () => conversations.filter(conversation => (conversation.title || '').toLowerCase().includes(search.toLowerCase())),
@@ -264,7 +294,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   return <section className="messages-panel">
     <div className="conversation-list">
       <div className="messages-heading">
-        <div><span className="eyebrow">MESSAGERIE</span><small>Conversations de votre compte</small></div>
+        <div><span className="eyebrow">MESSAGERIE</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => { setGroupMode(false); setNewConversationOpen(true) }}>＋ Discussion</button><button type="button" onClick={() => { setGroupMode(true); setNewConversationOpen(true) }}>＋ Groupe</button></div>
       </div>
       <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label>
       {conversations.length === 0 && <p className="empty-copy">Aucune conversation pour le moment.</p>}
@@ -315,5 +345,13 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         </form>
       </> : <div className="empty-thread"><span>◌</span><p>Sélectionnez une conversation.</p></div>}
     </div>
+  </section>
+    {newConversationOpen && <div className="message-dialog-backdrop" role="presentation"><div className="message-dialog" role="dialog" aria-modal="true" aria-label={groupMode ? 'Créer un groupe' : 'Nouvelle discussion'}>
+      <div className="message-dialog-head"><div><span className="eyebrow">{groupMode ? 'NOUVEAU GROUPE' : 'NOUVELLE DISCUSSION'}</span><strong>{groupMode ? 'Créer un groupe' : 'Écrire à une personne'}</strong></div><button type="button" onClick={() => setNewConversationOpen(false)} aria-label="Fermer">×</button></div>
+      {groupMode && <input className="message-dialog-input" value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Nom du groupe" aria-label="Nom du groupe" />}
+      <input className="message-dialog-input" value={contactQuery} onChange={event => setContactQuery(event.target.value)} placeholder="Rechercher une personne" aria-label="Rechercher une personne" autoFocus />
+      <div className="message-contact-list">{contacts.map(contact => { const selectedContact = selectedContacts.includes(contact.id); return <button type="button" key={contact.id} className={`message-contact-row ${selectedContact ? 'selected' : ''}`} onClick={() => setSelectedContacts(current => groupMode ? (selectedContact ? current.filter(id => id !== contact.id) : [...current, contact.id]) : [contact.id])}><div className="avatar avatar-sm avatar-soft">{contact.avatar_url ? <img src={contact.avatar_url} alt="" /> : (contact.full_name || '').split(/\s+/).map(part => part[0]).join('').slice(0,2).toUpperCase()}</div><div><strong>{contact.full_name || ''}</strong><small>@{contact.username || ''}</small></div><span>{selectedContact ? '✓' : '+'}</span></button> })}</div>
+      <div className="message-dialog-footer"><span>{selectedContacts.length ? `${selectedContacts.length} sélectionné(s)` : ''}</span><button type="button" className="primary-button" disabled={!selectedContacts.length || creatingConversation || (groupMode && !groupTitle.trim())} onClick={() => void startConversation()}>{creatingConversation ? 'Création…' : groupMode ? 'Créer le groupe' : 'Commencer'}</button></div>
+    </div></div>}
   </section>
 }
