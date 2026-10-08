@@ -123,11 +123,24 @@ export async function searchMessageContacts(userId: string, query: string) {
   return (data ?? []) as ProfileRecord[]
 }
 
+async function requireProfilesExist(userIds: string[]) {
+  const ids = [...new Set(userIds.filter(Boolean))]
+  if (!ids.length) throw new Error('Aucun profil sélectionné.')
+  const client = requireSupabase()
+  const { data, error } = await client.from('profiles').select('id').in('id', ids)
+  if (error) throw error
+  const existing = new Set((data ?? []).map((row: { id: string }) => row.id))
+  const missing = ids.filter(id => !existing.has(id))
+  if (missing.length) throw new Error('Le profil sélectionné n’existe pas dans Avani Pro.')
+  return existing
+}
+
 export async function createGroupConversation(userId: string, title: string, memberIds: string[]) {
   const name = title.trim()
   const uniqueMembers = [...new Set(memberIds.filter(id => id && id !== userId))]
   if (!name) throw new Error('Le nom du groupe est requis.')
   if (!uniqueMembers.length) throw new Error('Ajoutez au moins une personne au groupe.')
+  await requireProfilesExist([userId, ...uniqueMembers])
   const client = requireSupabase()
   const { data: conversation, error } = await client.from('conversations').insert({ title: name, is_group: true, created_by: userId }).select('id, title, is_group, updated_at, last_message_id').single()
   if (error) throw error
@@ -141,11 +154,31 @@ export async function createGroupConversation(userId: string, title: string, mem
 }
 
 export async function createDirectConversation(userId: string, contactId: string, contactName: string) {
+  if (!contactId || contactId === userId) throw new Error('Profil destinataire invalide.')
+  await requireProfilesExist([userId, contactId])
   const client = requireSupabase()
-  const { data: conversation, error } = await client.from('conversations').insert({ title: contactName, is_group: false, created_by: userId }).select('id, title, is_group, updated_at').single()
+
+  const { data: myMemberships, error: myMembershipsError } = await client.from('conversation_members').select('conversation_id').eq('user_id', userId)
+  if (myMembershipsError) throw myMembershipsError
+  const myConversationIds = (myMemberships ?? []).map(row => row.conversation_id)
+  if (myConversationIds.length) {
+    const { data: shared, error: sharedError } = await client
+      .from('conversation_members')
+      .select('conversation:conversations(id, title, is_group, updated_at, last_message_id)')
+      .eq('user_id', contactId)
+      .in('conversation_id', myConversationIds)
+    if (sharedError) throw sharedError
+    const existing = (shared ?? []).map((row: any) => Array.isArray(row.conversation) ? row.conversation[0] : row.conversation).find((conversation: ConversationRecord | null) => conversation && !conversation.is_group)
+    if (existing) return existing
+  }
+
+  const { data: conversation, error } = await client.from('conversations').insert({ title: contactName, is_group: false, created_by: userId }).select('id, title, is_group, updated_at, last_message_id').single()
   if (error) throw error
   const { error: membersError } = await client.from('conversation_members').insert([{ conversation_id: conversation.id, user_id: userId }, { conversation_id: conversation.id, user_id: contactId }])
-  if (membersError) throw membersError
+  if (membersError) {
+    await client.from('conversations').delete().eq('id', conversation.id).eq('created_by', userId)
+    throw membersError
+  }
   return conversation as ConversationRecord
 }
 
