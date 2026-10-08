@@ -20,7 +20,7 @@ export type MessageRecord = {
   sender?: Pick<ProfileRecord, 'username' | 'full_name' | 'avatar_url'>
   reply_to?: Pick<MessageRecord, 'id' | 'body' | 'sender_id'> | null
 }
-export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; last_message_id?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord }[] }
+export type ConversationRecord = { id: string; title: string | null; is_group: boolean; is_public?: boolean; updated_at: string; last_message_id?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord }[] }
 
 export async function createPost(authorId: string, body: string, postType = 'text') {
   const client = requireSupabase()
@@ -36,9 +36,39 @@ export async function getMyProfile(user: User) {
 }
 
 export async function listConversations(userId: string) {
-  const { data, error } = await requireSupabase().from('conversation_members').select('conversation:conversations(id, title, is_group, updated_at, last_message_id), profile:profiles(id, username, full_name, avatar_url, bio, verified_type)').eq('user_id', userId)
+  const { data, error } = await requireSupabase().from('conversation_members').select('conversation:conversations(id, title, is_group, is_public, updated_at, last_message_id), profile:profiles(id, username, full_name, avatar_url, bio, verified_type)').eq('user_id', userId)
   if (error) throw error
   return (data ?? []).map((row: any) => ({ ...row.conversation, conversation_members: [{ user_id: row.user_id, profile: row.profile }] })) as ConversationRecord[]
+}
+
+export async function listPublicGroups() {
+  const { data, error } = await requireSupabase()
+    .from('conversations')
+    .select('id, title, is_group, is_public, updated_at, last_message_id')
+    .eq('is_group', true)
+    .eq('is_public', true)
+    .order('updated_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as ConversationRecord[]
+}
+
+export async function joinPublicGroup(userId: string, conversationId: string) {
+  await requireProfilesExist([userId])
+  const client = requireSupabase()
+  const { error } = await client.from('conversation_members').upsert(
+    { conversation_id: conversationId, user_id: userId },
+    { onConflict: 'conversation_id,user_id', ignoreDuplicates: true },
+  )
+  if (error) throw error
+  const { data, error: conversationError } = await client
+    .from('conversations')
+    .select('id, title, is_group, is_public, updated_at, last_message_id')
+    .eq('id', conversationId)
+    .eq('is_group', true)
+    .eq('is_public', true)
+    .single()
+  if (conversationError) throw conversationError
+  return data as ConversationRecord
 }
 
 export async function listMessages(conversationId: string, before?: string, limit = 50) {
