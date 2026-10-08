@@ -228,3 +228,57 @@
   .create-top{padding:8px}
   .topbar-nav button{padding:7px 8px}
 }
+
+
+/* Main account menu — keep each action separated and readable */
+.top-actions{position:relative}
+.main-menu{
+  position:absolute;
+  top:calc(100% + 10px);
+  right:0;
+  z-index:1000;
+  width:190px;
+  padding:7px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:rgba(12,18,34,.98);
+  box-shadow:0 18px 45px rgba(0,0,0,.35);
+  backdrop-filter:blur(18px);
+}
+.main-menu button{
+  width:100%;
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding:9px 11px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:var(--white);
+  font:600 12px 'Space Grotesk',sans-serif;
+  text-align:left;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.main-menu button:hover{
+  background:rgba(79,124,255,.14);
+}
+.main-menu .menu-danger{
+  color:#ff7b8c;
+  border-top:1px solid var(--line);
+  margin-top:3px;
+  padding-top:11px;
+}
+.main-menu .menu-danger:hover{
+  background:rgba(255,77,101,.10);
+}
+@media(max-width:560px){
+  .main-menu{
+    right:0;
+    width:180px;
+  }
+}
