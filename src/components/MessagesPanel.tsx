@@ -5,10 +5,6 @@ import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
 
-function messageAuthorName(message: MessageRecord) {
-  return message.sender?.full_name || message.sender?.username || ''
-}
-
 export function MessagesPanel({ user, onAction, initialConversationId }: { user: User | null; onAction: (message: string) => void; initialConversationId?: string }) {
   const [conversations, setConversations] = useState<ConversationRecord[]>([])
   const [selected, setSelected] = useState<ConversationRecord | null>(null)
@@ -63,7 +59,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les messages.') })
     void markConversationRead(selected.id, user.id).catch(() => undefined)
 
-    const channel = supabase.channel(`conversation:${selected.id}`, {
+    const client = supabase
+    const channel = client.channel(`conversation:${selected.id}`,
       config: { presence: { key: user.id } },
     })
 
@@ -83,11 +80,12 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       })
       .on('broadcast', { event: 'typing' }, payload => {
         const data = payload.payload as { userId?: string; name?: string; active?: boolean }
-        if (!data.userId || data.userId === user.id) return
+        const typingUserId = data.userId
+        if (!typingUserId || typingUserId === user.id) return
         setTyping(current => {
           const next = { ...current }
-          if (data.active) next[data.userId] = data.name || ''
-          else delete next[data.userId]
+          if (data.active) next[typingUserId] = data.name || ''
+          else delete next[typingUserId]
           return next
         })
       })
@@ -115,13 +113,15 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       window.removeEventListener('online', onOnline)
       window.removeEventListener('offline', onOffline)
       if (typingTimeout.current) window.clearTimeout(typingTimeout.current)
-      void supabase.removeChannel(channel)
+      void client.removeChannel(channel)
     }
   }, [selected, user])
 
   const broadcastTyping = async (active: boolean) => {
     if (!selected || !user || !supabase) return
-    const channel = supabase.getChannels().find(item => item.topic === `realtime:conversation:${selected.id}`)
+    const client = supabase
+    if (!client) return
+    const channel = client.getChannels().find(item => item.topic === `realtime:conversation:${selected.id}`)
     if (!channel) return
     await channel.send({ type: 'broadcast', event: 'typing', payload: { userId: user.id, name: user.user_metadata?.full_name || '', active } })
   }
