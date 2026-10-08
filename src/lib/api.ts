@@ -131,8 +131,14 @@ async function requireProfilesExist(userIds: string[]) {
   if (error) throw error
   const existing = new Set((data ?? []).map((row: { id: string }) => row.id))
   const missing = ids.filter(id => !existing.has(id))
-  if (missing.length) throw new Error('Le profil sélectionné n’existe pas dans Avani Pro.')
+  if (missing.length) throw new Error('Le profil sélectionné n’existe pas dans Avani Pro. Créez d’abord le profil dans Supabase.')
   return existing
+}
+
+async function getConversation(client: ReturnType<typeof requireSupabase>, conversationId: string) {
+  const { data, error } = await client.from('conversations').select('id, title, is_group, updated_at, last_message_id').eq('id', conversationId).single()
+  if (error) throw error
+  return data as ConversationRecord
 }
 
 export async function createGroupConversation(userId: string, title: string, memberIds: string[]) {
@@ -142,15 +148,18 @@ export async function createGroupConversation(userId: string, title: string, mem
   if (!uniqueMembers.length) throw new Error('Ajoutez au moins une personne au groupe.')
   await requireProfilesExist([userId, ...uniqueMembers])
   const client = requireSupabase()
-  const { data: conversation, error } = await client.from('conversations').insert({ title: name, is_group: true, created_by: userId }).select('id, title, is_group, updated_at, last_message_id').single()
+  const conversationId = crypto.randomUUID()
+
+  const { error } = await client.from('conversations').insert({ id: conversationId, title: name, is_group: true, created_by: userId })
   if (error) throw error
-  const members = [userId, ...uniqueMembers].map(memberId => ({ conversation_id: conversation.id, user_id: memberId }))
+
+  const members = [userId, ...uniqueMembers].map(memberId => ({ conversation_id: conversationId, user_id: memberId }))
   const { error: membersError } = await client.from('conversation_members').insert(members)
   if (membersError) {
-    await client.from('conversations').delete().eq('id', conversation.id).eq('created_by', userId)
+    await client.from('conversations').delete().eq('id', conversationId).eq('created_by', userId)
     throw membersError
   }
-  return conversation as ConversationRecord
+  return getConversation(client, conversationId)
 }
 
 export async function createDirectConversation(userId: string, contactId: string, contactName: string) {
@@ -172,14 +181,15 @@ export async function createDirectConversation(userId: string, contactId: string
     if (existing) return existing
   }
 
-  const { data: conversation, error } = await client.from('conversations').insert({ title: contactName, is_group: false, created_by: userId }).select('id, title, is_group, updated_at, last_message_id').single()
+  const conversationId = crypto.randomUUID()
+  const { error } = await client.from('conversations').insert({ id: conversationId, title: contactName, is_group: false, created_by: userId })
   if (error) throw error
-  const { error: membersError } = await client.from('conversation_members').insert([{ conversation_id: conversation.id, user_id: userId }, { conversation_id: conversation.id, user_id: contactId }])
+  const { error: membersError } = await client.from('conversation_members').insert([{ conversation_id: conversationId, user_id: userId }, { conversation_id: conversationId, user_id: contactId }])
   if (membersError) {
-    await client.from('conversations').delete().eq('id', conversation.id).eq('created_by', userId)
+    await client.from('conversations').delete().eq('id', conversationId).eq('created_by', userId)
     throw membersError
   }
-  return conversation as ConversationRecord
+  return getConversation(client, conversationId)
 }
 
 export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry'
