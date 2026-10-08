@@ -99,6 +99,18 @@ export async function deleteComment(commentId: string, authorId: string) {
   if (error) throw error
 }
 
+export async function uploadPostImage(userId: string, file: File) {
+  if (!file.type.startsWith('image/')) throw new Error('Choisissez une image pour la publication.')
+  if (file.size > 10 * 1024 * 1024) throw new Error('L’image doit faire moins de 10 Mo.')
+  const path = `${userId}/posts/${crypto.randomUUID()}-${file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-')}`
+  const client = requireSupabase()
+  const { error } = await client.storage.from('files').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' })
+  if (error) throw error
+  const { data, error: signedError } = await client.storage.from('files').createSignedUrl(path, 60 * 60 * 24 * 7)
+  if (signedError || !data?.signedUrl) throw signedError ?? new Error('Impossible de préparer l’image.')
+  return data.signedUrl
+}
+
 export async function uploadPrivateFile(userId: string, file: File) {
   if (file.size > 50 * 1024 * 1024) throw new Error('La taille maximale est de 50 Mo.')
   const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/-+/g, '-')
