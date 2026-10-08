@@ -284,3 +284,296 @@
 }
 .feed-filter-tabs{display:flex;align-items:center;gap:4px}.feed-count{margin-left:auto;color:var(--muted);font-size:10px}.feed-filter-tabs button{border-radius:8px;padding:7px 10px}.feed-filter-tabs .filter-active{background:rgba(79,124,255,.15)}
 @media(max-width:760px){.feed-filter{gap:6px}.feed-filter-tabs{overflow-x:auto}.feed-filter-tabs button{white-space:nowrap;padding:6px 8px}.feed-count{display:none}}
+
+
+/* Facebook-style home layout — faithful to the approved reference, while keeping Avani Pro identity */
+.app-shell{
+  grid-template-columns:270px minmax(0,1fr) 390px;
+  max-width:1540px;
+  min-height:100vh;
+}
+.sidebar{
+  padding:20px 18px 24px;
+  background:#080d19;
+}
+.sidebar .brand{
+  padding:0 10px;
+  font-size:20px;
+}
+.sidebar .profile-mini{
+  margin:34px 10px 30px;
+}
+.main-content{
+  max-width:none;
+  padding:18px 22px 60px;
+  min-width:0;
+}
+.topbar{
+  display:grid;
+  grid-template-columns:minmax(250px,1fr) auto auto;
+  align-items:center;
+  gap:18px;
+  margin-bottom:18px;
+  min-height:48px;
+}
+.topbar-brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  min-width:0;
+}
+.topbar-brand-button{
+  order:0;
+}
+.topbar-brand-button .brand-mark{
+  width:38px;
+  height:38px;
+}
+.topbar-brand-button .brand-mark img,
+.sidebar .brand-mark img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.topbar .search{
+  width:min(250px,100%);
+  padding:10px 14px;
+  border-radius:18px;
+  background:#10192c;
+}
+.topbar-nav{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  white-space:nowrap;
+}
+.topbar-nav button{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:38px;
+  padding:8px 11px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:#a8b3cc;
+  font:600 11px 'Space Grotesk';
+}
+.topbar-nav button:hover,
+.topbar-nav button.active{
+  color:#fff;
+  background:rgba(24,119,242,.12);
+}
+.topbar-status{display:none}
+.top-actions{
+  justify-content:flex-end;
+  gap:8px;
+}
+.create-top,.profile-trigger,.menu-trigger{
+  border:1px solid #263655;
+  background:#111b30;
+  color:#fff;
+  border-radius:9px;
+}
+.create-top{padding:9px 12px}
+.profile-trigger{padding:5px 8px}
+.menu-trigger{width:35px;height:35px}
+.main-menu{
+  top:55px;
+  right:0;
+  width:195px;
+  z-index:1000;
+}
+.facebook-welcome{
+  display:block;
+  margin:0 0 18px;
+  padding:20px 20px 16px;
+  border:1px solid rgba(64,105,184,.5);
+  border-radius:15px;
+  background:linear-gradient(135deg,#101f4d 0%,#101a39 58%,#0d1428 100%);
+  box-shadow:0 10px 30px rgba(0,0,0,.16);
+}
+.facebook-welcome-main{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  min-width:0;
+}
+.welcome-brand-orb{
+  width:66px;
+  height:66px;
+  flex:0 0 66px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:radial-gradient(circle,#1b2e7c 0%,#111c4b 48%,#091020 100%);
+  border:1px solid #5268d8;
+  box-shadow:0 0 28px rgba(91,82,230,.5);
+}
+.welcome-brand-orb img{
+  width:51px;
+  height:51px;
+  object-fit:contain;
+}
+.facebook-welcome .welcome-copy h1{
+  margin:3px 0 5px;
+  font:700 27px 'Space Grotesk';
+  letter-spacing:-.035em;
+}
+.facebook-welcome .welcome-copy p{
+  max-width:610px;
+  margin:0;
+  font-size:12px;
+  line-height:1.5;
+  color:#b8c3da;
+}
+.facebook-network-bar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 120px 120px;
+  align-items:center;
+  margin-top:18px;
+  padding:10px 14px;
+  border:1px solid #385078;
+  border-radius:11px;
+  background:rgba(8,15,31,.4);
+}
+.network-active-copy{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  min-width:0;
+}
+.network-active-copy .pulse-dot{
+  width:10px;
+  height:10px;
+  flex:0 0 10px;
+}
+.network-active-copy div{
+  display:grid;
+  gap:2px;
+}
+.network-active-copy strong{
+  font-size:13px;
+  color:#f3f6ff;
+}
+.network-active-copy small{
+  color:#9aa9c6;
+  font-size:10px;
+}
+.network-metric{
+  min-height:43px;
+  padding-left:18px;
+  border:0;
+  border-left:1px solid #304362;
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+}
+.network-metric b{
+  display:block;
+  color:#f4f7ff;
+  font:700 20px 'Space Grotesk';
+}
+.network-metric span{
+  color:#95a3bf;
+  font-size:9px;
+}
+.stories-section{
+  margin-bottom:18px;
+  padding:14px 16px;
+  border-radius:15px;
+}
+.stories-heading{
+  margin-bottom:10px;
+}
+.stories-heading strong{
+  font-size:17px;
+}
+.story-card{
+  flex-basis:112px;
+  height:160px;
+  border-radius:12px;
+}
+.compact-composer{
+  margin-bottom:17px;
+  padding:13px 16px;
+  border-radius:15px;
+}
+.compact-composer .composer-divider{
+  margin:9px 0 4px;
+}
+.feed-filter{
+  margin-bottom:10px;
+}
+.post-list{
+  gap:12px;
+}
+.post-card{
+  border-radius:15px;
+}
+.right-rail{
+  padding:18px 20px 28px 0;
+}
+.right-rail .rail-card{
+  padding:16px;
+  border-radius:15px;
+  margin-bottom:14px;
+  background:linear-gradient(145deg,#10182b,#0d1424);
+}
+.right-rail .card-heading{
+  margin-bottom:15px;
+}
+.right-rail .card-heading span{
+  font-size:14px;
+  font-weight:700;
+}
+.right-rail .card-heading button{
+  color:#2d9cff;
+}
+.right-rail .suggestion-list{
+  gap:12px;
+}
+.right-rail .suggestion{
+  gap:10px;
+}
+.right-rail .follow-button{
+  width:auto;
+  min-width:72px;
+  padding:0 11px;
+  height:32px;
+  border-radius:8px;
+  background:#087cf5;
+  border-color:#087cf5;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+}
+.right-rail .follow-button.following{
+  background:rgba(34,211,238,.12);
+  border-color:#2a6980;
+  color:#5be4ef;
+}
+@media(max-width:1250px){
+  .app-shell{grid-template-columns:250px minmax(0,1fr) 315px}
+  .topbar-nav button{padding-left:8px;padding-right:8px}
+}
+@media(max-width:1050px){
+  .app-shell{grid-template-columns:235px minmax(0,1fr)}
+  .right-rail{display:none}
+}
+@media(max-width:760px){
+  .main-content{padding:12px 10px 75px}
+  .topbar{grid-template-columns:1fr auto;gap:8px}
+  .topbar-brand .search{width:auto;flex:1}
+  .topbar-brand-button>span:last-child{display:none}
+  .topbar-nav{grid-column:1/-1;grid-row:2;justify-content:flex-start;overflow-x:auto}
+  .facebook-welcome{padding:14px}
+  .facebook-welcome-main{gap:10px}
+  .welcome-brand-orb{width:50px;height:50px;flex-basis:50px}
+  .welcome-brand-orb img{width:39px;height:39px}
+  .facebook-welcome .welcome-copy h1{font-size:21px}
+  .facebook-network-bar{grid-template-columns:1fr 75px 75px;padding:8px}
+  .network-active-copy small{display:none}
+  .network-active-copy strong{font-size:11px}
+}
