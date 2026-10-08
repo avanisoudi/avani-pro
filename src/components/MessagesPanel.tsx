@@ -60,7 +60,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     void markConversationRead(selected.id, user.id).catch(() => undefined)
 
     const client = supabase
-    const channel = client.channel(`conversation:${selected.id}`,
+    const channel = client.channel(`conversation:${selected.id}`, {
       config: { presence: { key: user.id } },
     })
 
