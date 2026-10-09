@@ -858,3 +858,49 @@ html,body,#root{background:#f0f2f5!important;color:#1c1e21!important}
 .fb-engagement-summary,.post-social-summary{color:#65676b!important;border-color:#d9dde3!important}.fb-reaction-number,.reaction-total-number,.fb-engagement-meta,.social-summary-right{color:#65676b!important}
 .post-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important;border-color:#d9dde3!important}.post-actions>button,.post-actions>.reaction-action>button{min-height:36px!important;color:#65676b!important;font-size:12px!important}
 }
+
+/* Mobile feed rebuilt to follow the supplied Facebook reference */
+@media(max-width:760px){
+  .topbar{display:none!important}
+  .main-content{padding-top:0!important;padding-bottom:76px!important}
+  .mobile-tabbar{position:fixed!important;z-index:120!important;left:0!important;right:0!important;bottom:0!important;display:flex!important;align-items:center!important;justify-content:space-around!important;gap:2px!important;height:60px!important;padding:4px 5px!important;background:#fff!important;border-top:1px solid #d9dde3!important;box-shadow:0 -1px 4px rgba(0,0,0,.06)!important}
+  .mobile-tabbar .nav-button{display:flex!important;flex:1 1 0!important;min-width:0!important;min-height:48px!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;padding:4px 1px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#65676b!important;font-size:10px!important}
+  .mobile-tabbar .nav-button.active{color:#1877f2!important;background:transparent!important}
+  .compact-composer{order:1!important;padding:9px 12px 7px!important}
+  .composer-top{gap:8px!important;align-items:center!important}
+  .composer-top>.avatar{display:grid!important;flex:0 0 40px!important;width:40px!important;height:40px!important}
+  .composer-field{flex:1 1 auto!important;min-width:0!important}
+  .composer-top textarea{min-height:42px!important;height:42px!important;max-height:80px!important;padding:10px 13px!important;line-height:22px!important;resize:none!important}
+  .composer-actions{justify-content:space-between!important;gap:4px!important;margin-top:7px!important;padding-top:6px!important}
+  .facebook-composer-action{flex:1 1 0!important;min-width:0!important;gap:0!important;padding:5px!important}
+  .facebook-composer-action strong{display:none!important}
+  .composer-photo-icon,.composer-feeling-icon{font-size:23px!important;line-height:24px!important}
+  .facebook-publish-button{flex:0 0 auto!important;min-width:70px!important;min-height:32px!important;font-size:13px!important}
+  .stories-section{padding:9px 0 10px!important}
+  .story-card{flex-basis:110px!important;width:110px!important;height:160px!important;border-radius:10px!important}
+  .story-card.story-self:not(.story-live) .story-media-preview{height:67%!important}
+  .story-card.story-self:not(.story-live) .story-shade{background:linear-gradient(180deg,transparent 58%,#fff 58%)!important}
+  .story-card.story-self:not(.story-live) strong{bottom:8px!important}
+  .post-list{gap:8px!important}
+  .post-card{padding:12px 12px 6px!important}
+  .post-header{min-height:42px!important}
+  .post-author strong{font-size:15px!important;font-weight:600!important}
+  .post-author span{font-size:12px!important}
+  .post-author small{display:none!important}
+  .post-body{margin:8px 0 10px!important;font-size:15px!important;line-height:1.34!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important}
+  .post-image{width:calc(100% + 24px)!important;max-width:none!important;max-height:none!important;margin:8px -12px 0!important;border-radius:0!important}
+  .tag-row{margin:4px 0!important}
+  .fb-engagement-summary{min-height:36px!important;border-bottom:1px solid #e4e6eb!important}
+  .post-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:0!important;margin-top:3px!important;padding:2px 0!important;border-top:0!important}
+  .post-actions>button,.post-actions>.reaction-action>button{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:0!important;min-height:38px!important;padding:5px 2px!important;color:#65676b!important;font-size:12px!important;white-space:nowrap!important}
+  .post-actions .save-action{display:none!important}
+  .comment-box{margin-top:0!important}
+  .comment-summary{border-top:0!important}
+}
+@media(max-width:380px){
+  .mobile-tabbar .nav-button{font-size:9px!important}
+  .composer-top>.avatar{flex-basis:36px!important;width:36px!important;height:36px!important}
+  .facebook-publish-button{min-width:60px!important;padding:5px 8px!important}
+  .story-card{flex-basis:102px!important;width:102px!important;height:150px!important}
+  .post-actions>button,.post-actions>.reaction-action>button{font-size:11px!important}
+}
