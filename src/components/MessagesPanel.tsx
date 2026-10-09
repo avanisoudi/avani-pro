@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { createDirectConversation, createGroupConversation, joinPublicGroup, listConversations, listMessages, listPublicGroups, listMessageReactions, markConversationRead, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type ReactionType } from '../lib/api'
+import { createDirectConversation, createGroupConversation, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listPublicGroups, listMessageReactions, markConversationRead, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type ReactionType, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
+
+function MessageAttachment({ message }: { message: MessageRecord }) {
+  const [url, setUrl] = useState('')
+  const [error, setError] = useState(false)
+  useEffect(() => { let active = true; if (!message.attachment_path) return () => { active = false }; getMessageAttachmentUrl(message.attachment_path).then(value => { if (active) setUrl(value) }).catch(() => { if (active) setError(true) }); return () => { active = false } }, [message.attachment_path])
+  if (error) return <span className="attachment-error">Pièce jointe indisponible</span>
+  if (!url) return <span className="attachment-loading">Chargement de la pièce jointe…</span>
+  if (message.attachment_mime_type?.startsWith('image/')) return <a href={url} target="_blank" rel="noreferrer"><img className="message-attachment-image" src={url} alt={message.attachment_name || 'Pièce jointe'} /></a>
+  return <a className="message-attachment-link" href={url} target="_blank" rel="noreferrer">↗ {message.attachment_name || 'Ouvrir la pièce jointe'}</a>
+}
 
 export function MessagesPanel({ user, onAction, initialConversationId }: { user: User | null; onAction: (message: string) => void; initialConversationId?: string }) {
   const [conversations, setConversations] = useState<ConversationRecord[]>([])
@@ -12,6 +22,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [selected, setSelected] = useState<ConversationRecord | null>(null)
   const [messages, setMessages] = useState<MessageRecord[]>([])
   const [draft, setDraft] = useState('')
+  const [attachment, setAttachment] = useState<File | null>(null)
+  const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
@@ -215,21 +227,32 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     typingTimeout.current = window.setTimeout(() => { void broadcastTyping(false) }, 1800)
   }
 
+  const chooseAttachment = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (file.size > MAX_MESSAGE_ATTACHMENT_BYTES) { onAction('La pièce jointe dépasse la limite de 25 Mo.'); return }
+    setAttachment(file)
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!selected || !user || !draft.trim()) return
+    if (!selected || !user || (!draft.trim() && !attachment) || sending) return
     const body = draft.trim()
+    setSending(true)
     setDraft('')
     void broadcastTyping(false)
     try {
-      const message = await sendMessage(selected.id, user.id, body, { replyToId: replyTo?.id ?? null })
+      const attachmentPath = attachment ? await uploadMessageAttachment(selected.id, user.id, attachment) : null
+      const message = await sendMessage(selected.id, user.id, body || `Pièce jointe : ${attachment?.name || ''}`, { replyToId: replyTo?.id ?? null, attachmentPath, attachmentName: attachment?.name ?? null, attachmentMimeType: attachment?.type ?? null, attachmentSizeBytes: attachment?.size ?? null, messageType: attachment?.type.startsWith('image/') ? 'image' : attachment ? 'file' : 'text' })
       setMessages(current => current.some(item => item.id === message.id) ? current : [...current, message])
       setReplyTo(null)
+      setAttachment(null)
       setConversations(current => current.map(item => item.id === selected.id ? { ...item, updated_at: message.created_at, last_message_id: message.id } : item).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)))
     } catch (caught) {
       setDraft(body)
       onAction(caught instanceof Error ? caught.message : 'Message non envoyé.')
-    }
+    } finally { setSending(false) }
   }
 
   const loadOlder = async () => {
@@ -348,7 +371,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           {messages.map(message => <div className={`message-bubble ${message.sender_id === user.id ? 'mine' : ''}`} key={message.id}>
             {message.reply_to && <button type="button" className="message-reply-preview" onClick={() => document.getElementById(`message-${message.reply_to?.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>↳ {message.reply_to.body}</button>}
             {editingId === message.id ? <div><textarea value={editingBody} onChange={event => setEditingBody(event.target.value)} aria-label="Modifier le message" /><button type="button" onClick={() => void saveEdit()}>Enregistrer</button><button type="button" onClick={() => { setEditingId(null); setEditingBody('') }}>Annuler</button></div> : <>
-              <span id={`message-${message.id}`}>{message.deleted_at ? 'Ce message a été supprimé.' : message.body}</span>
+              {message.attachment_path && !message.deleted_at && <MessageAttachment message={message} />}<span id={`message-${message.id}`}>{message.deleted_at ? 'Ce message a été supprimé.' : message.body}</span>
               <small>{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</small>
               {!message.deleted_at && <>
                 <div className="message-reactions" aria-label="Réactions au message">
@@ -372,8 +395,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         {replyTo && <div className="reply-composer"><span>Réponse à : {replyTo.body}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Annuler la réponse">×</button></div>}
 
         <form className="message-compose" onSubmit={submit}>
-          <input value={draft} onChange={event => handleDraftChange(event.target.value)} placeholder={selected.is_group ? 'Écrire au groupe…' : 'Écrire un message…'} aria-label="Votre message" disabled={connection === 'offline'} />
-          <button className="primary-button" disabled={!draft.trim() || connection === 'offline'}>Envoyer ↗</button>
+          <div className="message-input-wrap"><input value={draft} onChange={event => handleDraftChange(event.target.value)} placeholder={selected.is_group ? 'Écrire au groupe…' : 'Écrire un message…'} aria-label="Votre message" disabled={connection === 'offline'} />{attachment && <span className="attachment-chip">{attachment.name}<button type="button" onClick={() => setAttachment(null)} aria-label="Retirer la pièce jointe">×</button></span>}</div>
+          <label className="attachment-button" title="Ajouter une pièce jointe">＋<input type="file" accept="image/*,video/*,application/pdf,text/plain" onChange={chooseAttachment} /></label><button className="primary-button" disabled={(!draft.trim() && !attachment) || connection === 'offline' || sending}>{sending ? 'Envoi…' : 'Envoyer ↗'}</button>
         </form>
       </> : <div className="empty-thread"><span>◌</span><p>Sélectionnez une conversation.</p></div>}
     </div>

@@ -27,6 +27,8 @@ La migration `004_persistent_interactions.sql` ajoute `saved_posts` et `post_sha
 
 La migration `006_group_chat.sql` ajoute `groups.conversation_id` et les policies de membres. La création d’un groupe crée aussi une ligne `conversations` avec `is_group=true` et ajoute le propriétaire à `conversation_members`. Le groupe est ensuite visible dans `MessagesPanel`, avec historique Postgres, envoi durable, abonnement Realtime et invitation de profils dans le groupe et son chat. Cette migration est une **étape d’activation de déploiement**, pas une faille : tant qu’elle n’est pas exécutée dans le SQL Editor, le code déployé ne peut pas créer les relations groupe/chat attendues.
 
+La migration `007_message_attachments.sql` crée le bucket privé `message-attachments`. Les objets utilisent le chemin `<conversation_id>/<uploader_id>/<uuid>-<nom>`. Les membres de la conversation peuvent créer une URL signée de lecture; seul l’auteur de l’upload peut modifier ou supprimer son objet. Le frontend limite les pièces jointes à 25 Mo et accepte les images, vidéos, PDF et fichiers texte. Il faut exécuter cette migration une fois dans Supabase avant d’utiliser le bouton `＋` dans le composeur de messages.
+
 Le parcours d’inscription est en deux étapes dans `AuthModal.tsx`, avec Google OAuth Supabase. Les toasts d’interface restent visibles 8 secondes puis disparaissent automatiquement. La persistance de session est activée par `persistSession`, `autoRefreshToken` et `detectSessionInUrl` dans `src/lib/supabase.ts`.
 
 ## Routes client / API

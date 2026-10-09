@@ -22,6 +22,25 @@ export type MessageRecord = {
 }
 export type ConversationRecord = { id: string; title: string | null; is_group: boolean; is_public?: boolean; updated_at: string; last_message_id?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord }[] }
 
+export const MESSAGE_ATTACHMENT_BUCKET = 'message-attachments'
+export const MAX_MESSAGE_ATTACHMENT_BYTES = 25 * 1024 * 1024
+
+export async function uploadMessageAttachment(conversationId: string, userId: string, file: File) {
+  if (file.size <= 0 || file.size > MAX_MESSAGE_ATTACHMENT_BYTES) throw new Error('La pièce jointe doit faire au maximum 25 Mo.')
+  if (!file.type || (!file.type.startsWith('image/') && !file.type.startsWith('video/') && file.type !== 'application/pdf' && !file.type.startsWith('text/'))) throw new Error('Type de fichier non pris en charge. Utilisez une image, une vidéo, un PDF ou un fichier texte.')
+  const safeName = file.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'attachment'
+  const path = `${conversationId}/${userId}/${crypto.randomUUID()}-${safeName}`
+  const { error } = await requireSupabase().storage.from(MESSAGE_ATTACHMENT_BUCKET).upload(path, file, { upsert: false, contentType: file.type })
+  if (error) throw error
+  return path
+}
+
+export async function getMessageAttachmentUrl(path: string, expiresIn = 3600) {
+  const { data, error } = await requireSupabase().storage.from(MESSAGE_ATTACHMENT_BUCKET).createSignedUrl(path, expiresIn)
+  if (error) throw error
+  return data.signedUrl
+}
+
 export async function createPost(authorId: string, body: string, postType = 'text') {
   const client = requireSupabase()
   const { data, error } = await client.from('posts').insert({ author_id: authorId, body: body.trim(), post_type: postType }).select('id, created_at').single()
