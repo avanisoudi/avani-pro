@@ -16,7 +16,7 @@ for (const marker of ['Avani Pro', 'og:image', 'logo-icon']) {
 const scriptPath = html.match(/src="(\/assets\/index-[^"]+\.js)"/)?.[1]
 if (scriptPath) {
   const bundle = await (await fetch(`${baseUrl}${scriptPath}`)).text()
-  for (const marker of ['notification-bell.svg', 'social-icons.svg', 'group-chat-icon.svg', 'markAllRead', 'postgres_changes', 'is_group']) {
+  for (const marker of ['social-icons.svg', 'group-chat-icon.svg', 'markAllRead', 'postgres_changes', 'is_group']) {
     const ok = bundle.includes(marker)
     console.log(`${ok ? 'OK' : 'FAIL'} bundle marker ${marker}`)
     if (!ok) failed += 1

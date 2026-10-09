@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { createDirectConversation, createGroupConversation, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listPublicGroups, listMessageReactions, markConversationRead, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type ReactionType, uploadMessageAttachment } from '../lib/api'
+import { createDirectConversation, createGroupConversation, deleteMessage, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listPublicGroups, listMessageReactions, markConversationRead, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
@@ -308,7 +308,6 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     const message = messages.find(item => item.id === editingId)
     if (!message) return
     try {
-      const { updateMessage } = await import('../lib/api')
       const updated = await updateMessage(editingId, user.id, editingBody)
       setMessages(current => current.map(item => item.id === editingId ? { ...item, ...updated } : item))
       setEditingId(null)
@@ -321,7 +320,6 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const removeMessage = async (message: MessageRecord) => {
     if (!user || message.sender_id !== user.id) return
     try {
-      const { deleteMessage } = await import('../lib/api')
       const deleted = await deleteMessage(message.id, user.id)
       setMessages(current => current.map(item => item.id === message.id ? { ...item, ...deleted, body: '', deleted_at: deleted.deleted_at } : item))
     } catch (caught) {
