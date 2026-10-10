@@ -59,8 +59,8 @@ function App() {
   const [active, setActive] = useState<NavKey>(initialNav)
   const [pathname, setPathname] = useState(initialPath)
   const [posts, setPosts] = useState<Post[]>([])
-  const [composer, setComposer] = useState('')
-  const [postImage, setPostImage] = useState<{ file: File; preview: string } | null>(null)
+
+
   const [toast, setToast] = useState('')
   const [followed, setFollowed] = useState<string[]>([])
   const [networkPeople, setNetworkPeople] = useState<ProfileRecord[]>([])
@@ -126,7 +126,6 @@ function App() {
       flash('Publication supprimée.')
     } catch (error) { flash(error instanceof Error ? error.message : 'La publication n’a pas pu être supprimée.') }
   }
-  const publish = async () => { if (!composer.trim() && !postImage) return; if (isSupabaseConfigured && !sessionUser) { openAuth(); return }; const body = composer.trim(); try { const imageUrl = sessionUser && postImage ? await uploadPostImage(sessionUser.id, postImage.file) : null; const persisted = sessionUser ? await createPost(sessionUser.id, imageUrl ? `${body}${body ? '\n\n' : ''}[image]${imageUrl}[/image]` : body, imageUrl ? 'image' : 'text') : null; if (!persisted) throw new Error('La publication n’a pas été enregistrée dans Supabase.')
       if (!sessionUser) throw new Error('Session expirée.')
       setPosts(current => [{ id: persisted.id, authorId: sessionUser.id, name: displayName, handle: displayUsername, role: profile?.bio || '', avatar: displayAvatar, time: 'à l’instant', body: imageUrl ? `${body}${body ? '\n\n' : ''}[image]${imageUrl}[/image]` : body, tags: body.match(/#[\w-]+/g) ?? [], stats: { likes: 0, comments: 0, shares: 0 }, kind: imageUrl ? 'image' : 'thought' }, ...current]); setComposer(''); setPostImage(null); flash('Publication enregistrée dans votre feed') } catch (caught) { flash(caught instanceof Error ? caught.message : 'La publication n’a pas pu être enregistrée.') } }
   useEffect(() => { if (!supabase) return; supabase.auth.getSession().then(({ data }) => { setSessionUser(data.session?.user ?? null); if (!data.session) setProfile(null) }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { setSessionUser(session?.user ?? null); if (!session) setProfile(null) }); return () => subscription.unsubscribe() }, [])
@@ -135,7 +134,6 @@ function App() {
   useEffect(() => { if (!sessionUser || !supabase) return; getMyProfile(sessionUser).then(setProfile).catch(() => undefined) }, [sessionUser])
   const openAuth = () => { if (!isSupabaseConfigured) { flash('Ajoutez vos variables Supabase dans Render pour activer la connexion.'); return }; setAuthOpen(true) }
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); setProfile(null); flash('Vous êtes déconnecté de votre espace sécurisé.') }
-  const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (file.type.startsWith('image/')) { if (file.size > 10 * 1024 * 1024) { flash('L’image doit faire moins de 10 Mo.'); return }; setPostImage({ file, preview: URL.createObjectURL(file) }); return }; if (!sessionUser) { openAuth(); return }; try { await uploadPrivateFile(sessionUser.id, file); flash(`Fichier « ${file.name} » sécurisé dans votre espace.`) } catch (error) { flash(error instanceof Error ? error.message : 'Le fichier n’a pas pu être envoyé.') } }
  
 
   if (!sessionUser) return <><PublicHome onAuth={openAuth} />{authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={flash} />}{toast && <div className="toast"><span>✦</span>{toast}</div>}</>
