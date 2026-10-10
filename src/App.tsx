@@ -122,9 +122,9 @@ function App() {
       const nextPost: Post = {
         id: created.id, authorId: sessionUser.id, name: authorName,
         handle: profile?.username ? `@${profile.username}` : sessionUser.email ? `@${sessionUser.email.split('@')[0]}` : '',
-        role: profile?.bio || '', avatar: authorName.split(/\\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase(),
+        role: profile?.bio || '', avatar: authorName.split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase(),
         avatarUrl: profile?.avatar_url ?? null, time: 'à l’instant', body: content,
-        tags: content.match(/#[\\w-]+/g) ?? [], stats: { likes: 0, comments: 0, shares: 0 },
+        tags: content.match(/#[\w-]+/g) ?? [], stats: { likes: 0, comments: 0, shares: 0 },
         kind: 'thought', liked: false, saved: false, verifiedType: profile?.verified_type ?? null,
         reactionCounts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
       }
