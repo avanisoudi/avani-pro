@@ -59,8 +59,6 @@ function App() {
   const [active, setActive] = useState<NavKey>(initialNav)
   const [pathname, setPathname] = useState(initialPath)
   const [posts, setPosts] = useState<Post[]>([])
-
-
   const [toast, setToast] = useState('')
   const [followed, setFollowed] = useState<string[]>([])
   const [networkPeople, setNetworkPeople] = useState<ProfileRecord[]>([])
@@ -126,15 +124,12 @@ function App() {
       flash('Publication supprimée.')
     } catch (error) { flash(error instanceof Error ? error.message : 'La publication n’a pas pu être supprimée.') }
   }
-      if (!sessionUser) throw new Error('Session expirée.')
-      setPosts(current => [{ id: persisted.id, authorId: sessionUser.id, name: displayName, handle: displayUsername, role: profile?.bio || '', avatar: displayAvatar, time: 'à l’instant', body: imageUrl ? `${body}${body ? '\n\n' : ''}[image]${imageUrl}[/image]` : body, tags: body.match(/#[\w-]+/g) ?? [], stats: { likes: 0, comments: 0, shares: 0 }, kind: imageUrl ? 'image' : 'thought' }, ...current]); setComposer(''); setPostImage(null); flash('Publication enregistrée dans votre feed') } catch (caught) { flash(caught instanceof Error ? caught.message : 'La publication n’a pas pu être enregistrée.') } }
   useEffect(() => { if (!supabase) return; supabase.auth.getSession().then(({ data }) => { setSessionUser(data.session?.user ?? null); if (!data.session) setProfile(null) }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { setSessionUser(session?.user ?? null); if (!session) setProfile(null) }); return () => subscription.unsubscribe() }, [])
   useEffect(() => { if (!sessionUser) { setNetworkPeople([]); setNetworkGroups([]); setFollowed([]); return }; Promise.all([listDiscoverableProfiles(sessionUser.id), listMyGroups(sessionUser.id), listFollowingIds(sessionUser.id)]).then(([people, groups, followingIds]) => { setNetworkPeople(people); setNetworkGroups(groups); setFollowed(followingIds) }).catch(() => { setNetworkPeople([]); setNetworkGroups([]); setFollowed([]) }) }, [sessionUser])
   useEffect(() => { if (!supabase) return; listFeedPosts(sessionUser?.id).then(feed => { if (supabase) setPosts(feed.map(post => ({ id: post.id, authorId: post.author?.id, name: post.author?.full_name || '', handle: post.author?.username ? `@${post.author.username}` : '', role: post.author?.bio || '', avatar: (post.author?.full_name || '').split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase(), avatarUrl: post.author?.avatar_url ?? null, time: new Date(post.created_at).toLocaleDateString('fr-FR'), body: post.body, tags: post.body.match(/#[\w-]+/g) ?? [], stats: { likes: post.likes, comments: post.comments, shares: post.shares }, kind: post.post_type === 'image' ? 'image' : post.post_type === 'link' ? 'link' : 'thought', liked: post.liked, reaction: post.reaction ?? undefined, reactionCounts: post.reactionCounts, saved: post.saved, verifiedType: post.author?.verified_type }))) }).catch(() => undefined) }, [sessionUser])
   useEffect(() => { if (!sessionUser || !supabase) return; getMyProfile(sessionUser).then(setProfile).catch(() => undefined) }, [sessionUser])
   const openAuth = () => { if (!isSupabaseConfigured) { flash('Ajoutez vos variables Supabase dans Render pour activer la connexion.'); return }; setAuthOpen(true) }
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); setProfile(null); flash('Vous êtes déconnecté de votre espace sécurisé.') }
- 
 
   if (!sessionUser) return <><PublicHome onAuth={openAuth} />{authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={flash} />}{toast && <div className="toast"><span>✦</span>{toast}</div>}</>
 
