@@ -1012,3 +1012,74 @@ html,body,#root{background:#f0f2f5!important;color:#1c1e21!important}
   .theme-light .rail-card .card-heading,.theme-light .network-stat strong,.theme-light .suggestion-copy strong {color:#1c1e21!important}
   .theme-light .rail-card p,.theme-light .suggestion-copy span,.theme-light .suggestion-copy small,.theme-light .footer-links {color:#65676b!important}
 }
+
+
+/* Compact Facebook-like density: smaller type, tighter spacing, less decorative chrome. */
+@media (min-width:761px) {
+  .app-shell.theme-light {grid-template-columns:228px minmax(460px, 620px) 270px!important;gap:14px!important}
+  .theme-light .sidebar {padding:14px 9px!important}
+  .theme-light .brand {gap:7px!important;font-size:20px!important}
+  .theme-light .brand-mark {width:32px!important;height:32px!important}
+  .theme-light .profile-mini {gap:8px!important;padding:8px 7px!important;margin:8px 0!important}
+  .theme-light .profile-mini .avatar {width:36px!important;height:36px!important}
+  .theme-light .profile-mini strong {font-size:13px!important}
+  .theme-light .profile-mini span:not(.verified) {font-size:11px!important}
+  .theme-light .nav-section-label {margin:12px 8px 5px!important;font-size:10px!important}
+  .theme-light .nav-button {min-height:38px!important;padding:7px 9px!important;gap:9px!important;font-size:13px!important}
+  .theme-light .nav-icon {width:20px!important;font-size:17px!important}
+  .theme-light .security-note {margin-top:12px!important;padding:9px!important;font-size:11px!important}
+  .theme-light .main-content {max-width:620px!important;padding-top:12px!important}
+  .theme-light .topbar {gap:8px!important;margin-bottom:10px!important;padding:6px 0 10px!important}
+  .theme-light .topbar-brand .search {height:38px!important}
+  .theme-light .topbar-brand .search input {font-size:13px!important}
+  .theme-light .topbar-nav button {padding:8px 10px!important;font-size:12px!important}
+  .theme-light .topbar-status {font-size:11px!important}
+  .theme-light .profile-trigger {width:34px!important;height:34px!important}
+  .theme-light .right-rail {padding:16px 6px 20px 0!important}
+  .theme-light .rail-card {padding:12px!important;margin-bottom:10px!important}
+  .theme-light .rail-card .card-heading {margin-bottom:8px!important;font-size:14px!important}
+  .theme-light .rail-card p,.theme-light .suggestion-copy span,.theme-light .suggestion-copy small,.theme-light .footer-links {font-size:11px!important;line-height:1.35!important}
+  .theme-light .stories-section {padding:10px!important;margin-bottom:9px!important}
+  .theme-light .stories-heading {gap:6px!important;margin-bottom:8px!important}
+  .theme-light .stories-heading strong {font-size:15px!important}
+  .theme-light .stories-heading span,.theme-light .stories-heading button {font-size:11px!important}
+  .theme-light .stories-heading .eyebrow {font-size:8px!important}
+  .theme-light .stories-row {gap:6px!important}
+  .theme-light .story-card {flex-basis:100px!important;width:100px!important;height:150px!important;border-radius:8px!important}
+  .theme-light .story-card strong {font-size:11px!important}
+  .theme-light .feed-filter {padding:7px 10px!important;margin-bottom:8px!important}
+  .theme-light .feed-filter button:not(.sort-button) {padding:6px 8px!important;font-size:11px!important}
+  .theme-light .feed-count,.theme-light .sort-button {font-size:11px!important}
+  .theme-light .post-list {gap:8px!important}
+  .theme-light .post-card {padding:11px 12px!important;border-radius:8px!important}
+  .theme-light .post-header {gap:8px!important;min-height:36px!important}
+  .theme-light .post-header .avatar,.theme-light .post-author .avatar {width:38px!important;height:38px!important}
+  .theme-light .post-author strong {font-size:13px!important}
+  .theme-light .post-author span,.theme-light .post-author small,.theme-light .post-header .post-meta {font-size:10px!important}
+  .theme-light .post-body {margin:7px 0 8px!important;font-size:13px!important;line-height:1.4!important}
+  .theme-light .post-image {max-height:560px!important}
+  .theme-light .fb-engagement-summary {min-height:32px!important;font-size:11px!important}
+  .theme-light .fb-engagement-meta {font-size:11px!important;gap:8px!important}
+  .theme-light .post-actions {margin-top:2px!important;padding:1px 0!important}
+  .theme-light .post-actions button {min-height:34px!important;padding:5px 6px!important;font-size:11px!important}
+  .theme-light .comment-box {padding-top:7px!important}
+  .theme-light .comment-bubble {padding:7px 10px!important;font-size:12px!important}
+  .theme-light .comment-bubble strong {font-size:11px!important}
+  .theme-light .comment-bubble p {font-size:12px!important;line-height:1.35!important}
+  .theme-light .comment-toggle {font-size:11px!important}
+  .theme-light .composer-card {padding:10px!important;margin-bottom:9px!important}
+  .theme-light .composer-top textarea {min-height:38px!important;font-size:13px!important}
+  .theme-light .composer-actions {gap:6px!important;margin-top:6px!important;padding-top:6px!important}
+  .theme-light .facebook-composer-action {font-size:11px!important}
+}
+@media (max-width:760px) {
+  .stories-heading strong {font-size:15px!important}
+  .stories-heading span,.stories-heading button {font-size:11px!important}
+  .story-card strong {font-size:11px!important}
+  .post-author strong {font-size:13px!important}
+  .post-author span {font-size:10px!important}
+  .post-body {font-size:13px!important;line-height:1.35!important}
+  .fb-engagement-summary,.fb-engagement-meta {font-size:11px!important}
+  .post-actions>button,.post-actions>.reaction-action>button {font-size:11px!important}
+  .comment-bubble {font-size:12px!important}
+}
