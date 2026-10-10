@@ -42,7 +42,7 @@ function Stories({ onAction, ownAvatar, userId }: { onAction: (message: string) 
   const others = stories.filter(story => story.author_id !== userId)
   const authorName = (story: StoryRecord) => story.author?.full_name || ''
   return <section className="stories-section" aria-label="Stories">
-    <div className="stories-heading"><div><span className="eyebrow">MOMENTS DU RÉSEAU</span><strong>Stories</strong><span>Photos et vidéos · disparaissent après 24 h</span></div><div className="stories-heading-actions"><b>{stories.length} active{stories.length === 1 ? '' : 's'}</b><button onClick={() => void loadStories()}>Actualiser ↻</button></div></div>
+    <div className="stories-heading"><div><span className="eyebrow">MOMENTS DU RÉSEAU</span><strong>Moments</strong><span>Photos et vidéos partagées par votre réseau</span></div><div className="stories-heading-actions"><b>{stories.length} active{stories.length === 1 ? '' : 's'}</b><button onClick={() => void loadStories()}>Actualiser ↻</button></div></div>
     <div className="stories-row">
       {ownStory ? <button className="story-card story-self story-live" onClick={() => setViewer(ownStory)} aria-label="Voir votre story"><span className="story-shade" />{ownStory.media_url ? <img className="story-media-preview" src={ownStory.media_url} alt="" /> : ownAvatar ? <img className="story-media-preview" src={ownAvatar} alt="" /> : <span className="story-avatar story-avatar-own">AV</span>}<strong>Votre story</strong><span className="story-card-label">Ajouter</span></button> : <label className="story-card story-self" htmlFor="story-upload" aria-label="Créer une story"><span className="story-shade" />{ownAvatar ? <img className="story-media-preview" src={ownAvatar} alt="" /> : null}<span className="story-add-button" aria-hidden="true">+</span><strong>Créer une story</strong></label>}
       {storyComposerOpen && storyPreview && <div className="story-composer-backdrop" role="dialog" aria-modal="true" aria-label="Créer une story"><form className="story-composer" onSubmit={publishStory}><button type="button" className="story-close" onClick={() => setStoryComposerOpen(false)} aria-label="Fermer">×</button><span className="eyebrow">NOUVELLE STORY</span><h3>Aperçu de votre story</h3>{storyFile?.type.startsWith('video/') ? <video src={storyPreview} controls /> : <img src={storyPreview} alt="Aperçu de la story" />}<textarea value={storyCaption} onChange={event => setStoryCaption(event.target.value)} placeholder="Ajoutez une description…" aria-label="Description de la story" /><label className="story-privacy">Audience<select value={storyPrivacy} onChange={event => setStoryPrivacy(event.target.value as typeof storyPrivacy)}><option value="public">Tout le monde</option><option value="followers">Mes followers</option><option value="private">Moi uniquement</option></select></label><div className="story-composer-actions"><button type="button" className="message-button" onClick={() => setStoryComposerOpen(false)}>Annuler</button><button className="primary-button">Partager la story</button></div></form></div>}
@@ -139,20 +139,20 @@ function App() {
         <div className="brand"><span className="brand-mark"><img src="/assets/avani-mark.svg" alt="" /></span><span>AVANI<span className="brand-pro">PRO</span></span></div>
         <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</div><div><strong>{displayName}{profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}</strong><span>{displayUsername}</span></div></div>
         <nav className="nav-stack nav-stack-pro" aria-label="Navigation Avani Pro">
-          <span className="nav-section-label">ESPACE DE TRAVAIL</span>
-          <NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Fil d’actualité" />
+          <span className="nav-section-label">VOTRE ESPACE PRO</span>
+          <NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Actualités" />
           <NavButton active={active === 'explore'} onClick={() => navigateTo('/search', 'explore')} icon="explore" label="Découvrir" />
-          <NavButton active={active === 'messages'} onClick={() => navigateTo('/messages', 'messages')} icon="messages" label="Messagerie" />
-          <NavButton active={active === 'notifications'} onClick={() => navigateTo('/notifications', 'notifications')} icon="explore" label="Centre d’activité" />
+          <NavButton active={active === 'messages'} onClick={() => navigateTo('/messages', 'messages')} icon="messages" label="Messages" />
+          <NavButton active={active === 'notifications'} onClick={() => navigateTo('/notifications', 'notifications')} icon="explore" label="Notifications" />
           <span className="nav-section-label">VOS COMMUNAUTÉS</span>
-          <NavButton active={active === 'groups'} onClick={() => navigateTo('/groups', 'groups')} icon="groups" label="Communautés" />
-          <NavButton active={active === 'pages'} onClick={() => navigateTo('/pages', 'pages')} icon="pages" label="Pages professionnelles" />
+          <NavButton active={active === 'groups'} onClick={() => navigateTo('/groups', 'groups')} icon="groups" label="Groupes professionnels" />
+          <NavButton active={active === 'pages'} onClick={() => navigateTo('/pages', 'pages')} icon="pages" label="Pages" />
           <span className="nav-section-label">VOTRE ESPACE</span>
-          <NavButton active={active === 'profile'} onClick={() => navigateTo('/settings', 'profile')} icon="profile" label="Identité publique" />
+          <NavButton active={active === 'profile'} onClick={() => navigateTo('/settings', 'profile')} icon="profile" label="Profil professionnel" />
           <NavButton active={active === 'files'} onClick={() => navigateTo('/files', 'files')} icon="save" label="Documents" />
-          <NavButton active={active === 'saved'} onClick={() => navigateTo('/saved', 'saved')} icon="save" label="Éléments enregistrés" />
+          <NavButton active={active === 'saved'} onClick={() => navigateTo('/saved', 'saved')} icon="save" label="Enregistrés" />
           <span className="nav-section-label nav-section-admin">ADMINISTRATION</span>
-          <NavButton active={active === 'admin'} onClick={() => navigateTo('/admin', 'admin')} icon="admin" label="Console de gestion" />
+          <NavButton active={active === 'admin'} onClick={() => navigateTo('/admin', 'admin')} icon="admin" label="Administration" />
         </nav>
           <div className="sidebar-bottom"><button className={`nav-button muted ${active === 'settings' ? 'active' : ''}`} onClick={() => navigateTo('/settings', 'settings')}><SvgIcon name="settings" /> Réglages</button><div className="security-note"><span className="pulse-dot" /> Espace sécurisé<br /><small>Chiffrement actif</small></div></div>
       </aside>
@@ -164,7 +164,7 @@ function App() {
         {active === 'feed' && <>
           <section className="feed-rebuild" aria-label="Fil d’actualité">
             <div className="feed-page-heading">
-              <div><h1>Fil d’actualité</h1><p>Les dernières nouvelles de votre réseau.</p></div>
+              <div><h1>Votre fil</h1><p>Les actualités et idées de votre réseau professionnel.</p></div>
               <button type="button" className="feed-refresh" onClick={() => { setFeedQuery(''); flash('Filtres réinitialisés.') }} aria-label="Réinitialiser les filtres">↻</button>
             </div>
             <Stories onAction={flash} ownAvatar={displayAvatarUrl} userId={sessionUser?.id ?? null} />
