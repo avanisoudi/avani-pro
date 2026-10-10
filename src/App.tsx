@@ -5,7 +5,7 @@ import { AuthModal } from './components/AuthModal'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
 import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchPanel } from './components/AdvancedPanels'
-import { deletePost as deletePostRecord, getMyProfile, listFeedPosts, listReactionUsers, recordPostShare, setPostReaction, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord, type ReactionType } from './lib/api'
+import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, listReactionUsers, recordPostShare, setPostReaction, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord, type ReactionType } from './lib/api'
 import { createComment, createStory, deleteComment, listActiveStories, listComments, listDiscoverableProfiles, listFollowingIds, listMyGroups, toggleFollow, updateComment, type CommentRecord, type StoryRecord } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
@@ -66,6 +66,8 @@ function App() {
   const [feedFilter, setFeedFilter] = useState<'all' | 'following' | 'trending'>('all')
   const [feedQuery, setFeedQuery] = useState('')
   const [editingPostId, setEditingPostId] = useState<string | number | null>(null)
+  const [postDraft, setPostDraft] = useState('')
+  const [publishingPost, setPublishingPost] = useState(false)
   const [sessionUser, setSessionUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
@@ -107,6 +109,34 @@ function App() {
       .filter(post => feedFilter !== 'trending' || post.stats.likes >= 150)
       .filter(post => !query || `${post.name} ${post.body} ${post.tags.join(' ')}`.toLowerCase().includes(query))
   }, [feedFilter, feedQuery, followed, posts])
+  const publishPost = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const content = postDraft.trim()
+    if (!content) { flash('Écrivez quelque chose avant de publier.'); return }
+    if (!sessionUser) { flash('Connectez-vous pour publier.'); return }
+    if (content.length > 5000) { flash('Votre publication dépasse la limite de 5 000 caractères.'); return }
+    setPublishingPost(true)
+    try {
+      const created = await createPost(sessionUser.id, content, 'text')
+      const authorName = profile?.full_name || sessionUser.user_metadata?.full_name || ''
+      const nextPost: Post = {
+        id: created.id, authorId: sessionUser.id, name: authorName,
+        handle: profile?.username ? `@${profile.username}` : sessionUser.email ? `@${sessionUser.email.split('@')[0]}` : '',
+        role: profile?.bio || '', avatar: authorName.split(/\\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase(),
+        avatarUrl: profile?.avatar_url ?? null, time: 'à l’instant', body: content,
+        tags: content.match(/#[\\w-]+/g) ?? [], stats: { likes: 0, comments: 0, shares: 0 },
+        kind: 'thought', liked: false, saved: false, verifiedType: profile?.verified_type ?? null,
+        reactionCounts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+      }
+      setPosts(current => [nextPost, ...current])
+      setPostDraft('')
+      setFeedFilter('all')
+      setFeedQuery('')
+      flash('Votre publication est en ligne.')
+    } catch (error) {
+      flash(error instanceof Error ? error.message : 'La publication n’a pas pu être créée.')
+    } finally { setPublishingPost(false) }
+  }
   const updatePost = async (id: string | number, body: string) => {
     if (typeof id !== 'string' || !sessionUser) { flash('Cette publication ne peut pas être modifiée hors connexion.'); return }
     try {
@@ -168,6 +198,23 @@ function App() {
               <button type="button" className="feed-refresh" onClick={() => { setFeedQuery(''); flash('Filtres réinitialisés.') }} aria-label="Réinitialiser les filtres">↻</button>
             </div>
             <Stories onAction={flash} ownAvatar={displayAvatarUrl} userId={sessionUser?.id ?? null} />
+            <form className="pro-post-composer" onSubmit={publishPost}>
+              <div className="pro-post-composer-top">
+                <div className="avatar avatar-md avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Votre photo de profil" /> : displayAvatar || 'AV'}</div>
+                <label className="pro-post-input-wrap">
+                  <span className="pro-post-label">Partager avec votre réseau</span>
+                  <textarea value={postDraft} onChange={event => setPostDraft(event.target.value)} maxLength={5000} placeholder="Qu’avez-vous envie de partager aujourd’hui ?" aria-label="Contenu de la publication" rows={3} />
+                </label>
+              </div>
+              <div className="pro-post-composer-footer">
+                <div className="pro-post-tools">
+                  <button type="button" onClick={() => setPostDraft(value => value ? value + ' 😊' : '😊 ')} aria-label="Ajouter un emoji"><span>☺</span> Humeur</button>
+                  <button type="button" onClick={() => setPostDraft(value => value && !value.endsWith(' ') ? value + ' #' : value + '#')} aria-label="Ajouter un hashtag"><span>#</span> Hashtag</button>
+                  <span className="pro-post-audience" title="Les publications sont visibles selon les règles d’accès configurées sur votre compte">🌐 Public</span>
+                </div>
+                <div className="pro-post-submit-group"><span className={postDraft.length > 4800 ? 'pro-post-counter near-limit' : 'pro-post-counter'}>{postDraft.length}/5000</span><button className="pro-post-submit" disabled={publishingPost || !postDraft.trim()}>{publishingPost ? 'Publication…' : 'Publier'}</button></div>
+              </div>
+            </form>
             <div className="feed-controls">
               <div className="feed-filter-tabs" role="tablist" aria-label="Filtrer les publications">
                 <button type="button" role="tab" aria-selected={feedFilter === 'all'} className={feedFilter === 'all' ? 'filter-active' : ''} onClick={() => setFeedFilter('all')}>Pour vous</button>
