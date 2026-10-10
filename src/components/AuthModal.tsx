@@ -75,12 +75,14 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
       if (mode === 'signup') {
         const fullName = `${firstName.trim()} ${lastName.trim()}`
-        const username = `${firstName}${lastName}`
+        const usernameBase = `${firstName}${lastName}`
           .toLowerCase()
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .replace(/[^a-z0-9_]/g, '')
-          .slice(0, 24) || undefined
+        // Keep usernames distinct when different people share the same name.
+        const usernameSuffix = crypto.randomUUID().replace(/-/g, '').slice(0, 6)
+        const username = `${(usernameBase || 'membre').slice(0, 17)}_${usernameSuffix}`
         const { data, error: signUpError } = await client.auth.signUp({
           email: email.trim(),
           password,
