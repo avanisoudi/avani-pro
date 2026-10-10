@@ -169,13 +169,23 @@ export type StoryRecord = { id: string; author_id: string; media_path: string; m
 
 export async function listActiveStories(userId: string) {
   const client = requireSupabase()
-  const { data, error } = await client.from('stories').select('id, author_id, media_path, media_type, caption, privacy, created_at, expires_at, author:profiles!stories_author_id_fkey(id, username, full_name, avatar_url, verified_type)').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: true }).limit(100)
+  const [{ data, error }, { data: follows, error: followsError }] = await Promise.all([
+    client.from('stories').select('id, author_id, media_path, media_type, caption, privacy, created_at, expires_at, author:profiles!stories_author_id_fkey(id, username, full_name, avatar_url, verified_type)').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: true }).limit(100),
+    client.from('follows').select('following_id').eq('follower_id', userId),
+  ])
   if (error) throw error
-  const rows = (data ?? []).map((row: any) => ({ ...row, author: Array.isArray(row.author) ? row.author[0] : row.author })) as StoryRecord[]
+  if (followsError) throw followsError
+  const followingIds = new Set((follows ?? []).map((row: { following_id: string }) => row.following_id))
+  const rows = ((data ?? []).map((row: any) => ({ ...row, author: Array.isArray(row.author) ? row.author[0] : row.author })) as StoryRecord[])
+    .filter(row => row.author_id === userId || row.privacy === 'public' || (row.privacy === 'followers' && followingIds.has(row.author_id)))
+  // Generate signed URLs only for stories the current user is allowed to see.
   const paths = [...new Set(rows.map(row => row.media_path))]
-  const signed = await Promise.all(paths.map(async path => { const result = await client.storage.from('story-media').createSignedUrl(path, 60 * 60); return [path, result.data?.signedUrl ?? null] as const }))
+  const signed = await Promise.all(paths.map(async path => {
+    const result = await client.storage.from('story-media').createSignedUrl(path, 60 * 60)
+    return [path, result.data?.signedUrl ?? null] as const
+  }))
   const urls = new Map(signed)
-  return rows.filter(row => row.author_id === userId || row.privacy !== 'private').map(row => ({ ...row, media_url: urls.get(row.media_path) ?? undefined }))
+  return rows.map(row => ({ ...row, media_url: urls.get(row.media_path) ?? undefined }))
 }
 
 export async function createStory(userId: string, file: File, caption: string, privacy: 'public' | 'followers' | 'private') {
