@@ -118,7 +118,7 @@ function App() {
     setPublishingPost(true)
     try {
       const created = await createPost(sessionUser.id, content, 'text')
-      const authorName = profile?.full_name || sessionUser.user_metadata?.full_name || ''
+      const authorName: string = String(profile?.full_name || sessionUser.user_metadata?.full_name || '')
       const nextPost: Post = {
         id: created.id, authorId: sessionUser.id, name: authorName,
         handle: profile?.username ? `@${profile.username}` : sessionUser.email ? `@${sessionUser.email.split('@')[0]}` : '',
