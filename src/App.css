@@ -1150,3 +1150,26 @@ html,body,#root{background:#f0f2f5!important;color:#1c1e21!important}
 .theme-light .feed-composer-bottom{border-color:#e4e6eb}
 .theme-light .feed-media-button,.theme-light .feed-feeling-button{color:#65676b}
 .theme-light .feed-composer-top textarea::placeholder{color:#65676b}
+
+/* AVANI PRO — professional navigation refresh */
+.sidebar-pro .brand{padding-bottom:22px}
+.sidebar-pro .profile-mini{margin:0 12px 22px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.sidebar-pro .nav-stack-pro{gap:5px;padding:0 10px}
+.sidebar-pro .nav-stack-pro .nav-section-label{margin:18px 12px 7px;color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.13em}
+.sidebar-pro .nav-stack-pro .nav-section-label:first-child{margin-top:2px}
+.sidebar-pro .nav-stack-pro .nav-button{min-height:42px;padding:0 12px;border-radius:10px;font-size:12px;font-weight:550;transition:background .16s ease,color .16s ease,transform .16s ease}
+.sidebar-pro .nav-stack-pro .nav-button .svg-icon{width:17px;height:17px;opacity:.82}
+.sidebar-pro .nav-stack-pro .nav-button:hover{transform:translateX(2px)}
+.sidebar-pro .nav-stack-pro .nav-button.active{background:rgba(24,119,242,.11);color:#1877f2;font-weight:700}
+.sidebar-pro .nav-stack-pro .nav-button.active .svg-icon{opacity:1}
+.topbar-nav-pro{gap:5px}
+.topbar-nav-pro button{padding:10px 13px;border-radius:9px;font-size:12px;font-weight:600}
+.topbar-nav-pro button.active{background:rgba(24,119,242,.1);color:#1877f2}
+.mobile-tabbar-pro .nav-button{font-size:10px;gap:4px}
+.mobile-tabbar-pro .nav-button .svg-icon{width:19px;height:19px}
+.theme-light .sidebar-pro .profile-mini{background:#fff;border-color:#e4e6eb}
+.theme-light .sidebar-pro .nav-stack-pro .nav-button{color:#4b5563}
+.theme-light .sidebar-pro .nav-stack-pro .nav-button.active{background:#eaf3ff;color:#1877f2}
+.theme-light .sidebar-pro .nav-stack-pro .nav-section-label{color:#7b8492}
+@media(max-width:1100px){.topbar-nav-pro button{padding:9px 8px}.sidebar-pro .nav-stack-pro .nav-button{font-size:11px}}
+@media(max-width:760px){.sidebar-pro .profile-mini{margin-bottom:12px}.mobile-tabbar-pro .nav-button{font-size:9px}.topbar-nav-pro{display:none}}
