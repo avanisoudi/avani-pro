@@ -105,6 +105,7 @@ function App() {
   const visiblePosts = useMemo(() => {
     const query = feedQuery.trim().toLowerCase()
     return posts
+      .filter(post => !/^test de nouvelle version$/i.test(post.body.trim()))
       .filter(post => feedFilter !== 'following' || Boolean(post.authorId && followed.includes(post.authorId)))
       .filter(post => feedFilter !== 'trending' || post.stats.likes >= 150)
       .filter(post => !query || `${post.name} ${post.body} ${post.tags.join(' ')}`.toLowerCase().includes(query))
