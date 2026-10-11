@@ -1294,6 +1294,8 @@ html,body,#root{background:#f0f2f5!important;color:#1c1e21!important}
  .feed-post-list .post-actions .reaction-button-label{font-size:12px!important}
 }
 
+/* Modules feed social : contacts, sponsorisé et publication média */
+.online-contacts .card-heading,.sponsored-card .card-heading{padding:14px 14px 8px}.online-dot{display:inline-block;width:7px;height:7px;margin-left:4px;border-radius:50%;background:#20c997;box-shadow:0 0 0 2px rgba(32,201,151,.15)}.contact-list{padding:0 10px 10px}.contact-row{display:flex;align-items:center;gap:8px;width:100%;padding:7px 4px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}.contact-row strong{flex:1;font-size:11px}.contact-row>span:last-child{color:var(--muted);font-size:11px}.sponsor-banner{display:grid;gap:6px;margin:0 12px 12px;padding:16px;border-radius:10px;background:linear-gradient(135deg,#172b75,#7b35db);color:#fff}.sponsor-banner strong{font-size:13px}.sponsor-banner span{font-size:10px;opacity:.82}.sponsor-banner button{justify-self:start;margin-top:4px;border:0;border-radius:7px;background:#1877f2;color:#fff;padding:7px 11px;font-size:10px;font-weight:600;cursor:pointer}.pro-post-tools{flex-wrap:wrap}.composer-tool-photo{color:#20a85a!important}
 /* Avani Pro — référence sociale complète desktop */
 @media(min-width:761px){
  :root{--avani-bg:#f4f7fb;--avani-blue:#1877f2;--avani-text:#172b4d;--avani-muted:#6b7b98}
