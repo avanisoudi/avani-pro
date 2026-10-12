@@ -4,6 +4,7 @@ import './App.css'
 import './mobile.css'
 import './desktop.css'
 import './landing.css'
+import './reactions.css'
 import { AuthModal } from './components/AuthModal'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
@@ -318,46 +319,62 @@ const reactionMeta: Array<[ReactionType, string, string]> = [
   ['angry', '😡', 'Grrr'],
 ]
 
+const rxKeys = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const
+const rxMeta: Record<string, { label: string; icon: string; color: string }> = {
+  like: { label: 'J’aime', icon: '/assets/reactions/like.svg', color: '#1877f2' },
+  love: { label: 'J’adore', icon: '/assets/reactions/love.svg', color: '#f33e58' },
+  haha: { label: 'Haha', icon: '/assets/reactions/haha.svg', color: '#f7b125' },
+  wow: { label: 'Wouah', icon: '/assets/reactions/wow.svg', color: '#f7b125' },
+  sad: { label: 'Triste', icon: '/assets/reactions/sad.svg', color: '#f7b125' },
+  angry: { label: 'Grrr', icon: '/assets/reactions/angry.svg', color: '#e9710f' },
+}
+
 function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReact: (reaction: ReactionType) => void }) {
   const [open, setOpen] = useState(false)
-  const closeTimer = useRef<number | null>(null)
-  const current = reactionMeta.find(item => item[0] === reaction) ?? reactionMeta[0]
-  const closeSoon = () => {
-    if (closeTimer.current) window.clearTimeout(closeTimer.current)
-    closeTimer.current = window.setTimeout(() => setOpen(false), 180)
-  }
-  const keepOpen = () => {
-    if (closeTimer.current) window.clearTimeout(closeTimer.current)
-    setOpen(true)
-  }
-  useEffect(() => () => { if (closeTimer.current) window.clearTimeout(closeTimer.current) }, [])
+  const hoverTimer = useRef<number | null>(null)
+  const pressTimer = useRef<number | null>(null)
+  const longPressed = useRef(false)
+  const meta = reaction ? rxMeta[reaction] : undefined
+  const cancelHover = () => { if (hoverTimer.current) window.clearTimeout(hoverTimer.current); hoverTimer.current = null }
+  const cancelPress = () => { if (pressTimer.current) window.clearTimeout(pressTimer.current); pressTimer.current = null }
+  useEffect(() => () => { cancelHover(); cancelPress() }, [])
   return <div
-    className="reaction-action"
-    onPointerEnter={keepOpen}
-    onPointerLeave={closeSoon}
+    className="rx"
+    onPointerEnter={event => { if (event.pointerType === 'mouse') { cancelHover(); setOpen(true) } }}
+    onPointerLeave={event => { if (event.pointerType === 'mouse') { cancelHover(); hoverTimer.current = window.setTimeout(() => setOpen(false), 250) } }}
     onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false) }}
   >
-    {open && <div className="reaction-picker" role="group" aria-label="Choisir une réaction">
-      {reactionMeta.map(([key, emoji, label]) => <button type="button" key={key} className={reaction === key ? 'active' : ''} title={label} aria-label={label} onClick={() => { onReact(key); setOpen(false) }}>{emoji}</button>)}
+    {open && <div className="rx-picker" role="group" aria-label="Choisir une réaction">
+      {rxKeys.map(key => <button key={key} type="button" className={`rx-option${reaction === key ? ' is-selected' : ''}`} aria-label={rxMeta[key].label} aria-pressed={reaction === key} style={{ color: rxMeta[key].color }} onClick={() => { setOpen(false); onReact(key as ReactionType) }}>
+        <img src={rxMeta[key].icon} alt="" /><span>{rxMeta[key].label}</span>
+      </button>)}
     </div>}
     <button
       type="button"
-      className={reaction ? `reaction-selected reaction-${current[0]}` : 'reaction-selected reaction-like'}
+      className={`rx-button${meta ? ' is-active' : ''}`}
+      style={meta ? { ['--rx-active' as string]: meta.color } as React.CSSProperties : undefined}
+      aria-label={meta ? `Réaction : ${meta.label}. Appuyez pour modifier ou retirer` : 'J’aime'}
       aria-haspopup="true"
       aria-expanded={open}
-      aria-label={reaction ? `Réaction actuelle : ${current[2]}. Modifier ou retirer la réaction` : 'J’aime. Ouvrir les r��actions'}
-      onClick={() => {
-        onReact(reaction ?? 'like')
-        setOpen(false)
-      }}
       onPointerDown={event => {
-        if (event.pointerType === 'touch') setOpen(true)
+        longPressed.current = false
+        if (event.pointerType !== 'mouse') {
+          cancelPress()
+          pressTimer.current = window.setTimeout(() => { longPressed.current = true; setOpen(true) }, 450)
+        }
+      }}
+      onPointerUp={cancelPress}
+      onPointerLeave={cancelPress}
+      onPointerCancel={cancelPress}
+      onContextMenu={event => { if (longPressed.current) event.preventDefault() }}
+      onClick={() => {
+        if (longPressed.current) { longPressed.current = false; return }
+        setOpen(false)
+        onReact(reaction ?? 'like')
       }}
     >
-      <span className="reaction-button-content">
-        {current[0] === 'like' ? <img className="reaction-button-asset" src={reaction === 'like' ? '/assets/reaction-like-blue.svg' : '/assets/reaction-like.svg'} alt="" aria-hidden="true" /> : <span className="reaction-button-emoji" aria-hidden="true">{current[1]}</span>}
-        <span className="reaction-button-label">{current[2]}</span>
-      </span>
+      {meta ? <img className="rx-icon" src={meta.icon} alt="" /> : <SvgIcon name="like" />}
+      <span>{meta ? meta.label : 'J’aime'}</span>
     </button>
   </div>
 }
@@ -419,22 +436,18 @@ function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCo
     <div className="post-header"><div className={`avatar avatar-md ${post.kind === 'image' ? 'avatar-cyan' : 'avatar-soft'}`}>{post.avatarUrl ? <img src={post.avatarUrl} alt={`Photo de profil de ${post.name}`} /> : post.avatar}</div><div className="post-author"><strong>{post.name}{post.verifiedType && <VerifiedBadge type={post.verifiedType} />}</strong><span>{post.handle} · {post.time} · Public</span><small>{post.role}</small></div><div>{user?.id === post.authorId && <div className="post-menu"><button className="more-button" aria-label="Options de la publication" onClick={() => setMenuOpen(!menuOpen)}>•••</button>{menuOpen && <div className="post-menu-popover"><button onClick={() => { setMenuOpen(false); onEdit() }}>Modifier</button><button className="danger-action" onClick={() => { setMenuOpen(false); onDelete() }}>Supprimer</button></div>}</div>}</div></div>
     {editing ? <form className="post-edit-form" onSubmit={submitEdit}><textarea value={draft} onChange={event => setDraft(event.target.value)} aria-label="Modifier la publication" /><div><button type="button" className="message-button" onClick={onCancelEdit}>Annuler</button><button className="primary-button">Enregistrer</button></div></form> : <>{displayBody && <p className="post-body">{displayBody}</p>}{imageMatch?.[1] && <img className="post-image" src={imageMatch[1]} alt={`Image publiée par ${post.name}`} />}</>}
     <div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
-    <div className="fb-engagement-summary">
-      <button type="button" className="fb-reaction-count" onClick={() => setReactionModalOpen(true)} aria-label={`Voir les ${formatReactionCount(reactionTotal)} réactions`}>
-        <span className="fb-reaction-icons" aria-hidden="true">
-          {Object.entries(counts).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([type]) => {
-            const meta = reactionMeta.find(item => item[0] === type)
-            if (!meta) return null
-            return type === 'like'
-              ? <img key={type} className="fb-reaction-icon fb-reaction-like" src={post.reaction === 'like' ? '/assets/reaction-like-blue.svg' : '/assets/reaction-like.svg'} alt="" />
-              : <span key={type} className={`fb-reaction-icon fb-reaction-${type}`}>{meta[1]}</span>
-          })}
-        </span>
-        {reactionTotal > 0 && <span className="fb-reaction-number">{formatReactionCount(reactionTotal)}</span>}
+    <div className="rx-summary">
+      <button type="button" className="rx-count" onClick={() => setReactionModalOpen(true)} aria-label={`Voir les ${formatReactionCount(reactionTotal)} réactions`}>
+        {reactionTotal > 0 && <>
+          <span className="rx-stack" aria-hidden="true">
+            {Object.entries(counts).filter(([, count]) => count > 0).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([type]) => rxMeta[type] ? <img key={type} className="rx-stack-icon" src={rxMeta[type].icon} alt="" /> : null)}
+          </span>
+          <span className="rx-total">{formatReactionCount(reactionTotal)}</span>
+        </>}
       </button>
-      <div className="fb-engagement-meta">
-        {post.stats.comments > 0 && <button type="button" onClick={openComments}>{formatReactionCount(post.stats.comments)} commentaire{post.stats.comments > 1 ? "s" : ""}</button>}
-        {post.stats.shares > 0 && <button type="button" onClick={() => void onShare()}>{formatReactionCount(post.stats.shares)} partage{post.stats.shares > 1 ? "s" : ""}</button>}
+      <div className="rx-meta">
+        {post.stats.comments > 0 && <button type="button" onClick={openComments}>{formatReactionCount(post.stats.comments)} commentaire{post.stats.comments > 1 ? 's' : ''}</button>}
+        {post.stats.shares > 0 && <button type="button" onClick={() => void onShare()}>{formatReactionCount(post.stats.shares)} partage{post.stats.shares > 1 ? 's' : ''}</button>}
       </div>
     </div>
     <div className="post-actions">
