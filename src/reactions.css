@@ -1,0 +1,231 @@
+/*
+ * AVANI PRO — réactions façon Facebook
+ * Bouton J’aime (toucher, survol, appui long), barre des réactions,
+ * résumé avec icônes superposées. Chargé en dernier pour gagner sur les anciennes règles.
+ */
+
+:root {
+  --rx-muted: #65676b;
+  --rx-line: #e4e6eb;
+}
+
+.rx {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.rx-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rx-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.rx-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.rx-button .svg-icon,
+.post-actions .rx-button .svg-icon {
+  display: inline-block !important;
+  width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.rx-button .rx-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+
+/* Barre des réactions */
+.rx-picker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  animation: rx-pop 0.16s ease-out;
+}
+
+@keyframes rx-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+.rx-option {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.rx-option img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.rx-option:hover,
+.rx-option:focus-visible {
+  transform: translateY(-8px) scale(1.25);
+  outline: 0;
+}
+
+.rx-option.is-selected::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.rx-option > span {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #1c1e21;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.rx-option:hover > span,
+.rx-option:focus-visible > span {
+  opacity: 1;
+}
+
+/* Résumé des réactions */
+.rx-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rx-line);
+  color: var(--rx-muted);
+  font-size: 14px;
+}
+
+.rx-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rx-count:hover .rx-total {
+  text-decoration: underline;
+}
+
+.rx-stack {
+  display: inline-flex;
+  align-items: center;
+}
+
+.rx-stack-icon {
+  width: 20px;
+  height: 20px;
+  margin-left: -5px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-sizing: content-box;
+  background: #fff;
+}
+
+.rx-stack-icon:first-child {
+  margin-left: 0;
+}
+
+.rx-total {
+  color: var(--rx-muted);
+}
+
+.rx-meta {
+  display: flex;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.rx-meta button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rx-meta button:hover {
+  text-decoration: underline;
+}
+
+/* Thème sombre */
+.app-shell.theme-dark {
+  --rx-muted: #8f9bbd;
+  --rx-line: #24304f;
+}
+
+.app-shell.theme-dark .rx-picker {
+  background: #1a2340;
+}
+
+.app-shell.theme-dark .rx-stack-icon {
+  border-color: #1a2340;
+  background: #1a2340;
+}
+
+/* Bouton colorisé selon la réaction choisie (bat les règles de bureau/mobile) */
+.rx-button.is-active,
+.post-actions .rx-button.is-active,
+.app-shell .post-actions .rx-button.is-active,
+.app-shell.theme-light .post-actions .rx-button.is-active {
+  color: var(--rx-active, #1877f2) !important;
+}
