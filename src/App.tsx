@@ -6,6 +6,7 @@ import './desktop.css'
 import './landing.css'
 import './reactions.css'
 import { AuthModal } from './components/AuthModal'
+import { ResetPasswordPanel } from './components/ResetPasswordPanel'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
 import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchPanel } from './components/AdvancedPanels'
@@ -212,6 +213,14 @@ function App() {
   useEffect(() => { if (!sessionUser || !supabase) return; getMyProfile(sessionUser).then(setProfile).catch(() => undefined) }, [sessionUser])
   const openAuth = () => { if (!isSupabaseConfigured) { flash('Ajoutez vos variables Supabase dans Render pour activer la connexion.'); return }; setAuthOpen(true) }
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); setProfile(null); flash('Vous êtes déconnecté de votre espace sécurisé.') }
+
+  if (pathname.startsWith('/reset-password')) {
+    const leaveResetPage = () => { window.history.replaceState({}, '', '/'); setPathname('/') }
+    return <>
+      <ResetPasswordPanel onDone={message => { leaveResetPage(); flash(message) }} onBack={leaveResetPage} />
+      {toast && <div className="toast"><span>✦</span>{toast}</div>}
+    </>
+  }
 
   if (!sessionUser) return <><PublicHome onAuth={openAuth} />{authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={flash} />}{toast && <div className="toast"><span>✦</span>{toast}</div>}</>
 

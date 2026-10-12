@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { requireSupabase } from '../lib/supabase'
+import { isAcceptablePassword, MIN_PASSWORD_LENGTH } from '../lib/passwordStrength'
+import { PasswordField } from './PasswordField'
 
 type AuthMode = 'login' | 'signup' | 'reset'
 type AuthModalProps = { onClose: () => void; onSuccess: (message: string) => void }
@@ -13,7 +15,6 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -49,8 +50,8 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         setError('Renseignez votre prénom, votre nom et votre téléphone.')
         return
       }
-      if (password.length < 8) {
-        setError('Choisissez un mot de passe de 8 caractères minimum.')
+      if (!isAcceptablePassword(password)) {
+        setError(`Ce mot de passe est trop faible. Utilisez ${MIN_PASSWORD_LENGTH} caractères minimum, avec des majuscules, des chiffres ou des symboles.`)
         return
       }
       if (password !== confirmPassword) {
@@ -182,43 +183,25 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           </label>
 
           {mode !== 'reset' && (
-            <label>
-              Mot de passe
-              <div className="password-field">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={event => setPassword(event.target.value)}
-                  required
-                  minLength={8}
-                  placeholder={mode === 'signup' ? '8 caractères minimum' : 'Votre mot de passe'}
-                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(value => !value)}
-                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                >
-                  {showPassword ? 'Masquer' : 'Afficher'}
-                </button>
-              </div>
-            </label>
+            <PasswordField
+              label="Mot de passe"
+              value={password}
+              onChange={setPassword}
+              showStrength={mode === 'signup'}
+              placeholder={mode === 'signup' ? `${MIN_PASSWORD_LENGTH} caractères minimum` : 'Votre mot de passe'}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            />
           )}
 
           {mode === 'signup' && (
-            <label>
-              Confirmer le mot de passe
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={event => setConfirmPassword(event.target.value)}
-                required
-                minLength={8}
-                placeholder="Répétez le mot de passe"
-                autoComplete="new-password"
-              />
-            </label>
+            <PasswordField
+              label="Confirmer le mot de passe"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              placeholder="Répétez le mot de passe"
+              autoComplete="new-password"
+              matchWith={password}
+            />
           )}
 
           {error && (
