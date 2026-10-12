@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import './App.css'
 import './mobile.css'
 import './desktop.css'
+import './landing.css'
 import { AuthModal } from './components/AuthModal'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
@@ -15,15 +16,62 @@ type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' |
 type Post = { id: string | number; authorId?: string; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean; reaction?: ReactionType; reactionCounts?: Record<ReactionType, number>; saved?: boolean; verifiedType?: string | null; avatarUrl?: string | null }
 
 function PublicHome({ onAuth }: { onAuth: () => void }) {
-  return <main className="public-home">
-    <header className="public-nav"><div className="brand"><span className="brand-mark"><img src="/assets/avani-mark.svg" alt="" /></span><span>AVANI<span className="brand-pro">PRO</span></span></div><div className="public-nav-actions"><a href="#vision">Pourquoi Avani Pro</a><a href="#features">Fonctionnalités</a><button className="auth-button" onClick={onAuth}>Se connecter</button><button className="primary-button" onClick={onAuth}>Créer un compte <span>↗</span></button></div></header>
-    <section className="public-hero"><div className="hero-copy"><span className="eyebrow">LE RÉSEAU DES ESPRITS EN MOUVEMENT</span><h1>Les bonnes idées méritent <em>un vrai réseau.</em></h1><p>Avani Pro réunit professionnels, créateurs et communautés dans un espace conçu pour partager, échanger et transformer les conversations en projets concrets.</p><div className="hero-actions"><button className="primary-button hero-cta" onClick={onAuth}>Rejoindre Avani Pro <span>↗</span></button><a className="hero-link" href="#vision">Découvrir la plateforme <span>↓</span></a></div><div className="hero-proof"><span>Un réseau construit autour de vos conversations<br /><strong>et de vos projets</strong></span></div></div><div className="hero-visual" aria-label="Aperçu des conversations Avani Pro"><div className="visual-glow" /><div className="visual-window"><div className="visual-top"><span className="window-dots">● ● ●</span><span>votre signal</span><span>•••</span></div><div className="visual-stat"><span>IMPACT DE LA COMMUNAUTÉ</span><strong>+24.8%</strong><i /></div><div className="visual-message"><div className="avatar avatar-sm avatar-gradient">AV</div><div><strong>Votre publication</strong><p>Partagez une idée avec votre réseau.</p><small>Les interactions réelles apparaîtront ici.</small></div></div><div className="visual-message second"><div className="avatar avatar-sm avatar-soft">AV</div><div><strong>Votre communauté</strong><p>Les conversations prennent vie avec de vraies personnes.</p><small>Les données affichées proviennent de votre activité.</small></div></div><div className="visual-composer">Partager une idée avec votre réseau <b>↗</b></div></div></div></section>
-    <section id="vision" className="public-section"><div><span className="eyebrow">PLUS QU’UN FIL D’ACTUALITÉ</span><h2>Un espace qui donne de la portée à vos idées.</h2></div><p>Pas de bruit inutile. Avani Pro est pensé pour les échanges qui comptent, les rencontres qui ouvrent des portes et les groupes qui font réellement avancer les projets.</p></section>
-    <section id="features" className="public-features"><article><span>01</span><h3>Votre signal</h3><p>Publiez vos réflexions, projets et apprentissages auprès d’un réseau qui vous comprend.</p></article><article><span>02</span><h3>Vos communautés</h3><p>Créez ou rejoignez des groupes privés pour discuter comme dans un espace de confiance.</p></article><article><span>03</span><h3>Vos conversations</h3><p>Échangez en direct, partagez des fichiers et gardez les idées importantes au même endroit.</p></article></section>
-    <section className="public-details"><div><span className="eyebrow">PENSÉ POUR VOTRE QUOTIDIEN</span><h2>Tout ce qu’il faut pour faire avancer vos projets.</h2></div><div className="detail-list"><article><strong>Un profil qui vous ressemble</strong><p>Présentez votre expertise, vos intérêts et vos réalisations à une communauté pertinente.</p></article><article><strong>Des échanges qui restent utiles</strong><p>Publiez, commentez, répondez et retrouvez vos conversations sans perdre le fil.</p></article><article><strong>Un espace fiable</strong><p>Votre compte et vos échanges sont protégés. Vous gardez le contrôle de ce que vous partagez.</p></article></div></section>
-    <section className="public-bottom"><h2>Votre prochaine conversation peut tout changer.</h2><p>Créez votre compte gratuitement et rejoignez les personnes qui construisent la suite.</p><button className="primary-button" onClick={onAuth}>Créer mon compte gratuitement <span>↗</span></button></section>
-    <footer className="public-footer"><span>© 2026 Avani Pro</span><span>Un réseau pensé pour avancer.</span></footer>
-  </main>
+  return <div className="lp">
+    <header className="lp-nav">
+      <a className="lp-brand" href="/" aria-label="Avani Pro, accueil"><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span></a>
+      <nav className="lp-links" aria-label="Sections"><a href="#vision">Pourquoi Avani Pro</a><a href="#features">Fonctionnalités</a></nav>
+      <div className="lp-actions"><button type="button" className="lp-login" onClick={onAuth}>Se connecter</button><button type="button" className="lp-cta" onClick={onAuth}>Créer un compte</button></div>
+    </header>
+    <section className="lp-hero">
+      <div className="lp-copy">
+        <span className="lp-eyebrow">LE RÉSEAU DES ESPRITS EN MOUVEMENT</span>
+        <h1>Les bonnes idées méritent <em>un vrai réseau.</em></h1>
+        <p>Avani Pro réunit professionnels, créateurs et communautés dans un espace conçu pour partager, échanger et transformer les conversations en projets concrets.</p>
+        <div className="lp-hero-actions"><button type="button" className="lp-cta lp-cta-large" onClick={onAuth}>Rejoindre Avani Pro</button><a className="lp-link" href="#vision">Découvrir la plateforme ↓</a></div>
+        <p className="lp-proof">Un réseau construit autour de vos conversations <strong>et de vos projets</strong></p>
+      </div>
+      <div className="lp-preview" aria-label="Aperçu du fil Avani Pro">
+        <article className="lp-post">
+          <div className="lp-post-head"><span className="lp-avatar">AV</span><div><strong>Votre publication</strong><small>À l’instant · Public</small></div></div>
+          <p>Partagez une idée avec votre réseau. Les interactions réelles apparaîtront ici.</p>
+          <div className="lp-post-tags"><span>#Motivation</span><span>#Projets</span></div>
+          <div className="lp-post-stats"><span>👍 ❤️ 2</span><span>3 commentaires · 1 partage</span></div>
+          <div className="lp-post-actions"><span>J’aime</span><span>Commenter</span><span>Partager</span><span>Enregistrer</span></div>
+        </article>
+        <article className="lp-post lp-post-second">
+          <div className="lp-post-head"><span className="lp-avatar lp-avatar-alt">CM</span><div><strong>Votre communauté</strong><small>Groupe · Public</small></div></div>
+          <p>Les conversations prennent vie avec de vraies personnes.</p>
+        </article>
+      </div>
+    </section>
+    <section id="vision" className="lp-section">
+      <span className="lp-eyebrow">PLUS QU’UN FIL D’ACTUALITÉ</span>
+      <h2>Un espace qui donne de la portée à vos idées.</h2>
+      <p className="lp-lead">Pas de bruit inutile. Avani Pro est pensé pour les échanges qui comptent, les rencontres qui ouvrent des portes et les groupes qui font réellement avancer les projets.</p>
+    </section>
+    <section id="features" className="lp-features">
+      <article><span className="lp-num">01</span><h3>Votre signal</h3><p>Publiez vos réflexions, projets et apprentissages auprès d’un réseau qui vous comprend.</p></article>
+      <article><span className="lp-num">02</span><h3>Vos communautés</h3><p>Créez ou rejoignez des groupes privés pour discuter comme dans un espace de confiance.</p></article>
+      <article><span className="lp-num">03</span><h3>Vos conversations</h3><p>Échangez en direct, partagez des fichiers et gardez les idées importantes au même endroit.</p></article>
+    </section>
+    <section className="lp-section lp-details">
+      <div>
+        <span className="lp-eyebrow">PENSÉ POUR VOTRE QUOTIDIEN</span>
+        <h2>Tout ce qu’il faut pour faire avancer vos projets.</h2>
+      </div>
+      <div className="lp-detail-list">
+        <article><strong>Un profil qui vous ressemble</strong><p>Présentez votre expertise, vos intérêts et vos réalisations à une communauté pertinente.</p></article>
+        <article><strong>Des échanges qui restent utiles</strong><p>Publiez, commentez, répondez et retrouvez vos conversations sans perdre le fil.</p></article>
+        <article><strong>Un espace fiable</strong><p>Votre compte et vos échanges sont protégés. Vous gardez le contrôle de ce que vous partagez.</p></article>
+      </div>
+    </section>
+    <section className="lp-band">
+      <h2>Votre prochaine conversation peut tout changer.</h2>
+      <p>Créez votre compte gratuitement et rejoignez les personnes qui construisent la suite.</p>
+      <button type="button" className="lp-cta lp-cta-large" onClick={onAuth}>Créer mon compte gratuitement ↗</button>
+    </section>
+    <footer className="lp-footer"><span>© 2026 Avani Pro</span><span>Un réseau pensé pour avancer.</span></footer>
+  </div>
 }
 
 function Stories({ onAction, ownAvatar, userId }: { onAction: (message: string) => void; ownAvatar: string | null; userId: string | null }) {
