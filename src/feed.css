@@ -1,0 +1,38 @@
+/* Fil d'actualité : menu ⋯ de publication, publication masquée. */
+.post-menu-sep {
+  display: block;
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}
+
+.post-menu-popover [role='menuitem'] {
+  white-space: nowrap;
+}
+
+.post-card-hidden {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted, #8393b8);
+  font-size: 13px;
+}
+
+.post-card-hidden p {
+  margin: 0;
+}
+
+.post-card-hidden button {
+  border: 0;
+  background: transparent;
+  color: var(--cyan, #22d3ee);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.post-card-hidden button:hover {
+  text-decoration: underline;
+}

@@ -5,6 +5,7 @@ import './mobile.css'
 import './desktop.css'
 import './landing.css'
 import './reactions.css'
+import './feed.css'
 import { AuthModal } from './components/AuthModal'
 import { ResetPasswordPanel } from './components/ResetPasswordPanel'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
@@ -289,7 +290,7 @@ function App() {
               <span className="feed-count">{visiblePosts.length} publication{visiblePosts.length === 1 ? '' : 's'}</span>
             </div>
             <section className="post-list feed-post-list" aria-label="Publications">
-              {visiblePosts.length === 0 ? <div className="empty-feed"><div className="empty-feed-icon">⌁</div><strong>Aucune publication pour le moment</strong><span>Les publications de votre réseau apparaîtront ici. Vous pouvez commencer par partager une idée.</span></div> : visiblePosts.map(post => <PostCard key={post.id} post={post} user={sessionUser} onReact={(reaction) => void reactToPost(post.id, reaction)} onCommentCountChange={(count) => setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, comments: count } } : item))} onShare={async () => { if (sessionUser && typeof post.id === 'string') { try { await recordPostShare(post.id, sessionUser.id); setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, shares: item.stats.shares + 1 } } : item)) } catch { flash('Le partage n’a pas pu être enregistré.') } } else flash('Connectez-vous pour enregistrer ce partage.') }} onSave={async () => { if (!sessionUser || typeof post.id !== 'string') { flash('Connectez-vous pour sauvegarder cette publication.'); return }; try { const next = await toggleSavedPost(post.id, sessionUser.id, post.saved ?? false); setPosts(current => current.map(item => item.id === post.id ? { ...item, saved: next } : item)); flash(next ? 'Publication sauvegardée.' : 'Publication retirée des sauvegardes.') } catch { flash('La sauvegarde n’a pas pu être enregistrée.') } }} onComment={() => flash('Impossible de charger ou d’enregistrer le commentaire.')} onEdit={() => setEditingPostId(post.id)} onDelete={() => void deletePost(post.id)} editing={editingPostId === post.id} onCancelEdit={() => setEditingPostId(null)} onSaveEdit={body => void updatePost(post.id, body)} />)}
+              {visiblePosts.length === 0 ? <div className="empty-feed"><div className="empty-feed-icon">⌁</div><strong>Aucune publication pour le moment</strong><span>Les publications de votre réseau apparaîtront ici. Vous pouvez commencer par partager une idée.</span></div> : visiblePosts.map(post => <PostCard key={post.id} post={post} user={sessionUser} onNotify={flash} onReact={(reaction) => void reactToPost(post.id, reaction)} onCommentCountChange={(count) => setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, comments: count } } : item))} onShare={async () => { if (sessionUser && typeof post.id === 'string') { try { await recordPostShare(post.id, sessionUser.id); setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, shares: item.stats.shares + 1 } } : item)) } catch { flash('Le partage n’a pas pu être enregistré.') } } else flash('Connectez-vous pour enregistrer ce partage.') }} onSave={async () => { if (!sessionUser || typeof post.id !== 'string') { flash('Connectez-vous pour sauvegarder cette publication.'); return }; try { const next = await toggleSavedPost(post.id, sessionUser.id, post.saved ?? false); setPosts(current => current.map(item => item.id === post.id ? { ...item, saved: next } : item)); flash(next ? 'Publication sauvegardée.' : 'Publication retirée des sauvegardes.') } catch { flash('La sauvegarde n’a pas pu être enregistrée.') } }} onComment={() => flash('Impossible de charger ou d’enregistrer le commentaire.')} onEdit={() => setEditingPostId(post.id)} onDelete={() => void deletePost(post.id)} editing={editingPostId === post.id} onCancelEdit={() => setEditingPostId(null)} onSaveEdit={body => void updatePost(post.id, body)} />)}
             </section>
           </section>
         </>}
@@ -430,10 +431,28 @@ function ReactionModal({ post, onClose }: { post: Post; onClose: () => void }) {
   </div>
 }
 
-function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCountChange, onEdit, onDelete, editing, onCancelEdit, onSaveEdit }: { post: Post; user: User | null; onReact: (reaction: ReactionType) => void; onShare: () => void; onSave: () => void; onComment: () => void; onCommentCountChange: (count: number) => void; onEdit: () => void; onDelete: () => void; editing: boolean; onCancelEdit: () => void; onSaveEdit: (body: string) => void }) {
+function PostCard({ post, user, onNotify, onReact, onShare, onSave, onComment, onCommentCountChange, onEdit, onDelete, editing, onCancelEdit, onSaveEdit }: { post: Post; user: User | null; onNotify: (message: string) => void; onReact: (reaction: ReactionType) => void; onShare: () => void; onSave: () => void; onComment: () => void; onCommentCountChange: (count: number) => void; onEdit: () => void; onDelete: () => void; editing: boolean; onCancelEdit: () => void; onSaveEdit: (body: string) => void }) {
   const [draft, setDraft] = useState(post.body)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [hidden, setHidden] = useState(() => { try { return JSON.parse(window.localStorage.getItem('avani:hidden-posts') || '[]').includes(String(post.id)) } catch { return false } })
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const setHiddenPersisted = (value: boolean) => {
+    setHidden(value)
+    try {
+      const list: string[] = JSON.parse(window.localStorage.getItem('avani:hidden-posts') || '[]')
+      const next = value ? [...new Set([...list, String(post.id)])] : list.filter(id => id !== String(post.id))
+      window.localStorage.setItem('avani:hidden-posts', JSON.stringify(next))
+    } catch { /* stockage indisponible : le masquage reste pour cette session */ }
+  }
+  const copyLink = async () => {
+    const link = `${window.location.origin}/#publication-${post.id}`
+    try {
+      await navigator.clipboard.writeText(link)
+      onNotify('Lien de la publication copié.')
+    } catch {
+      onNotify(`Copiez ce lien : ${link}`)
+    }
+  }
   const [reactionModalOpen, setReactionModalOpen] = useState(false)
   const submitEdit = (event: React.FormEvent) => { event.preventDefault(); if (draft.trim()) onSaveEdit(draft.trim()) }
   const openComments = () => { setCommentsOpen(true) }
@@ -441,8 +460,12 @@ function PostCard({ post, user, onReact, onShare, onSave, onComment, onCommentCo
   const reactionTotal = Object.values(counts).reduce((sum, value) => sum + value, 0)
   const imageMatch = post.body.match(/\[image\](.*?)\[\/image\]/)
   const displayBody = post.body.replace(/\n?\[image\].*?\[\/image\]/, '').trim()
-  return <article className="post-card">
-    <div className="post-header"><div className={`avatar avatar-md ${post.kind === 'image' ? 'avatar-cyan' : 'avatar-soft'}`}>{post.avatarUrl ? <img src={post.avatarUrl} alt={`Photo de profil de ${post.name}`} /> : post.avatar}</div><div className="post-author"><strong>{post.name}{post.verifiedType && <VerifiedBadge type={post.verifiedType} />}</strong><span>{post.handle} · {post.time} · Public</span><small>{post.role}</small></div><div>{user?.id === post.authorId && <div className="post-menu"><button className="more-button" aria-label="Options de la publication" onClick={() => setMenuOpen(!menuOpen)}>•••</button>{menuOpen && <div className="post-menu-popover"><button onClick={() => { setMenuOpen(false); onEdit() }}>Modifier</button><button className="danger-action" onClick={() => { setMenuOpen(false); onDelete() }}>Supprimer</button></div>}</div>}</div></div>
+  if (hidden) return <article className="post-card post-card-hidden">
+    <p>Publication masquée. Vous ne la verrez plus dans votre fil.</p>
+    <button type="button" onClick={() => setHiddenPersisted(false)}>Annuler</button>
+  </article>
+  return <article className="post-card" id={`publication-${post.id}`}>
+    <div className="post-header"><div className={`avatar avatar-md ${post.kind === 'image' ? 'avatar-cyan' : 'avatar-soft'}`}>{post.avatarUrl ? <img src={post.avatarUrl} alt={`Photo de profil de ${post.name}`} /> : post.avatar}</div><div className="post-author"><strong>{post.name}{post.verifiedType && <VerifiedBadge type={post.verifiedType} />}</strong><span>{post.handle} · {post.time} · Public</span><small>{post.role}</small></div><div className="post-menu" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setMenuOpen(false) }}><button className="more-button" aria-label="Options de la publication" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>•••</button>{menuOpen && <div className="post-menu-popover" role="menu"><button role="menuitem" onClick={() => { setMenuOpen(false); void onSave() }}>{post.saved ? 'Retirer des enregistrements' : 'Enregistrer la publication'}</button><button role="menuitem" onClick={() => { setMenuOpen(false); void copyLink() }}>Copier le lien</button><button role="menuitem" onClick={() => { setMenuOpen(false); setHiddenPersisted(true) }}>Masquer la publication</button>{user?.id === post.authorId && <><span className="post-menu-sep" /><button role="menuitem" onClick={() => { setMenuOpen(false); onEdit() }}>Modifier</button><button role="menuitem" className="danger-action" onClick={() => { setMenuOpen(false); onDelete() }}>Supprimer</button></>}</div>}</div></div>
     {editing ? <form className="post-edit-form" onSubmit={submitEdit}><textarea value={draft} onChange={event => setDraft(event.target.value)} aria-label="Modifier la publication" /><div><button type="button" className="message-button" onClick={onCancelEdit}>Annuler</button><button className="primary-button">Enregistrer</button></div></form> : <>{displayBody && <p className="post-body">{displayBody}</p>}{imageMatch?.[1] && <img className="post-image" src={imageMatch[1]} alt={`Image publiée par ${post.name}`} />}</>}
     <div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
     <div className="rx-summary">
