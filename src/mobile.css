@@ -885,6 +885,126 @@
     gap: 6px;
   }
 
+  /* Blocs à fond sombre du thème desktop : on les repasse en surfaces claires */
+  .feature-panel .group-tools,
+  .feature-panel .group-search,
+  .feature-panel .group-filters,
+  .feature-panel .group-shortcuts,
+  .feature-panel .global-search-input,
+  .feature-panel .person-card,
+  .feature-panel .group-card,
+  .feature-panel .public-group-card,
+  .feature-panel .whatsapp-group-card,
+  .feature-panel .saved-card,
+  .feature-panel .file-row,
+  .feature-panel .admin-row,
+  .feature-panel .notification-page-row,
+  .feature-panel .inline-form,
+  .feature-panel .profile-form,
+  .feature-panel .profile-quick-stats,
+  .feature-panel .settings-list,
+  .feature-panel .search-results,
+  .feature-panel .search-result,
+  .feature-panel .empty-state,
+  .feature-panel .feature-empty,
+  .feature-panel .admin-stats {
+    background: var(--m-surface) !important;
+    border-color: var(--m-line) !important;
+    color: var(--m-text) !important;
+    box-shadow: none !important;
+  }
+
+  .feature-panel .group-tools,
+  .feature-panel .group-filters,
+  .feature-panel .group-shortcuts {
+    padding: 10px !important;
+    border: 1px solid var(--m-line) !important;
+    border-radius: 12px;
+  }
+
+  .feature-panel .group-tools {
+    display: grid !important;
+    gap: 8px;
+  }
+
+  .feature-panel .group-filters,
+  .feature-panel .group-shortcuts {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .feature-panel .global-search-input {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--m-line) !important;
+  }
+
+  .feature-panel .global-search-input input,
+  .feature-panel .group-search input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .feature-panel .group-search {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 1px solid var(--m-line) !important;
+    border-radius: 12px;
+  }
+
+  .feature-panel .group-search input {
+    padding: 10px 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .feature-panel button:not(.primary-button):not(.active):not(.filter-active):not(.reaction-selected):not(.more-button):not(.icon-button) {
+    background: var(--m-surface) !important;
+    color: var(--m-text) !important;
+    border: 1px solid var(--m-line) !important;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 13px;
+  }
+
+  .feature-panel button.active,
+  .feature-panel button.filter-active,
+  .feature-panel .group-filters button[aria-pressed="true"] {
+    background: rgba(24, 119, 242, 0.12) !important;
+    color: var(--m-blue) !important;
+    border-color: var(--m-blue) !important;
+  }
+
+  .feature-panel .group-card,
+  .feature-panel .public-group-card,
+  .feature-panel .person-card,
+  .feature-panel .saved-card,
+  .feature-panel .file-row,
+  .feature-panel .admin-row,
+  .feature-panel .notification-page-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 12px !important;
+    border: 1px solid var(--m-line) !important;
+    border-radius: 12px;
+  }
+
+  .feature-panel .group-card-actions,
+  .feature-panel .person-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
   /* Messagerie : liste puis conversation, en plein écran */
   .messages-panel {
     grid-template-columns: 1fr !important;
