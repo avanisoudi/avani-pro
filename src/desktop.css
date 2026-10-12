@@ -1,0 +1,1045 @@
+/*
+ * AVANI PRO — maquette bureau (≥ 761px)
+ * Barre de navigation bleu nuit, colonne de menu, fil central et colonne de droite.
+ * Les sélecteurs sont préfixés par .app-shell pour battre les anciennes règles
+ * de App.css. Le mobile (≤ 760px) est géré par mobile.css et n'est pas modifié ici.
+ */
+
+@media (min-width: 761px) {
+  :root {
+    --av-navy: #17246b;
+    --av-navy-2: #1f3596;
+    --av-blue: #1877f2;
+    --av-sky: #4aa3ff;
+    --av-bg: #f0f2f5;
+    --av-line: #e4e6eb;
+    --av-text: #050505;
+    --av-muted: #65676b;
+    --av-hover: #f2f2f2;
+  }
+
+  body {
+    background: var(--av-bg) !important;
+    color: var(--av-text) !important;
+  }
+
+  /* ---------- Coque : 3 colonnes sous la barre du haut ---------- */
+  .app-shell {
+    display: grid !important;
+    grid-template-columns: 260px minmax(0, 640px) 320px !important;
+    justify-content: center;
+    gap: 0 16px !important;
+    max-width: none !important;
+    padding: 60px 0 0 !important;
+    min-height: 100vh !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: var(--av-bg) !important;
+    color: var(--av-text) !important;
+  }
+
+  .app-shell .topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    inset-inline: 0 !important;
+    z-index: 50;
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 60px;
+    margin: 0 !important;
+    padding: 0 14px !important;
+    background: linear-gradient(90deg, var(--av-navy), var(--av-navy-2) 55%, var(--av-navy)) !important;
+    border: 0 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  }
+
+  .app-shell .topbar-brand {
+    display: flex !important;
+    align-items: center;
+    gap: 14px !important;
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .app-shell .topbar-brand-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font: 700 19px 'Space Grotesk', Arial, sans-serif;
+    letter-spacing: 0.02em;
+  }
+
+  .app-shell .topbar-brand-button .brand-mark {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .app-shell .topbar-brand-button .brand-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .app-shell .topbar-brand-button .brand-pro {
+    color: var(--av-sky);
+    font-weight: 500;
+  }
+
+  .app-shell .topbar .search {
+    width: 260px !important;
+    height: 40px !important;
+    padding: 0 14px !important;
+    gap: 8px !important;
+    border: 0 !important;
+    border-radius: 20px !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+
+  .app-shell .topbar .search input {
+    width: 100%;
+    min-width: 0;
+    background: transparent;
+    color: #fff !important;
+    font-size: 14px !important;
+    border: 0;
+    outline: 0;
+  }
+
+  .app-shell .topbar .search input::placeholder {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+
+  /* Onglets centraux avec icônes */
+  .app-shell .topbar-nav-pro {
+    display: flex !important;
+    align-items: stretch;
+    gap: 6px;
+    height: 60px;
+  }
+
+  .app-shell .topbar-nav-pro button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 92px;
+    height: 60px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72) !important;
+    font-size: 12px !important;
+    font-weight: 500;
+  }
+
+  .app-shell .topbar-nav-pro button:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .app-shell .topbar-nav-pro button .svg-icon {
+    width: 24px;
+    height: 24px;
+    color: currentColor;
+  }
+
+  .app-shell .topbar-nav-pro button.active {
+    color: var(--av-sky) !important;
+  }
+
+  .app-shell .topbar-nav-pro button.active::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--av-sky);
+  }
+
+  .app-shell .topbar-status {
+    display: none !important;
+  }
+
+  .app-shell .top-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 10px !important;
+  }
+
+  .app-shell .nav-bell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+  }
+
+  .app-shell .nav-bell .svg-icon {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .app-shell .topbar-nav-pro button .av-play {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+
+  .app-shell .topbar-nav-pro button .av-play path {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .app-shell .nav-badge {
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--av-navy);
+    border-radius: 50%;
+    background: #e41e3f;
+  }
+
+  .app-shell .profile-trigger {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .app-shell .profile-trigger .avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border: 2px solid #fff;
+    border-radius: 50%;
+  }
+
+  .app-shell .profile-trigger .avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .app-shell .profile-trigger-name {
+    display: none;
+  }
+
+  .app-shell .menu-trigger {
+    display: grid !important;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .app-shell .main-menu {
+    position: absolute;
+    top: 66px;
+    right: 14px;
+    z-index: 60;
+    display: grid;
+    min-width: 200px;
+    padding: 6px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .app-shell .main-menu button {
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--av-text);
+    font-size: 14px;
+    text-align: left;
+  }
+
+  .app-shell .main-menu button:hover {
+    background: var(--av-hover);
+  }
+
+  .app-shell .main-menu .menu-danger {
+    color: #d93025;
+  }
+
+  /* ---------- Colonne de gauche ---------- */
+  .app-shell .sidebar {
+    grid-column: 1;
+    position: sticky;
+    top: 60px;
+    display: flex !important;
+    flex-direction: column;
+    height: calc(100vh - 60px);
+    min-height: 0 !important;
+    overflow-y: auto;
+    padding: 12px 8px 16px !important;
+    border: 0 !important;
+    background: transparent !important;
+    scrollbar-width: thin;
+  }
+
+  .app-shell .sidebar .brand {
+    display: none;
+  }
+
+  .app-shell .profile-mini {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 8px !important;
+    padding: 8px !important;
+    border-radius: 10px;
+  }
+
+  .app-shell .profile-mini:hover {
+    background: var(--av-line);
+  }
+
+  .app-shell .profile-mini .avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+  }
+
+  .app-shell .profile-mini strong {
+    font-size: 15px;
+    color: var(--av-text) !important;
+  }
+
+  .app-shell .profile-mini span:not(.verified) {
+    font-size: 13px;
+    color: var(--av-muted) !important;
+  }
+
+  .app-shell .nav-stack,
+  .app-shell .nav-stack-pro {
+    display: grid !important;
+    gap: 2px;
+  }
+
+  .app-shell .nav-section-label {
+    display: none !important;
+  }
+
+  .app-shell .nav-button {
+    display: flex !important;
+    align-items: center;
+    gap: 12px !important;
+    min-height: 40px;
+    padding: 8px 10px !important;
+    border: 0;
+    border-radius: 8px !important;
+    background: transparent;
+    color: var(--av-text) !important;
+    font-size: 15px !important;
+    font-weight: 500;
+    box-shadow: none !important;
+  }
+
+  .app-shell .nav-button:hover {
+    background: var(--av-line) !important;
+  }
+
+  .app-shell .nav-button.active {
+    background: #e7f3ff !important;
+    color: var(--av-blue) !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .nav-button .svg-icon {
+    width: 24px !important;
+    height: 24px !important;
+    flex: 0 0 auto;
+    color: var(--av-blue);
+  }
+
+  .app-shell .nav-button b {
+    margin-left: auto;
+  }
+
+  .app-shell .sidebar-bottom {
+    margin-top: auto;
+    padding-top: 10px;
+  }
+
+  .app-shell .nav-button.muted {
+    margin: 0 0 8px !important;
+  }
+
+  .app-shell .security-note {
+    padding: 0 10px;
+    border: 0;
+    color: var(--av-muted) !important;
+    font-size: 12px;
+  }
+
+  .app-shell .premium-card {
+    display: grid;
+    gap: 6px;
+    margin: 14px 4px 0;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(120deg, #3b2bd1, #8a2be2 70%, #b15cf0);
+    color: #fff;
+  }
+
+  .app-shell .premium-card strong {
+    font-size: 15px;
+  }
+
+  .app-shell .premium-card p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 0.92;
+  }
+
+  .app-shell .premium-card button {
+    margin-top: 6px;
+    padding: 9px;
+    border: 0;
+    border-radius: 8px;
+    background: #fff;
+    color: #3b2bd1;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  /* ---------- Fil central ---------- */
+  .app-shell .main-content {
+    grid-column: 2;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 16px 0 40px !important;
+  }
+
+  .app-shell .feed-rebuild {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .app-shell .feed-page-heading,
+  .app-shell .stories-heading {
+    display: none !important;
+  }
+
+  .app-shell .stories-section {
+    margin: 0 0 12px !important;
+    padding: 12px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  .app-shell .stories-row {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .app-shell .story-card {
+    flex: none !important;
+    width: 100% !important;
+    height: 200px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell .story-card:hover {
+    transform: none !important;
+  }
+
+  .app-shell .story-card strong {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    color: #fff !important;
+    font-size: 13px !important;
+    font-weight: 600;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
+
+  .app-shell .story-card.story-self:not(.story-live) strong {
+    color: var(--av-text) !important;
+    text-shadow: none;
+    bottom: 12px;
+    text-align: center;
+  }
+
+  .app-shell .story-card.story-self:not(.story-live) .story-shade {
+    background: linear-gradient(180deg, transparent 55%, #fff 55%) !important;
+  }
+
+  .app-shell .story-add-button {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -30%);
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 4px solid #fff;
+    border-radius: 50%;
+    background: var(--av-blue);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .app-shell .story-avatar {
+    width: 42px;
+    height: 42px;
+    border: 3px solid var(--av-blue) !important;
+    border-radius: 50%;
+  }
+
+  /* Composeur à une ligne */
+  .app-shell .pro-post-composer {
+    margin: 0 0 12px !important;
+    padding: 12px 16px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  .app-shell .pro-post-composer-top {
+    display: flex !important;
+    align-items: center;
+    gap: 10px !important;
+  }
+
+  .app-shell .pro-post-composer-top > .avatar {
+    flex: 0 0 40px;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+  }
+
+  .app-shell .pro-post-composer-top > .avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .app-shell .pro-post-label {
+    display: none !important;
+  }
+
+  .app-shell .pro-post-input-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app-shell .pro-post-input-wrap textarea {
+    width: 100%;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 10px 16px !important;
+    border: 0 !important;
+    border-radius: 20px !important;
+    background: var(--av-bg) !important;
+    color: var(--av-text) !important;
+    font-size: 15px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    resize: none;
+    outline: 0;
+  }
+
+  .app-shell .pro-post-composer-footer {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px !important;
+    margin-top: 10px !important;
+    padding-top: 6px !important;
+    border-top: 1px solid var(--av-line) !important;
+  }
+
+  .app-shell .pro-post-tools {
+    display: flex !important;
+    flex: 1 1 auto;
+    justify-content: space-around;
+    gap: 2px !important;
+    overflow: visible;
+  }
+
+  .app-shell .pro-post-tools button {
+    padding: 8px 10px !important;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--av-muted) !important;
+    font-size: 14px !important;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .app-shell .pro-post-tools button:hover {
+    background: var(--av-hover);
+  }
+
+  .app-shell .pro-post-tools button:nth-child(1) span { color: #45bd62; }
+  .app-shell .pro-post-tools button:nth-child(2) span { color: #f7b928; }
+  .app-shell .pro-post-tools button:nth-child(3) span { color: var(--av-blue); }
+  .app-shell .pro-post-tools button:nth-child(4) span { color: #f5533d; }
+
+  .app-shell .pro-post-audience,
+  .app-shell .pro-post-counter {
+    display: none !important;
+  }
+
+  .app-shell .pro-post-submit {
+    padding: 8px 14px !important;
+    border: 0;
+    border-radius: 8px;
+    background: var(--av-blue) !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    font-weight: 600;
+  }
+
+  .app-shell .pro-post-submit:disabled {
+    opacity: 0.45;
+  }
+
+  /* Onglets du fil */
+  .app-shell .feed-controls {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 12px !important;
+    padding: 6px !important;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+
+  .app-shell .feed-filter-tabs {
+    display: flex !important;
+    gap: 4px;
+  }
+
+  .app-shell .feed-filter-tabs button {
+    padding: 8px 14px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--av-muted) !important;
+    font-size: 14px !important;
+    font-weight: 600;
+  }
+
+  .app-shell .feed-filter-tabs button.filter-active {
+    background: #e7f3ff !important;
+    color: var(--av-blue) !important;
+  }
+
+  .app-shell .feed-count {
+    color: var(--av-muted);
+    font-size: 13px;
+    margin-right: 8px;
+  }
+
+  /* Publications */
+  .app-shell .feed-post-list,
+  .app-shell .post-list {
+    display: grid !important;
+    gap: 12px !important;
+  }
+
+  .app-shell .post-card {
+    padding: 12px 16px 6px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .app-shell .post-card:hover {
+    transform: none !important;
+    border-color: transparent !important;
+  }
+
+  .app-shell .post-header {
+    display: flex !important;
+    align-items: flex-start;
+    gap: 10px !important;
+  }
+
+  .app-shell .post-header > .avatar,
+  .app-shell .post-header > .avatar-md {
+    flex: 0 0 40px;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+  }
+
+  .app-shell .post-header > .avatar img,
+  .app-shell .post-header > .avatar-md img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .app-shell .post-author {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .app-shell .post-author > strong {
+    color: var(--av-text) !important;
+    font-size: 15px !important;
+    font-weight: 600;
+  }
+
+  .app-shell .post-author > span,
+  .app-shell .post-author > small {
+    color: var(--av-muted) !important;
+    font-size: 13px !important;
+  }
+
+  .app-shell .post-menu .more-button {
+    color: var(--av-muted);
+    font-size: 18px;
+  }
+
+  .app-shell .post-body {
+    margin: 10px 0 !important;
+    color: var(--av-text) !important;
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+    white-space: pre-wrap;
+  }
+
+  .app-shell .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 8px !important;
+  }
+
+  .app-shell .tag-row span {
+    color: var(--av-blue);
+    font-size: 15px;
+  }
+
+  .app-shell .post-image {
+    display: block;
+    width: calc(100% + 32px) !important;
+    max-width: none !important;
+    max-height: 540px;
+    margin: 4px -16px 8px !important;
+    border-radius: 0 !important;
+    object-fit: cover;
+  }
+
+  .app-shell .fb-engagement-summary {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 0 !important;
+    padding: 8px 0 !important;
+    border-bottom: 1px solid var(--av-line);
+    color: var(--av-muted) !important;
+    font-size: 15px !important;
+  }
+
+  .app-shell .fb-engagement-meta {
+    display: flex;
+    gap: 14px !important;
+    font-size: 15px !important;
+  }
+
+  .app-shell .fb-engagement-meta button,
+  .app-shell .fb-reaction-count {
+    border: 0;
+    background: transparent;
+    color: var(--av-muted) !important;
+    font-size: 15px;
+    padding: 0;
+  }
+
+  .app-shell .post-actions {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 !important;
+    margin: 0 !important;
+    padding: 4px 0 !important;
+    border: 0 !important;
+  }
+
+  .app-shell .post-actions > button,
+  .app-shell .post-actions .reaction-selected {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px !important;
+    width: 100%;
+    height: 40px;
+    padding: 0 4px !important;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--av-muted) !important;
+    font-size: 15px !important;
+    font-weight: 600;
+  }
+
+  .app-shell .post-actions > button:hover,
+  .app-shell .post-actions .reaction-selected:hover {
+    background: var(--av-hover);
+  }
+
+  .app-shell .post-actions .svg-icon {
+    display: inline-block !important;
+    width: 20px !important;
+    height: 20px !important;
+    color: currentColor;
+  }
+
+  .app-shell .comment-box {
+    padding: 6px 0 8px;
+  }
+
+  .app-shell .comment-toggle {
+    color: var(--av-muted) !important;
+    font-size: 14px !important;
+  }
+
+  .app-shell .comment-form {
+    display: flex !important;
+    align-items: center;
+    gap: 8px !important;
+    margin-top: 8px;
+  }
+
+  .app-shell .comment-form input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 18px;
+    background: var(--av-bg);
+    color: var(--av-text);
+    font-size: 14px;
+    outline: 0;
+  }
+
+  .app-shell .comment-form .avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+  }
+
+  .app-shell .comment-form .primary-button {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* ---------- Colonne de droite ---------- */
+  .app-shell .right-rail {
+    grid-column: 3;
+    position: sticky;
+    top: 60px;
+    display: block !important;
+    height: calc(100vh - 60px);
+    padding: 16px 0 16px 4px !important;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .app-shell .right-rail .rail-card {
+    margin: 0 0 12px !important;
+    padding: 12px 16px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  .app-shell .card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .app-shell .card-heading {
+    gap: 8px;
+  }
+
+  .app-shell .card-heading span {
+    color: var(--av-text);
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .app-shell .card-heading button {
+    flex: 0 0 auto;
+    font-size: 12px !important;
+    border: 0;
+    background: transparent;
+    color: var(--av-blue) !important;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .app-shell .right-rail .rail-card {
+    overflow: hidden;
+  }
+
+  .app-shell .contact-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--av-text);
+    font-size: 15px;
+    text-align: left;
+  }
+
+  .app-shell .contact-row:hover {
+    background: var(--av-hover);
+  }
+
+  .app-shell .contact-row .avatar {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+  }
+
+  .app-shell .contact-row strong {
+    flex: 1 1 auto;
+    font-weight: 500;
+    color: var(--av-text);
+  }
+
+  .app-shell .contact-row > span:last-child {
+    color: var(--av-muted);
+  }
+
+  .app-shell .suggestion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--av-line);
+  }
+
+  .app-shell .suggestion:last-child {
+    border-bottom: 0;
+  }
+
+  .app-shell .suggestion-copy {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .app-shell .suggestion-copy strong {
+    color: var(--av-text) !important;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .app-shell .suggestion-copy span,
+  .app-shell .suggestion-copy small {
+    color: var(--av-muted) !important;
+    font-size: 13px;
+  }
+
+  .app-shell .suggestion button {
+    flex: 0 0 auto;
+    margin-left: auto;
+    min-width: 40px;
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--av-blue);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .app-shell .sponsored-card .sponsor-banner {
+    border-radius: 10px;
+  }
+
+  .app-shell .footer-links {
+    color: var(--av-muted);
+    font-size: 12px;
+  }
+}
+
+/* Ordinateurs portables et tablettes : colonnes plus étroites */
+@media (min-width: 761px) and (max-width: 1200px) {
+  .app-shell {
+    grid-template-columns: 220px minmax(0, 1fr) 280px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}

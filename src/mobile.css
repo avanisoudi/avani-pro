@@ -35,6 +35,42 @@
     background: var(--m-bg);
   }
 
+/* Cloche de notifications dans la barre du haut */
+  .topbar .nav-bell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--m-hover);
+    color: var(--m-text);
+  }
+
+  .topbar .nav-bell .svg-icon {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .topbar .nav-badge {
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 9px;
+    height: 9px;
+    border: 2px solid var(--m-surface);
+    border-radius: 50%;
+    background: #e41e3f;
+  }
+
   /* ---------- Coque : une seule colonne ---------- */
   .app-shell {
     display: block !important;
@@ -142,9 +178,21 @@
   }
 
   .topbar-nav,
-  .topbar-status,
-  .topbar .menu-trigger {
+  .topbar-status {
     display: none !important;
+  }
+
+  .topbar .menu-trigger {
+    display: grid !important;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--m-hover);
+    color: var(--m-text);
+    font-size: 14px;
   }
 
   .top-actions {
