@@ -181,7 +181,8 @@ export async function listActiveStories(userId: string) {
   // Generate signed URLs only for stories the current user is allowed to see.
   const paths = [...new Set(rows.map(row => row.media_path))]
   const signed = await Promise.all(paths.map(async path => {
-    const result = await client.storage.from('story-media').createSignedUrl(path, 60 * 60)
+    // Une story dure 24 h : le lien doit rester valable toute la durée de vie de la story.
+    const result = await client.storage.from('story-media').createSignedUrl(path, 60 * 60 * 24)
     return [path, result.data?.signedUrl ?? null] as const
   }))
   const urls = new Map(signed)
