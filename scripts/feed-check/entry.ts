@@ -4,6 +4,7 @@
  * Lancement : npm run test:feed
  */
 import { applyReaction, formatCount, formatPostTime, isEditedPost, parsePostContent, reactionState, topReactions } from '../../src/lib/feed'
+import { MAX_POST_MEDIA_FILES, describeMediaError, isStoredMediaPath, mediaKind, mediaPostType, validateMediaSelection } from '../../src/lib/postMedia'
 import type { Post } from '../../src/lib/feed'
 
 const results: Array<{ name: string; ok: boolean; detail: string }> = []
@@ -71,6 +72,45 @@ const dup = parsePostContent('voir https://cdn.test/a.jpg [image]https://cdn.tes
 check('doublon image ignoré', dup.media.length === 1, JSON.stringify(dup.media))
 const video = parsePostContent('démo [image]https://cdn.test/clip.mp4[/image]')
 check('extension vidéo détectée', video.media[0]?.type === 'video', String(video.media[0]?.type))
+
+// 7. Médias du composeur : types, tailles, quota et chemins stockés.
+const file = (name: string, type: string, bytes: number) => {
+  const handle = new File([new Uint8Array(1)], name, { type, lastModified: 0 })
+  // on simule la taille déclarée sans allouer des dizaines de mégaoctets dans le test
+  Object.defineProperty(handle, 'size', { value: bytes })
+  return handle
+}
+const MB = 1024 * 1024
+check('photo JPEG acceptée', mediaKind(file('a.jpg', 'image/jpeg', 1)) === 'image' && mediaKind(file('a.mp4', 'video/mp4', 1)) === 'video' && mediaKind(file('a.pdf', 'application/pdf', 1)) === null)
+{
+  const lot = validateMediaSelection([file('a.jpg', 'image/jpeg', 2 * MB), file('b.png', 'image/png', 3 * MB)], 0, 0)
+  check('deux photos dans le quota = acceptées', lot.accepted.length === 2 && lot.rejected.length === 0, JSON.stringify(lot.rejected))
+}
+{
+  const lot = validateMediaSelection([file('geant.jpg', 'image/jpeg', 11 * MB), file('film.mp4', 'video/mp4', 60 * MB), file('note.txt', 'text/plain', 10)], 0, 0)
+  check('fichier trop lourd ou de mauvais type refusé', lot.accepted.length === 0 && lot.rejected.length === 3, JSON.stringify(lot.rejected))
+}
+{
+  const trop = Array.from({ length: MAX_POST_MEDIA_FILES + 2 }, (_, index) => file(`p${index}.jpg`, 'image/jpeg', 1 * MB))
+  const lot = validateMediaSelection(trop, 0, 0)
+  check(`grille limitée à ${MAX_POST_MEDIA_FILES} médias`, lot.accepted.length === MAX_POST_MEDIA_FILES && lot.rejected.length > 0, `acceptés=${lot.accepted.length}`)
+  const plein = validateMediaSelection([file('suite.jpg', 'image/jpeg', 1 * MB)], MAX_POST_MEDIA_FILES, 0)
+  check('aucun média ajouté quand la grille est pleine', plein.accepted.length === 0 && plein.rejected.length === 1)
+}
+{
+  const lot = validateMediaSelection([file('a.mp4', 'video/mp4', 40 * MB), file('b.mp4', 'video/mp4', 40 * MB), file('c.mp4', 'video/mp4', 40 * MB)], 0, 0)
+  check('enveloppe globale de 100 Mo respectée', lot.accepted.length === 2 && /total/.test(lot.rejected[0] ?? ''), JSON.stringify(lot.rejected))
+  const reprise = validateMediaSelection([file('d.mp4', 'video/mp4', 30 * MB)], 2, 80 * MB)
+  check('la taille déjà sélectionnée est comptée', reprise.accepted.length === 0 && /total/.test(reprise.rejected[0] ?? ''), JSON.stringify(reprise.rejected))
+}
+check('type de publication déduit des médias', mediaPostType([]) === 'text' && mediaPostType([{ kind: 'image' }]) === 'image' && mediaPostType([{ kind: 'video' }]) === 'video' && mediaPostType([{ kind: 'video' }, { kind: 'image' }]) === 'image')
+check('seuls les chemins d’objets sont signés', isStoredMediaPath('uid/posts/a.jpg') && !isStoredMediaPath('https://cdn.test/a.jpg') && !isStoredMediaPath('blob:xyz') && !isStoredMediaPath(''))
+{
+  const media = parsePostContent('Visite du chantier [image]https://cdn.test/chantier.jpg[/image]', ['uid/posts/soirée.mp4?token=abc'])
+  check('média stocké et média de démonstration coexistent', media.media.length === 2 && media.media[0].type === 'video' && media.media[1].type === 'image', JSON.stringify(media.media))
+}
+check('erreur de bucket manquant = message actionnable', describeMediaError(new Error('Bucket not found')).includes('008_post_media.sql'), describeMediaError(new Error('Bucket not found')))
+check('erreur RLS = message actionnable', describeMediaError(new Error('new row violates row-level security policy')).includes('RLS'))
 
 const failed = results.filter(result => !result.ok)
 console.log(`\n${results.length - failed.length}/${results.length} vérifications du fil réussies`)

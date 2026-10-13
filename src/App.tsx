@@ -17,6 +17,9 @@ import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { REACTION_KEYS, applyReaction, emptyReactionCounts, extractTags, toFeedPost } from './lib/feed'
 import type { Post } from './lib/feed'
 import { PostCard } from './components/PostCard'
+import { PostComposer } from './components/PostComposer'
+import { mediaPostType, removePostMedia, resolvePostMediaPaths, uploadPostMedia } from './lib/postMedia'
+import type { ComposerMedia } from './lib/postMedia'
 import { NavButton, SvgIcon, VerifiedBadge } from './components/icons'
 
 /** Le type Post et les helpers du fil vivent dans src/lib/feed.ts. */
@@ -122,8 +125,8 @@ function App() {
   const [feedFilter, setFeedFilter] = useState<'all' | 'following' | 'trending'>('all')
   const [feedQuery, setFeedQuery] = useState('')
   const [editingPostId, setEditingPostId] = useState<string | number | null>(null)
-  const [postDraft, setPostDraft] = useState('')
   const [publishingPost, setPublishingPost] = useState(false)
+  const [mediaProgress, setMediaProgress] = useState<{ done: number; total: number } | null>(null)
   const [sessionUser, setSessionUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
@@ -172,45 +175,52 @@ function App() {
       .filter(post => feedFilter !== 'trending' || post.stats.likes >= 150)
       .filter(post => !query || `${post.name} ${post.body} ${post.tags.join(' ')}`.toLowerCase().includes(query))
   }, [feedFilter, feedQuery, followed, posts])
-  const publishPost = async (event: React.FormEvent) => {
-    event.preventDefault()
-    const content = postDraft.trim()
-    if (!content) { flash('Écrivez quelque chose avant de publier.'); return }
-    if (!sessionUser) { flash('Connectez-vous pour publier.'); return }
-    if (content.length > 5000) { flash('Votre publication dépasse la limite de 5 000 caractères.'); return }
+  /**
+   * Publie le brouillon du composeur. Les fichiers sont d’abord téléversés dans le
+   * bucket Storage `post-media` (seuls les chemins d’objets sont enregistrés en base) ;
+   * si l’enregistrement échoue, les objets déjà envoyés sont supprimés.
+   */
+  const publishPost = async (body: string, media: ComposerMedia[]) => {
+    const content = body.trim()
+    if (!content && !media.length) {
+      flash('Écris quelque chose ou ajoute une photo avant de publier.')
+      return false
+    }
+    if (content.length > 5000) {
+      flash('Garde ta publication sous 5000 caractères.')
+      return false
+    }
+    if (!sessionUser) {
+      flash('Reconnexion nécessaire : rouvre la session puis publie à nouveau.')
+      return false
+    }
     setPublishingPost(true)
+    const uploaded: string[] = []
     try {
-      const created = await createPost(sessionUser.id, content, 'text')
+      setMediaProgress(media.length ? { done: 0, total: media.length } : null)
+      for (const [index, item] of media.entries()) {
+        uploaded.push(await uploadPostMedia(sessionUser.id, item.file))
+        setMediaProgress({ done: index + 1, total: media.length })
+      }
       const authorName: string = String(profile?.full_name || sessionUser.user_metadata?.full_name || 'Membre Avani Pro')
-      const nextPost = toFeedPost({
-        id: created.id,
-        body: content,
-        post_type: 'text',
-        created_at: created.created_at,
-        author: {
-          id: sessionUser.id,
-          username: profile?.username || (sessionUser.email ? sessionUser.email.split('@')[0] : ''),
-          full_name: authorName,
-          avatar_url: profile?.avatar_url ?? null,
-          bio: profile?.bio ?? null,
-          verified_type: profile?.verified_type ?? null,
-        },
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        liked: false,
-        saved: false,
-        reaction: null,
-        reactionCounts: emptyReactionCounts(),
-      })
+      const author = { id: sessionUser.id, username: profile?.username || (sessionUser.email ? sessionUser.email.split('@')[0] : ''), full_name: authorName, avatar_url: profile?.avatar_url ?? null, bio: profile?.bio ?? null, verified_type: profile?.verified_type ?? null }
+      const postType = mediaPostType(media)
+      const created = await createPost(sessionUser.id, content, postType, uploaded)
+      const paths = Array.isArray(created.media_paths) && created.media_paths.length ? created.media_paths : uploaded
+      const resolved = await resolvePostMediaPaths(paths)
+      const nextPost = toFeedPost({ id: created.id, body: content, post_type: postType, created_at: created.created_at, author, media: paths.map(path => resolved.get(path) ?? path), likes: 0, comments: 0, shares: 0, liked: false, saved: false, reaction: null, reactionCounts: emptyReactionCounts() })
       setPosts(current => [nextPost, ...current])
-      setPostDraft('')
-      setFeedFilter('all')
-      setFeedQuery('')
-      flash('Votre publication est en ligne.')
+      if (uploaded.length && !Array.isArray(created.media_paths)) flash('Publication en ligne : seule la première image est conservée tant que la colonne media_paths n’existe pas (migration 008).')
+      flash(uploaded.length ? `Publication en ligne avec ${uploaded.length} média${uploaded.length > 1 ? 's' : ''}.` : 'Votre publication est en ligne.')
+      return true
     } catch (error) {
-      flash(error instanceof Error ? error.message : 'La publication n’a pas pu être créée.')
-    } finally { setPublishingPost(false) }
+      if (uploaded.length) await removePostMedia(uploaded)
+      flash(error instanceof Error ? error.message : 'La publication a échoué.')
+      return false
+    } finally {
+      setMediaProgress(null)
+      setPublishingPost(false)
+    }
   }
   const updatePost = async (id: string | number, body: string) => {
     if (typeof id !== 'string' || !sessionUser) { flash('Cette publication ne peut pas être modifiée hors connexion.'); return }
@@ -283,25 +293,15 @@ function App() {
               <button type="button" className="feed-refresh" onClick={() => { setFeedQuery(''); flash('Filtres réinitialisés.') }} aria-label="Réinitialiser les filtres">↻</button>
             </div>
             <Stories onAction={flash} ownAvatar={displayAvatarUrl} userId={sessionUser?.id ?? null} />
-            <form className="pro-post-composer" onSubmit={publishPost}>
-              <div className="pro-post-composer-top">
-                <div className="avatar avatar-md avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Votre photo de profil" /> : displayAvatar || 'AV'}</div>
-                <label className="pro-post-input-wrap">
-                  <span className="pro-post-label">Partager avec votre réseau</span>
-                  <textarea value={postDraft} onChange={event => setPostDraft(event.target.value)} maxLength={5000} placeholder={`Quoi de neuf, ${displayName.split(' ')[0] || 'vous'} ?`} aria-label="Contenu de la publication" rows={3} />
-                </label>
-              </div>
-              <div className="pro-post-composer-footer">
-                <div className="pro-post-tools">
-                  <button type="button" className="composer-tool-photo" onClick={() => setPostDraft(value => value ? `${value}\n[image]https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=80[/image]` : '[image]https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=80[/image]')} aria-label="Ajouter une photo"><span>▣</span> Photo/vidéo</button>
-                  <button type="button" onClick={() => setPostDraft(value => value ? value + ' 😊' : '😊 ')} aria-label="Ajouter une humeur"><span>☺</span> Humeur/activité</button>
-                  <button type="button" onClick={() => setPostDraft(value => value && !value.endsWith(' ') ? value + ' #' : value + '#')} aria-label="Ajouter un hashtag"><span>#</span> Hashtag</button>
-                  <button type="button" onClick={() => flash('Ajoutez un lieu à votre publication.')} aria-label="Ajouter un lieu"><span>⌖</span> Lieu</button>
-                  <span className="pro-post-audience" title="Les publications sont visibles selon les règles d’accès configurées sur votre compte">🌐 Public</span>
-                </div>
-                <div className="pro-post-submit-group"><span className={postDraft.length > 4800 ? 'pro-post-counter near-limit' : 'pro-post-counter'}>{postDraft.length}/5000</span><button className="pro-post-submit" disabled={publishingPost || !postDraft.trim()}>{publishingPost ? 'Publication…' : 'Publier'}</button></div>
-              </div>
-            </form>
+            <PostComposer
+              displayName={displayName}
+              initials={displayAvatar}
+              avatarUrl={displayAvatarUrl}
+              busy={publishingPost}
+              progress={mediaProgress}
+              onPublish={publishPost}
+              onNotify={flash}
+            />
             <div className="feed-controls">
               <div className="feed-filter-tabs" role="tablist" aria-label="Filtrer les publications">
                 <button type="button" role="tab" aria-selected={feedFilter === 'all'} className={feedFilter === 'all' ? 'filter-active' : ''} onClick={() => setFeedFilter('all')}>Pour vous</button>

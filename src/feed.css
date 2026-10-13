@@ -932,3 +932,201 @@
 .feed-post-list {
   gap: 0 !important;
 }
+
+/* ---------------------------------------------------------------------------
+   Composeur du fil (fcomposer-*) : saisie, sélection de fichiers, aperçus.
+   --------------------------------------------------------------------------- */
+.fcomposer {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 12px 16px 10px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.fcomposer-top { display: flex; align-items: flex-start; gap: 8px; }
+.fcomposer-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5f35dc, #1877f2);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+.fcomposer-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.fcomposer-field { display: block; flex: 1; min-width: 0; }
+.fcomposer-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.fcomposer-field textarea {
+  width: 100%;
+  min-height: 60px;
+  max-height: 240px;
+  padding: 8px 0 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: #050505;
+  font: inherit;
+  font-size: 20px;
+  line-height: 24px;
+}
+.fcomposer-field textarea::placeholder { color: #65676b; }
+.fcomposer-field textarea:disabled { opacity: 0.6; }
+
+/* Aperçus avant publication : 1 grand, puis grille de 3 comme sur un post FB */
+.fcomposer-media {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 118px;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fcomposer-media li { position: relative; overflow: hidden; border-radius: 8px; background: #e4e6eb; }
+.fcomposer-media li:first-child:nth-last-child(2) { grid-column: span 2; }
+.fcomposer-media img,
+.fcomposer-media video { width: 100%; height: 100%; display: block; object-fit: cover; }
+.fcomposer-media-meta {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 8px 5px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.68));
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fcomposer-media li > button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.fcomposer-media li > button:hover:not(:disabled) { background: #050505; }
+.fcomposer-add {
+  display: grid;
+  place-items: center;
+  border: 1px dashed #bcc0c4;
+  background: #f0f2f5;
+}
+.fcomposer-add button {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: #050505;
+  font-size: 26px;
+  cursor: pointer;
+}
+.fcomposer-add button:hover:not(:disabled) { background: #e4e6eb; }
+
+.fcomposer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid #ced0d4;
+}
+.fcomposer-tools { display: flex; align-items: center; gap: 2px; min-width: 0; flex-wrap: wrap; }
+.fcomposer-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #65676b;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fcomposer-tool:hover:not(:disabled) { background: #f0f2f5; }
+.fcomposer-tool:disabled { opacity: 0.55; cursor: default; }
+.fcomposer-tool svg { width: 18px; height: 18px; }
+.fcomposer-tool.is-photo { color: #45bd62; }
+.fcomposer-audience {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: #65676b;
+  font-size: 12px;
+  font-weight: 600;
+}
+.fcomposer-audience svg { width: 14px; height: 14px; }
+.fcomposer-submit { display: flex; align-items: center; gap: 8px; flex: none; }
+.fcomposer-counter { color: #65676b; font-size: 12px; white-space: nowrap; }
+.fcomposer-counter.near-limit { color: #e41e3f; }
+.fcomposer-publish {
+  min-height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #1877f2;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fcomposer-publish:hover:not(:disabled) { background: #166fe5; }
+.fcomposer-publish:disabled { background: #bcc0c4; cursor: not-allowed; }
+.fcomposer-hint { margin: 8px 0 0; color: #65676b; font-size: 12px; }
+.fcomposer-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* Thème sombre */
+.app-shell.theme-dark .fcomposer { background: #242526; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+.app-shell.theme-dark .fcomposer-field textarea { color: #e4e6eb; }
+.app-shell.theme-dark .fcomposer-field textarea::placeholder { color: #b0b3b8; }
+.app-shell.theme-dark .fcomposer-footer { border-top-color: #3a3b3c; }
+.app-shell.theme-dark .fcomposer-tool:hover:not(:disabled),
+.app-shell.theme-dark .fcomposer-audience { background: transparent; }
+.app-shell.theme-dark .fcomposer-tool:hover:not(:disabled) { background: #3a3b3c; }
+.app-shell.theme-dark .fcomposer-media li,
+.app-shell.theme-dark .fcomposer-add { background: #3a3b3c; border-color: #4e4f50; }
+.app-shell.theme-dark .fcomposer-add button { color: #e4e6eb; }
+.app-shell.theme-dark .fcomposer-add button:hover:not(:disabled) { background: #4e4f50; }
+.app-shell.theme-dark .fcomposer-publish:disabled { background: #4e4f50; color: #b0b3b8; }
+
+@media (max-width: 760px) {
+  .fcomposer { padding: 10px 12px 8px; border-radius: 8px 8px 0 0; }
+  .fcomposer-field textarea { font-size: 16px; line-height: 22px; min-height: 48px; }
+  .fcomposer-media { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 96px; }
+  .fcomposer-media li:first-child:nth-last-child(2) { grid-column: span 1; }
+  .fcomposer-tool span, .fcomposer-audience span { font-size: 12px; }
+  .fcomposer-footer { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .fcomposer-submit { width: 100%; justify-content: space-between; }
+}

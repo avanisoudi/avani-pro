@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import { requireSupabase } from './supabase'
 import { isMissingColumnError } from './postgres'
+import { resolvePostMediaPaths } from './postMedia'
 
 export type ProfileRecord = { id: string; username: string; full_name: string; avatar_url: string | null; bio: string | null; verified_type: string | null; followers_count?: number; following_count?: number }
 export type MessageRecord = {
@@ -42,11 +43,32 @@ export async function getMessageAttachmentUrl(path: string, expiresIn = 3600) {
   return data.signedUrl
 }
 
-export async function createPost(authorId: string, body: string, postType = 'text') {
+/**
+ * Enregistre une publication. Les médias sont stockés sous forme de chemins d’objets
+ * Storage (`media_paths text[]`, colonne ajoutée par la migration 008) ; le premier chemin
+ * est aussi copié dans `media_path`, colonne historique de la migration 001.
+ * Si `media_paths` n’existe pas encore dans la base, la publication est quand même
+ * enregistrée avec sa première image plutôt que d’échouer.
+ */
+export async function createPost(authorId: string, body: string, postType = 'text', mediaPaths: string[] = []) {
   const client = requireSupabase()
-  const { data, error } = await client.from('posts').insert({ author_id: authorId, body: body.trim(), post_type: postType }).select('id, created_at').single()
-  if (error) throw error
-  return data as { id: string; created_at: string }
+  const content = body.trim() || ' '
+  const paths = mediaPaths.filter(Boolean)
+  const payload: Record<string, unknown> = { author_id: authorId, body: content, post_type: postType }
+  if (paths.length) {
+    payload.media_paths = paths
+    payload.media_path = paths[0]
+  }
+  const attempt = await client.from('posts').insert(payload).select('id, created_at, post_type, media_paths').single()
+  if (!attempt.error) return attempt.data as { id: string; created_at: string; media_paths?: string[] | null }
+  if (paths.length && isMissingColumnError(attempt.error, 'media_paths')) {
+    const withoutArray = { ...payload }
+    delete withoutArray.media_paths
+    const fallback = await client.from('posts').insert(withoutArray).select('id, created_at, post_type').single()
+    if (fallback.error) throw fallback.error
+    return { ...(fallback.data as { id: string; created_at: string }), media_paths: null }
+  }
+  throw attempt.error
 }
 
 export async function getMyProfile(user: User) {
@@ -245,7 +267,14 @@ export async function createDirectConversation(userId: string, contactId: string
 export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry'
 type LikeRow = { post_id: string; user_id: string; reaction_type: ReactionType }
 export type ReactionCounts = Record<ReactionType, number>
-export type FeedPostRecord = { id: string; body: string; post_type: string; created_at: string; updated_at?: string | null; author: ProfileRecord; likes: number; comments: number; shares: number; liked: boolean; saved: boolean; reaction: ReactionType | null; reactionCounts: ReactionCounts }
+/** Chemins bruts déclarés par une ligne `posts`, dans l’ordre d’affichage. */
+function mediaPathsOf(row: { media_paths?: unknown; media_path?: unknown }): string[] {
+  const list = Array.isArray(row.media_paths) ? (row.media_paths as unknown[]).filter((path): path is string => typeof path === 'string' && path.length > 0) : []
+  const single = typeof row.media_path === 'string' && row.media_path ? [row.media_path] : []
+  return [...new Set([...list, ...single])]
+}
+
+export type FeedPostRecord = { id: string; body: string; post_type: string; created_at: string; updated_at?: string | null; author: ProfileRecord; likes: number; comments: number; shares: number; liked: boolean; saved: boolean; reaction: ReactionType | null; reactionCounts: ReactionCounts; media?: string[] }
 
 /**
  * Lignes de réactions du fil. Si la base ne porte pas encore `reaction_type`,
@@ -261,10 +290,30 @@ async function listLikeRows(client: ReturnType<typeof requireSupabase>) {
   return ((plain.data ?? []) as Array<{ post_id: string; user_id: string }>).map(row => ({ ...row, reaction_type: 'like' as ReactionType }))
 }
 
+/**
+ * Publications du fil. Les colonnes de médias sont ajoutées par la migration 008 :
+ * si la base ne les porte pas encore, la requête est rejouée sans elles et le fil
+ * continue d’afficher les médias déjà présents dans le texte des publications.
+ */
+async function selectFeedPosts(client: ReturnType<typeof requireSupabase>) {
+  const withMedia = await client
+    .from('posts')
+    .select('id, body, post_type, created_at, updated_at, media_path, media_paths, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url, bio, verified_type)')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  if (!withMedia.error) return withMedia
+  if (!isMissingColumnError(withMedia.error, 'media_path') && !isMissingColumnError(withMedia.error, 'media_paths')) throw withMedia.error
+  return client
+    .from('posts')
+    .select('id, body, post_type, created_at, updated_at, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url, bio, verified_type)')
+    .order('created_at', { ascending: false })
+    .limit(50)
+}
+
 export async function listFeedPosts(userId?: string | null) {
   const client = requireSupabase()
   const [{ data: posts, error: postsError }, likeRows, { data: comments, error: commentsError }, { data: shares, error: sharesError }, savedResult] = await Promise.all([
-    client.from('posts').select('id, body, post_type, created_at, updated_at, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url, bio, verified_type)').order('created_at', { ascending: false }).limit(50),
+    selectFeedPosts(client),
     listLikeRows(client),
     client.from('comments').select('post_id'),
     client.from('post_shares').select('post_id'),
@@ -282,8 +331,11 @@ export async function listFeedPosts(userId?: string | null) {
     return all
   }, {})
   const savedIds = new Set(((savedResult.data ?? []) as Array<{ post_id: string }>).map(row => row.post_id))
+  const rows = (posts ?? []) as any[]
+  const storedPaths = rows.flatMap((row: any) => mediaPathsOf(row))
+  const mediaUrls = await resolvePostMediaPaths(storedPaths)
   const likeCounts = countBy(likeRows), commentCounts = countBy(comments), shareCounts = countBy(shares)
-  return (posts ?? []).map((row: any) => ({ id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at, updated_at: row.updated_at ?? null, author: Array.isArray(row.author) ? row.author[0] : row.author, likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0, liked: myReactions.has(row.id), reaction: myReactions.get(row.id) ?? null, reactionCounts: reactionCountsByPost[row.id] ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }, saved: savedIds.has(row.id) })) as FeedPostRecord[]
+  return rows.map((row: any) => ({ id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at, updated_at: row.updated_at ?? null, media: mediaPathsOf(row).map(path => mediaUrls.get(path) ?? path), author: Array.isArray(row.author) ? row.author[0] : row.author, likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0, liked: myReactions.has(row.id), reaction: myReactions.get(row.id) ?? null, reactionCounts: reactionCountsByPost[row.id] ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }, saved: savedIds.has(row.id) })) as FeedPostRecord[]
 }
 export type ReactionUserRecord = { user_id: string; reaction_type: ReactionType; created_at: string; user: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url'> | null }
 

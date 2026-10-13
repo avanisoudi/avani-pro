@@ -224,7 +224,7 @@ export function toFeedPost(record: FeedRecord): Post {
   const author = record.author ?? ({} as ProfileRecord)
   const name = author.full_name || 'Membre Avani Pro'
   const body = record.body ?? ''
-  const media = record.media ?? []
+  const media = Array.isArray(record.media) ? record.media.filter(Boolean) : []
   return {
     id: record.id,
     authorId: author.id,
