@@ -35,3 +35,8 @@
 - [x] Publier la version 1.2.0 avec le sprite `social-icons.svg` et le smoke test associé.
 - [x] Fusionner les routes avancées Recherche, Fichiers, Notifications et Profil public.
 - [x] Conserver Supabase/Render comme backend et cible de déploiement uniques.
+- [x] Aligner la carte de publication sur le fil de référence : en-tête, texte repliable, médias pleine largeur, ligne d'engagement, barre d'actions.
+- [x] Ouvrir les commentaires au clic sur « Commenter » : chargement unique, focus du champ, repli, compteur exact, message d'erreur avec « Réessayer ».
+- [x] Rendre le compteur de réactions exact et immédiat (total réconcilié, icônes superposées triées, réaction perso en tête).
+- [x] Ajouter les vérifications de logique du fil : `npm run test:feed`.
+- [ ] Publier une photo ou une vidéo depuis le composeur (sélection de fichier, aperçu, Supabase Storage).

@@ -1,4 +1,5 @@
 import { requireSupabase } from './supabase'
+import { isMissingColumnError } from './postgres'
 import type { ProfileRecord } from './api'
 
 export async function updateMyProfile(userId: string, values: Pick<ProfileRecord, 'full_name' | 'username' | 'bio'> | { avatar_url: string }) {
@@ -81,17 +82,62 @@ export async function getAdminStats() {
 }
 
 export type CommentRecord = { id: string; post_id: string; author_id: string; parent_id: string | null; body: string; created_at: string; author?: Pick<ProfileRecord, 'username' | 'full_name' | 'avatar_url' | 'verified_type'> }
+export type CommentListResult = { comments: CommentRecord[]; total: number; repliesSupported: boolean }
 
-export async function listComments(postId: string) {
-  const { data, error } = await requireSupabase().from('comments').select('id, post_id, author_id, parent_id, body, created_at, author:profiles!comments_author_id_fkey(username, full_name, avatar_url, verified_type)').eq('post_id', postId).order('created_at', { ascending: true }).limit(100)
-  if (error) throw error
-  return (data ?? []).map((row: any) => ({ ...row, author: Array.isArray(row.author) ? row.author[0] : row.author })) as CommentRecord[]
+const COMMENT_SELECT = 'id, post_id, author_id, parent_id, body, created_at, author:profiles!comments_author_id_fkey(username, full_name, avatar_url, verified_type)'
+const COMMENT_SELECT_WITHOUT_PARENT = 'id, post_id, author_id, body, created_at, author:profiles!comments_author_id_fkey(username, full_name, avatar_url, verified_type)'
+
+function toCommentRecord(row: Record<string, unknown>): CommentRecord {
+  const author = Array.isArray(row.author) ? row.author[0] : row.author
+  return {
+    id: String(row.id ?? crypto.randomUUID()),
+    post_id: String(row.post_id ?? ''),
+    author_id: String(row.author_id ?? ''),
+    parent_id: row.parent_id ? String(row.parent_id) : null,
+    body: String(row.body ?? ''),
+    created_at: String(row.created_at ?? new Date().toISOString()),
+    author: (author as CommentRecord['author']) ?? undefined,
+  }
+}
+
+/**
+ * Commentaire d’une publication : liste paginée côté client (100 lignes) et
+ * total exact renvoyé par PostgREST. Si la base ne connaît pas encore la colonne
+ * `parent_id`, la requête est rejouée sans elle au lieu de faire échouer l’ouverture des commentaires.
+ */
+export async function listComments(postId: string): Promise<CommentListResult> {
+  const client = requireSupabase()
+  const request = (columns: string) =>
+    client.from('comments').select(columns, { count: 'exact' }).eq('post_id', postId).order('created_at', { ascending: true }).limit(100)
+  const withParents = await request(COMMENT_SELECT)
+  if (withParents.error && isMissingColumnError(withParents.error, 'parent_id')) {
+    const withoutParents = await request(COMMENT_SELECT_WITHOUT_PARENT)
+    if (withoutParents.error) throw withoutParents.error
+    const comments = ((withoutParents.data ?? []) as unknown as Array<Record<string, unknown>>).map(toCommentRecord)
+    return { comments, total: Math.max(withoutParents.count ?? 0, comments.length), repliesSupported: false }
+  }
+  if (withParents.error) throw withParents.error
+  const comments = ((withParents.data ?? []) as unknown as Array<Record<string, unknown>>).map(toCommentRecord)
+  return { comments, total: Math.max(withParents.count ?? 0, comments.length), repliesSupported: true }
 }
 
 export async function createComment(postId: string | number, authorId: string, body: string, parentId?: string | null) {
-  const { data, error } = await requireSupabase().from('comments').insert({ post_id: String(postId), author_id: authorId, body: body.trim(), parent_id: parentId ?? null }).select('id, post_id, author_id, parent_id, body, created_at').single()
-  if (error) throw error
-  return data as CommentRecord
+  const content = body.trim()
+  if (!content) throw new Error('Écrivez votre commentaire avant de l’envoyer.')
+  if (content.length > 2000) throw new Error('Le commentaire dépasse 2 000 caractères.')
+  const client = requireSupabase()
+  const payload: Record<string, unknown> = { post_id: String(postId), author_id: authorId, body: content }
+  if (parentId) payload.parent_id = parentId
+  const attempt = await client.from('comments').insert(payload).select('*').single()
+  if (!attempt.error) return toCommentRecord((attempt.data ?? {}) as unknown as Record<string, unknown>)
+  if (parentId && isMissingColumnError(attempt.error, 'parent_id')) {
+    const withoutParent = { ...payload }
+    delete withoutParent.parent_id
+    const fallback = await client.from('comments').insert(withoutParent).select('*').single()
+    if (fallback.error) throw fallback.error
+    return toCommentRecord((fallback.data ?? {}) as unknown as Record<string, unknown>)
+  }
+  throw attempt.error
 }
 
 export async function deleteComment(commentId: string, authorId: string) {

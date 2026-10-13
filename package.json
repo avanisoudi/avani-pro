@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test:smoke": "node scripts/smoke-test.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:feed": "vite build --config scripts/feed-check/vite.config.mjs && node scripts/feed-check/out/entry.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
