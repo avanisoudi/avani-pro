@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import './App.css'
 import './mobile.css'
@@ -11,13 +11,16 @@ import { ResetPasswordPanel } from './components/ResetPasswordPanel'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
 import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchPanel } from './components/AdvancedPanels'
-import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, listReactionUsers, recordPostShare, setPostReaction, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord, type ReactionType } from './lib/api'
-import { createComment, createStory, deleteComment, listActiveStories, listComments, listDiscoverableProfiles, listFollowingIds, listMyGroups, toggleFollow, updateComment, type CommentRecord, type StoryRecord } from './lib/socialApi'
+import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, recordPostShare, setPostReaction, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord, type ReactionType } from './lib/api'
+import { createStory, listActiveStories, listDiscoverableProfiles, listFollowingIds, listMyGroups, toggleFollow, type StoryRecord } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { REACTION_KEYS, applyReaction, emptyReactionCounts, extractTags, toFeedPost } from './lib/feed'
+import type { Post } from './lib/feed'
+import { PostCard } from './components/PostCard'
+import { NavButton, SvgIcon, VerifiedBadge } from './components/icons'
 
+/** Le type Post et les helpers du fil vivent dans src/lib/feed.ts. */
 type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'saved' | 'notifications'
-type Post = { id: string | number; authorId?: string; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean; reaction?: ReactionType; reactionCounts?: Record<ReactionType, number>; saved?: boolean; verifiedType?: string | null; avatarUrl?: string | null }
-
 function PublicHome({ onAuth }: { onAuth: () => void }) {
   return <div className="lp">
     <header className="lp-nav">
@@ -132,22 +135,28 @@ function App() {
   useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); if (path.startsWith('/groups')) setActive('groups'); else if (path.startsWith('/pages')) setActive('pages'); else if (path.startsWith('/messages')) setActive('messages'); else if (path.startsWith('/notifications')) setActive('notifications'); else if (path.startsWith('/files')) setActive('files'); else if (path.startsWith('/saved')) setActive('saved'); else if (path.startsWith('/admin')) setActive('admin'); else if (path.startsWith('/settings') || path.startsWith('/u/')) setActive('profile'); else if (path.startsWith('/search')) setActive('explore'); else setActive('feed') }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 8000) }
+  /**
+   * Réaction optimistic : le nouvel état est dérivé du dernier rendu dans l’updater,
+   * donc deux appuis rapprochés (survol de la barre puis clic) ne peuvent ni figer
+   * le compteur sur une valeur antérieure ni le compter deux fois.
+   */
   const reactToPost = async (id: string | number, reaction: ReactionType) => {
-    const allowed: ReactionType[] = ['like', 'love', 'haha', 'wow', 'sad', 'angry']
-    if (!allowed.includes(reaction)) return
+    if (!REACTION_KEYS.includes(reaction)) return
+    if (!sessionUser) { flash('Connectez-vous pour réagir à une publication.'); return }
     const current = posts.find(post => post.id === id)
-    if (!current || !sessionUser || typeof id !== 'string') { if (!sessionUser) flash('Connectez-vous pour réagir à une publication.'); return }
+    if (!current) return
     const previous = current
-    const nextReaction = current.reaction === reaction ? null : reaction
-    const counts = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0, ...(current.reactionCounts ?? {}) } as Record<ReactionType, number>
-    if (current.reaction) counts[current.reaction] = Math.max(0, counts[current.reaction] - 1)
-    if (nextReaction) counts[nextReaction] += 1
-    const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
-    setPosts(items => items.map(post => post.id === id ? { ...post, liked: Boolean(nextReaction), reaction: nextReaction ?? undefined, reactionCounts: counts, stats: { ...post.stats, likes: total } } : post))
+    const rollback = { reaction: previous.reaction, reactionCounts: previous.reactionCounts, stats: previous.stats, liked: previous.liked }
+    setPosts(items => items.map(post => {
+      if (post.id !== id) return post
+      const next = applyReaction(post, reaction)
+      return { ...post, liked: Boolean(next.reaction), reaction: next.reaction ?? undefined, reactionCounts: next.counts, stats: { ...post.stats, likes: next.total } }
+    }))
+    if (typeof id !== 'string') { flash('Réaction conservée sur cet aperçu uniquement.'); return }
     try {
-      await setPostReaction(id, sessionUser.id, nextReaction)
+      await setPostReaction(id, sessionUser.id, current.reaction === reaction ? null : reaction)
     } catch {
-      setPosts(items => items.map(post => post.id === id ? previous : post))
+      setPosts(items => items.map(post => (post.id === id ? { ...post, ...rollback } : post)))
       flash('La réaction n’a pas pu être synchronisée. Votre affichage a été restauré.')
     }
   }
@@ -172,16 +181,28 @@ function App() {
     setPublishingPost(true)
     try {
       const created = await createPost(sessionUser.id, content, 'text')
-      const authorName: string = String(profile?.full_name || sessionUser.user_metadata?.full_name || '')
-      const nextPost: Post = {
-        id: created.id, authorId: sessionUser.id, name: authorName,
-        handle: profile?.username ? `@${profile.username}` : sessionUser.email ? `@${sessionUser.email.split('@')[0]}` : '',
-        role: profile?.bio || '', avatar: authorName.split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase(),
-        avatarUrl: profile?.avatar_url ?? null, time: 'à l’instant', body: content,
-        tags: content.match(/#[\w-]+/g) ?? [], stats: { likes: 0, comments: 0, shares: 0 },
-        kind: 'thought', liked: false, saved: false, verifiedType: profile?.verified_type ?? null,
-        reactionCounts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
-      }
+      const authorName: string = String(profile?.full_name || sessionUser.user_metadata?.full_name || 'Membre Avani Pro')
+      const nextPost = toFeedPost({
+        id: created.id,
+        body: content,
+        post_type: 'text',
+        created_at: created.created_at,
+        author: {
+          id: sessionUser.id,
+          username: profile?.username || (sessionUser.email ? sessionUser.email.split('@')[0] : ''),
+          full_name: authorName,
+          avatar_url: profile?.avatar_url ?? null,
+          bio: profile?.bio ?? null,
+          verified_type: profile?.verified_type ?? null,
+        },
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        liked: false,
+        saved: false,
+        reaction: null,
+        reactionCounts: emptyReactionCounts(),
+      })
       setPosts(current => [nextPost, ...current])
       setPostDraft('')
       setFeedFilter('all')
@@ -194,8 +215,8 @@ function App() {
   const updatePost = async (id: string | number, body: string) => {
     if (typeof id !== 'string' || !sessionUser) { flash('Cette publication ne peut pas être modifiée hors connexion.'); return }
     try {
-      await updatePostRecord(id, sessionUser.id, body)
-      setPosts(current => current.map(post => post.id === id ? { ...post, body, time: 'modifié à l’instant' } : post))
+      const saved = await updatePostRecord(id, sessionUser.id, body)
+      setPosts(current => current.map(post => post.id === id ? { ...post, body, tags: extractTags(body), editedAt: saved.updated_at } : post))
       setEditingPostId(null)
       flash('Publication modifiée.')
     } catch (error) { flash(error instanceof Error ? error.message : 'La publication n’a pas pu être modifiée.') }
@@ -210,7 +231,7 @@ function App() {
   }
   useEffect(() => { if (!supabase) return; supabase.auth.getSession().then(({ data }) => { setSessionUser(data.session?.user ?? null); if (!data.session) setProfile(null) }); const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { setSessionUser(session?.user ?? null); if (!session) setProfile(null) }); return () => subscription.unsubscribe() }, [])
   useEffect(() => { if (!sessionUser) { setNetworkPeople([]); setNetworkGroups([]); setFollowed([]); return }; Promise.all([listDiscoverableProfiles(sessionUser.id), listMyGroups(sessionUser.id), listFollowingIds(sessionUser.id)]).then(([people, groups, followingIds]) => { setNetworkPeople(people); setNetworkGroups(groups); setFollowed(followingIds) }).catch(() => { setNetworkPeople([]); setNetworkGroups([]); setFollowed([]) }) }, [sessionUser])
-  useEffect(() => { if (!supabase) return; listFeedPosts(sessionUser?.id).then(feed => { if (supabase) setPosts(feed.map(post => ({ id: post.id, authorId: post.author?.id, name: post.author?.full_name || '', handle: post.author?.username ? `@${post.author.username}` : '', role: post.author?.bio || '', avatar: (post.author?.full_name || '').split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase(), avatarUrl: post.author?.avatar_url ?? null, time: new Date(post.created_at).toLocaleDateString('fr-FR'), body: post.body, tags: post.body.match(/#[\w-]+/g) ?? [], stats: { likes: post.likes, comments: post.comments, shares: post.shares }, kind: post.post_type === 'image' ? 'image' : post.post_type === 'link' ? 'link' : 'thought', liked: post.liked, reaction: post.reaction ?? undefined, reactionCounts: post.reactionCounts, saved: post.saved, verifiedType: post.author?.verified_type }))) }).catch(() => undefined) }, [sessionUser])
+  useEffect(() => { if (!supabase) return; listFeedPosts(sessionUser?.id).then(feed => { if (supabase) setPosts(feed.map(post => toFeedPost(post))) }).catch(() => undefined) }, [sessionUser])
   useEffect(() => { if (!sessionUser || !supabase) return; getMyProfile(sessionUser).then(setProfile).catch(() => undefined) }, [sessionUser])
   const openAuth = () => { if (!isSupabaseConfigured) { flash('Ajoutez vos variables Supabase dans Render pour activer la connexion.'); return }; setAuthOpen(true) }
   const signOut = async () => { if (supabase) await supabase.auth.signOut(); setProfile(null); flash('Vous êtes déconnecté de votre espace sécurisé.') }
@@ -290,7 +311,24 @@ function App() {
               <span className="feed-count">{visiblePosts.length} publication{visiblePosts.length === 1 ? '' : 's'}</span>
             </div>
             <section className="post-list feed-post-list" aria-label="Publications">
-              {visiblePosts.length === 0 ? <div className="empty-feed"><div className="empty-feed-icon">⌁</div><strong>Aucune publication pour le moment</strong><span>Les publications de votre réseau apparaîtront ici. Vous pouvez commencer par partager une idée.</span></div> : visiblePosts.map(post => <PostCard key={post.id} post={post} user={sessionUser} onNotify={flash} onReact={(reaction) => void reactToPost(post.id, reaction)} onCommentCountChange={(count) => setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, comments: count } } : item))} onShare={async () => { if (sessionUser && typeof post.id === 'string') { try { await recordPostShare(post.id, sessionUser.id); setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, shares: item.stats.shares + 1 } } : item)) } catch { flash('Le partage n’a pas pu être enregistré.') } } else flash('Connectez-vous pour enregistrer ce partage.') }} onSave={async () => { if (!sessionUser || typeof post.id !== 'string') { flash('Connectez-vous pour sauvegarder cette publication.'); return }; try { const next = await toggleSavedPost(post.id, sessionUser.id, post.saved ?? false); setPosts(current => current.map(item => item.id === post.id ? { ...item, saved: next } : item)); flash(next ? 'Publication sauvegardée.' : 'Publication retirée des sauvegardes.') } catch { flash('La sauvegarde n’a pas pu être enregistrée.') } }} onComment={() => flash('Impossible de charger ou d’enregistrer le commentaire.')} onEdit={() => setEditingPostId(post.id)} onDelete={() => void deletePost(post.id)} editing={editingPostId === post.id} onCancelEdit={() => setEditingPostId(null)} onSaveEdit={body => void updatePost(post.id, body)} />)}
+              {visiblePosts.length === 0 ? <div className="empty-feed"><div className="empty-feed-icon">⌁</div><strong>Aucune publication pour le moment</strong><span>Les publications de votre réseau apparaîtront ici. Vous pouvez commencer par partager une idée.</span></div> : visiblePosts.map(post => (
+              <PostCard
+                key={post.id}
+                post={post}
+                user={sessionUser}
+                me={{ name: displayName, handle: displayUsername, initials: displayAvatar, avatarUrl: displayAvatarUrl }}
+                onReact={reaction => void reactToPost(post.id, reaction)}
+                onCommentTotalChange={count => setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, comments: count } } : item))}
+                onNotify={flash}
+                onShare={async () => { if (sessionUser && typeof post.id === 'string') { try { await recordPostShare(post.id, sessionUser.id); setPosts(current => current.map(item => item.id === post.id ? { ...item, stats: { ...item.stats, shares: item.stats.shares + 1 } } : item)) } catch { flash('Le partage n’a pas pu être enregistré.') } } else flash('Connectez-vous pour enregistrer ce partage.') }}
+                onSave={async () => { if (!sessionUser || typeof post.id !== 'string') { flash('Connectez-vous pour sauvegarder cette publication.'); return }; try { const next = await toggleSavedPost(post.id, sessionUser.id, post.saved ?? false); setPosts(current => current.map(item => item.id === post.id ? { ...item, saved: next } : item)); flash(next ? 'Publication sauvegardée.' : 'Publication retirée des sauvegardes.') } catch { flash('La sauvegarde n’a pas pu être enregistrée.') } }}
+                onEdit={() => setEditingPostId(post.id)}
+                onDelete={() => void deletePost(post.id)}
+                editing={editingPostId === post.id}
+                onCancelEdit={() => setEditingPostId(null)}
+                onSaveEdit={body => void updatePost(post.id, body)}
+              />
+            ))}
             </section>
           </section>
         </>}
@@ -313,255 +351,4 @@ function App() {
   )
 }
 
-function VerifiedBadge({ type = 'verified' }: { type?: string | null }) { const label = type === 'professional' ? 'Compte professionnel v��rifié' : type === 'creator' ? 'Créateur vérifié' : 'Compte vérifié'; return <span className="verified-badge" role="img" aria-label={label} title={label}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.5 12.1 3l2.55-.08 1.02 2.34 2.08 1.5-.72 2.45.72 2.45-2.08 1.5-1.02 2.34-2.55-.08L10 17.5l-2.1-1.5-2.55.08-1.02-2.34-2.08-1.5.72-2.45-.72-2.45 2.08-1.5 1.02-2.34L7.9 3 10 1.5Z"/><path className="verified-badge-check" d="m6.3 10.2 2.25 2.2 5.1-5.05"/></svg></span> }
-function SvgIcon({ name }: { name: string }) { return <svg className="svg-icon" aria-hidden="true"><use href={`/social-icons.svg#${name}`} /></svg> }
-function NavButton({ active, onClick, icon, label, badge }: { active: boolean; onClick: () => void; icon: string; label: string; badge?: string }) { return <button className={`nav-button ${active ? 'active' : ''}`} onClick={onClick}><SvgIcon name={icon} />{label}{badge && <b>{badge}</b>}</button> }
-function formatReactionCount(value: number) {
-  return new Intl.NumberFormat('fr-FR').format(Math.max(0, value))
-}
-
-const reactionMeta: Array<[ReactionType, string, string]> = [
-  ['like', '👍', 'J’aime'],
-  ['love', '❤️', 'J’adore'],
-  ['haha', '😂', 'Haha'],
-  ['wow', '😮', 'Wouah'],
-  ['sad', '😢', 'Triste'],
-  ['angry', '😡', 'Grrr'],
-]
-
-const rxKeys = ['like', 'love', 'haha', 'wow', 'sad', 'angry'] as const
-const rxMeta: Record<string, { label: string; icon: string; color: string }> = {
-  like: { label: 'J’aime', icon: '/assets/reactions/like.svg', color: '#1877f2' },
-  love: { label: 'J’adore', icon: '/assets/reactions/love.svg', color: '#f33e58' },
-  haha: { label: 'Haha', icon: '/assets/reactions/haha.svg', color: '#f7b125' },
-  wow: { label: 'Wouah', icon: '/assets/reactions/wow.svg', color: '#f7b125' },
-  sad: { label: 'Triste', icon: '/assets/reactions/sad.svg', color: '#f7b125' },
-  angry: { label: 'Grrr', icon: '/assets/reactions/angry.svg', color: '#e9710f' },
-}
-
-function ReactionPicker({ reaction, onReact }: { reaction?: ReactionType; onReact: (reaction: ReactionType) => void }) {
-  const [open, setOpen] = useState(false)
-  const hoverTimer = useRef<number | null>(null)
-  const pressTimer = useRef<number | null>(null)
-  const longPressed = useRef(false)
-  const meta = reaction ? rxMeta[reaction] : undefined
-  const cancelHover = () => { if (hoverTimer.current) window.clearTimeout(hoverTimer.current); hoverTimer.current = null }
-  const cancelPress = () => { if (pressTimer.current) window.clearTimeout(pressTimer.current); pressTimer.current = null }
-  useEffect(() => () => { cancelHover(); cancelPress() }, [])
-  return <div
-    className="rx"
-    onPointerEnter={event => { if (event.pointerType === 'mouse') { cancelHover(); setOpen(true) } }}
-    onPointerLeave={event => { if (event.pointerType === 'mouse') { cancelHover(); hoverTimer.current = window.setTimeout(() => setOpen(false), 250) } }}
-    onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false) }}
-  >
-    {open && <div className="rx-picker" role="group" aria-label="Choisir une réaction">
-      {rxKeys.map(key => <button key={key} type="button" className={`rx-option${reaction === key ? ' is-selected' : ''}`} aria-label={rxMeta[key].label} aria-pressed={reaction === key} style={{ color: rxMeta[key].color }} onClick={() => { setOpen(false); onReact(key as ReactionType) }}>
-        <img src={rxMeta[key].icon} alt="" /><span>{rxMeta[key].label}</span>
-      </button>)}
-    </div>}
-    <button
-      type="button"
-      className={`rx-button${meta ? ' is-active' : ''}`}
-      style={meta ? { ['--rx-active' as string]: meta.color } as React.CSSProperties : undefined}
-      aria-label={meta ? `Réaction : ${meta.label}. Appuyez pour modifier ou retirer` : 'J’aime'}
-      aria-haspopup="true"
-      aria-expanded={open}
-      onPointerDown={event => {
-        longPressed.current = false
-        if (event.pointerType !== 'mouse') {
-          cancelPress()
-          pressTimer.current = window.setTimeout(() => { longPressed.current = true; setOpen(true) }, 450)
-        }
-      }}
-      onPointerUp={cancelPress}
-      onPointerLeave={cancelPress}
-      onPointerCancel={cancelPress}
-      onContextMenu={event => { if (longPressed.current) event.preventDefault() }}
-      onClick={() => {
-        if (longPressed.current) { longPressed.current = false; return }
-        setOpen(false)
-        onReact(reaction ?? 'like')
-      }}
-    >
-      {meta ? <img className="rx-icon" src={meta.icon} alt="" /> : <SvgIcon name="like" />}
-      <span>{meta ? meta.label : 'J’aime'}</span>
-    </button>
-  </div>
-}
-
-function ReactionModal({ post, onClose }: { post: Post; onClose: () => void }) {
-  const [filter, setFilter] = useState<ReactionType | 'all'>('all')
-  const [users, setUsers] = useState<Array<{ user_id: string; reaction_type: ReactionType; created_at: string; user: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url'> | null }>>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const counts = post.reactionCounts ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
-  const total = Object.values(counts).reduce((sum, value) => sum + value, 0)
-  useEffect(() => {
-    const closeOnOutside = (event: PointerEvent) => { if (dialogRef.current && !dialogRef.current.contains(event.target as Node)) onClose() }
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    document.addEventListener('pointerdown', closeOnOutside)
-    document.addEventListener('keydown', closeOnEscape)
-    return () => { document.removeEventListener('pointerdown', closeOnOutside); document.removeEventListener('keydown', closeOnEscape) }
-  }, [onClose])
-  useEffect(() => {
-    let active = true
-    setLoading(true); setError('')
-    listReactionUsers(String(post.id), filter).then(rows => { if (active) { setUsers(rows); setLoading(false) } }).catch(() => { if (active) { setUsers([]); setLoading(false); setError('Impossible de charger les personnes qui ont réagi.') } })
-    return () => { active = false }
-  }, [post.id, filter])
-  return <div className="reaction-modal-backdrop" role="presentation">
-    <div className="reaction-modal" role="dialog" aria-modal="true" aria-label="Réactions" ref={dialogRef}>
-      <div className="reaction-modal-head"><div><strong>Réactions</strong><span>{formatReactionCount(total)} au total</span></div><button type="button" onClick={onClose} aria-label="Fermer">×</button></div>
-      <div className="reaction-tabs">
-        <button type="button" className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>Toutes <b>{formatReactionCount(total)}</b></button>
-        {reactionMeta.map(([key, emoji, label]) => <button type="button" key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>{emoji} {label} <b>{formatReactionCount(counts[key])}</b></button>)}
-      </div>
-      <div className="reaction-user-list">
-        {loading && <p className="empty-copy">Chargement des réactions…</p>}
-        {!loading && error && <p className="empty-copy">{error}</p>}
-        {!loading && !error && users.length === 0 && <p className="empty-copy">Aucune réaction dans cette catégorie.</p>}
-        {!loading && !error && users.map(item => <div className="reaction-user-row" key={`${item.user_id}-${item.reaction_type}`}>
-          <div className="avatar avatar-md avatar-soft">{item.user?.avatar_url ? <img src={item.user.avatar_url} alt="" /> : (item.user?.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()}</div>
-          <div><strong>{item.user?.full_name || ''}</strong><span>@{item.user?.username || ''}</span></div>
-          <span className={`reaction-user-type reaction-${item.reaction_type}`} aria-label={reactionMeta.find(meta => meta[0] === item.reaction_type)?.[2]}>{reactionMeta.find(meta => meta[0] === item.reaction_type)?.[1]}</span>
-        </div>)}
-      </div>
-    </div>
-  </div>
-}
-
-function PostCard({ post, user, onNotify, onReact, onShare, onSave, onComment, onCommentCountChange, onEdit, onDelete, editing, onCancelEdit, onSaveEdit }: { post: Post; user: User | null; onNotify: (message: string) => void; onReact: (reaction: ReactionType) => void; onShare: () => void; onSave: () => void; onComment: () => void; onCommentCountChange: (count: number) => void; onEdit: () => void; onDelete: () => void; editing: boolean; onCancelEdit: () => void; onSaveEdit: (body: string) => void }) {
-  const [draft, setDraft] = useState(post.body)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [hidden, setHidden] = useState(() => { try { return JSON.parse(window.localStorage.getItem('avani:hidden-posts') || '[]').includes(String(post.id)) } catch { return false } })
-  const [commentsOpen, setCommentsOpen] = useState(false)
-  const setHiddenPersisted = (value: boolean) => {
-    setHidden(value)
-    try {
-      const list: string[] = JSON.parse(window.localStorage.getItem('avani:hidden-posts') || '[]')
-      const next = value ? [...new Set([...list, String(post.id)])] : list.filter(id => id !== String(post.id))
-      window.localStorage.setItem('avani:hidden-posts', JSON.stringify(next))
-    } catch { /* stockage indisponible : le masquage reste pour cette session */ }
-  }
-  const copyLink = async () => {
-    const link = `${window.location.origin}/#publication-${post.id}`
-    try {
-      await navigator.clipboard.writeText(link)
-      onNotify('Lien de la publication copié.')
-    } catch {
-      onNotify(`Copiez ce lien : ${link}`)
-    }
-  }
-  const [reactionModalOpen, setReactionModalOpen] = useState(false)
-  const submitEdit = (event: React.FormEvent) => { event.preventDefault(); if (draft.trim()) onSaveEdit(draft.trim()) }
-  const openComments = () => { setCommentsOpen(true) }
-  const counts = post.reactionCounts ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
-  const reactionTotal = Object.values(counts).reduce((sum, value) => sum + value, 0)
-  const imageMatch = post.body.match(/\[image\](.*?)\[\/image\]/)
-  const displayBody = post.body.replace(/\n?\[image\].*?\[\/image\]/, '').trim()
-  if (hidden) return <article className="post-card post-card-hidden">
-    <p>Publication masquée. Vous ne la verrez plus dans votre fil.</p>
-    <button type="button" onClick={() => setHiddenPersisted(false)}>Annuler</button>
-  </article>
-  return <article className="post-card" id={`publication-${post.id}`}>
-    <div className="post-header"><div className={`avatar avatar-md ${post.kind === 'image' ? 'avatar-cyan' : 'avatar-soft'}`}>{post.avatarUrl ? <img src={post.avatarUrl} alt={`Photo de profil de ${post.name}`} /> : post.avatar}</div><div className="post-author"><strong>{post.name}{post.verifiedType && <VerifiedBadge type={post.verifiedType} />}</strong><span>{post.handle} · {post.time} · Public</span><small>{post.role}</small></div><div className="post-menu" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setMenuOpen(false) }}><button className="more-button" aria-label="Options de la publication" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>•••</button>{menuOpen && <div className="post-menu-popover" role="menu"><button role="menuitem" onClick={() => { setMenuOpen(false); void onSave() }}>{post.saved ? 'Retirer des enregistrements' : 'Enregistrer la publication'}</button><button role="menuitem" onClick={() => { setMenuOpen(false); void copyLink() }}>Copier le lien</button><button role="menuitem" onClick={() => { setMenuOpen(false); setHiddenPersisted(true) }}>Masquer la publication</button>{user?.id === post.authorId && <><span className="post-menu-sep" /><button role="menuitem" onClick={() => { setMenuOpen(false); onEdit() }}>Modifier</button><button role="menuitem" className="danger-action" onClick={() => { setMenuOpen(false); onDelete() }}>Supprimer</button></>}</div>}</div></div>
-    {editing ? <form className="post-edit-form" onSubmit={submitEdit}><textarea value={draft} onChange={event => setDraft(event.target.value)} aria-label="Modifier la publication" /><div><button type="button" className="message-button" onClick={onCancelEdit}>Annuler</button><button className="primary-button">Enregistrer</button></div></form> : <>{displayBody && <p className="post-body">{displayBody}</p>}{imageMatch?.[1] && <img className="post-image" src={imageMatch[1]} alt={`Image publiée par ${post.name}`} />}</>}
-    <div className="tag-row">{post.tags.map(tag => <span key={tag}>{tag}</span>)}</div>
-    <div className="rx-summary">
-      <button type="button" className="rx-count" onClick={() => setReactionModalOpen(true)} aria-label={`Voir les ${formatReactionCount(reactionTotal)} réactions`}>
-        {reactionTotal > 0 && <>
-          <span className="rx-stack" aria-hidden="true">
-            {Object.entries(counts).filter(([, count]) => count > 0).sort((x, y) => y[1] - x[1]).slice(0, 3).map(([type]) => rxMeta[type] ? <img key={type} className="rx-stack-icon" src={rxMeta[type].icon} alt="" /> : null)}
-          </span>
-          <span className="rx-total">{formatReactionCount(reactionTotal)}</span>
-        </>}
-      </button>
-      <div className="rx-meta">
-        {post.stats.comments > 0 && <button type="button" onClick={openComments}>{formatReactionCount(post.stats.comments)} commentaire{post.stats.comments > 1 ? 's' : ''}</button>}
-        {post.stats.shares > 0 && <button type="button" onClick={() => void onShare()}>{formatReactionCount(post.stats.shares)} partage{post.stats.shares > 1 ? 's' : ''}</button>}
-      </div>
-    </div>
-    <div className="post-actions">
-      <ReactionPicker reaction={post.reaction} onReact={onReact}/>
-      <button type="button" onClick={openComments}><SvgIcon name="comment"/> Commenter</button>
-      <button type="button" onClick={() => void onShare()}><SvgIcon name="share"/> Partager</button>
-      <button type="button" className={post.saved ? 'save-action saved' : 'save-action'} onClick={() => void onSave()}><SvgIcon name="save"/> Enregistrer</button>
-    </div>
-    <CommentBox postId={post.id} user={user} initialCount={post.stats.comments} open={commentsOpen} onOpenChange={setCommentsOpen} onAction={onComment} onCountChange={onCommentCountChange}/>
-    {reactionModalOpen && <ReactionModal post={post} onClose={() => setReactionModalOpen(false)}/>}
-  </article>
-}
-
-function CommentBox({ postId, user, initialCount = 0, open, onOpenChange, onAction, onCountChange }: { postId: string | number; user: User | null; initialCount?: number; open: boolean; onOpenChange: (open: boolean) => void; onAction: () => void; onCountChange: (count: number) => void }) {
-  const [comments, setComments] = useState<CommentRecord[]>([])
-  const [loaded, setLoaded] = useState(false)
-  const [body, setBody] = useState('')
-  const [replyTo, setReplyTo] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingBody, setEditingBody] = useState('')
-
-  useEffect(() => {
-    if (!open || typeof postId !== 'string') return
-    const load = async () => {
-      setLoading(true)
-      try { setComments(await listComments(postId)); setLoaded(true) } catch { onAction() } finally { setLoading(false) }
-    }
-    void load()
-  }, [open, postId, onAction])
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!body.trim()) return
-    if (!user) { onAction(); return }
-    setBusy(true)
-    try {
-      const created = await createComment(postId, user.id, body, replyTo)
-      setComments(current => { const next = [...current, { ...created, author: { username: user.user_metadata?.username ?? '', full_name: user.user_metadata?.full_name ?? 'Vous', avatar_url: null, verified_type: null } }]; onCountChange(next.length); return next })
-      setBody('')
-      setReplyTo(null)
-      onOpenChange(true)
-    } catch { onAction() } finally { setBusy(false) }
-  }
-
-  const saveEdit = async (comment: CommentRecord) => {
-    if (!user || comment.author_id !== user.id || !editingBody.trim()) return
-    try {
-      await updateComment(comment.id, user.id, editingBody)
-      setComments(current => current.map(item => item.id === comment.id ? { ...item, body: editingBody.trim() } : item))
-      setEditingId(null); setEditingBody('')
-    } catch { onAction() }
-  }
-
-  const remove = async (comment: CommentRecord) => {
-    if (!user || comment.author_id !== user.id) return
-    try {
-      await deleteComment(comment.id, user.id)
-      setComments(current => { const next = current.filter(item => item.id !== comment.id && item.parent_id !== comment.id); onCountChange(Math.max(0, next.length)); return next })
-    } catch { onAction() }
-  }
-
-  const roots = comments.filter(comment => !comment.parent_id)
-  const repliesFor = (id: string) => comments.filter(comment => comment.parent_id === id)
-  const authorName = (comment: CommentRecord) => comment.author?.full_name || (comment.author_id === user?.id ? 'Vous' : '')
-  const initials = (comment: CommentRecord) => authorName(comment).split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'AV'
-
-  return <div className="comment-box">
-    <div className="comment-summary"><button className="comment-toggle" onClick={() => onOpenChange(!open)} aria-expanded={open}><span className="comment-icon">◌</span>{open ? 'Masquer les commentaires' : `${loaded ? comments.length : initialCount} commentaire${(loaded ? comments.length : initialCount) > 1 ? 's' : ''}`}</button></div>
-    {open && <div className="comment-list">
-      {loading && <p className="empty-copy">Chargement des commentaires…</p>}
-      {!loading && roots.length === 0 && <p className="empty-copy">Aucun commentaire. Soyez le premier à répondre.</p>}
-      {!loading && roots.map(comment => <div className="comment-thread" key={comment.id}>
-        <div className="comment-row"><div className="avatar avatar-xs avatar-soft">{comment.author?.avatar_url ? <img src={comment.author.avatar_url} alt="" /> : initials(comment)}</div><div className="comment-content">
-          {editingId === comment.id ? <div className="comment-edit"><textarea value={editingBody} onChange={event => setEditingBody(event.target.value)} aria-label="Modifier le commentaire" /><div><button className="message-button" type="button" onClick={() => setEditingId(null)}>Annuler</button><button className="primary-button" type="button" onClick={() => void saveEdit(comment)}>Enregistrer</button></div></div> : <div className="comment-bubble"><strong>{authorName(comment)}{comment.author?.verified_type && <span className="verified">✓</span>}</strong><p>{comment.body}</p></div>}
-          <div className="comment-meta"><small>{new Date(comment.created_at).toLocaleString('fr-FR')}</small>{user && <button onClick={() => { setReplyTo(comment.id); setBody(''); onOpenChange(true) }}>Répondre</button>}{user?.id === comment.author_id && <><button onClick={() => { setEditingId(comment.id); setEditingBody(comment.body) }}>Modifier</button><button onClick={() => void remove(comment)}>Supprimer</button></>}</div>
-          {repliesFor(comment.id).map(reply => <div className="reply-row" key={reply.id}><div className="avatar avatar-xs avatar-gradient">{reply.author?.avatar_url ? <img src={reply.author.avatar_url} alt="" /> : initials(reply)}</div><div><div className="comment-bubble"><strong>{authorName(reply)}{reply.author?.verified_type && <span className="verified">✓</span>}</strong><p>{reply.body}</p></div><div className="comment-meta"><small>{new Date(reply.created_at).toLocaleString('fr-FR')}</small>{user?.id === reply.author_id && <><button onClick={() => { setEditingId(reply.id); setEditingBody(reply.body) }}>Modifier</button><button onClick={() => void remove(reply)}>Supprimer</button></>}</div></div></div>)}
-        </div></div>
-      </div>)}
-      <form className="comment-form" onSubmit={submit}><div className="avatar avatar-xs avatar-gradient">{user ? 'VO' : '?'}</div><input value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Écrivez votre réponse…' : 'Écrivez un commentaire…'} aria-label={replyTo ? 'Votre réponse' : 'Votre commentaire'} /><button className="primary-button" disabled={busy}>{busy ? 'Envoi…' : replyTo ? 'Répondre' : 'Publier'}</button></form>
-    </div>}
-  </div>
-}
 export default App

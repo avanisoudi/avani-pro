@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sorties du test de logique du fil
+scripts/feed-check/out
