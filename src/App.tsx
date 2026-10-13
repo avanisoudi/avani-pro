@@ -14,6 +14,7 @@ import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchP
 import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, listReactionUsers, recordPostShare, setPostReaction, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord, type ReactionType } from './lib/api'
 import { createComment, createStory, deleteComment, listActiveStories, listComments, listDiscoverableProfiles, listFollowingIds, listMyGroups, toggleFollow, updateComment, type CommentRecord, type StoryRecord } from './lib/socialApi'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { uploadPostImage } from './lib/socialApi'
 
 type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'saved' | 'notifications'
 type Post = { id: string | number; authorId?: string; name: string; handle: string; role: string; avatar: string; time: string; body: string; tags: string[]; stats: { likes: number; comments: number; shares: number }; kind: string; liked?: boolean; reaction?: ReactionType; reactionCounts?: Record<ReactionType, number>; saved?: boolean; verifiedType?: string | null; avatarUrl?: string | null }
@@ -120,6 +121,23 @@ function App() {
   const [feedQuery, setFeedQuery] = useState('')
   const [editingPostId, setEditingPostId] = useState<string | number | null>(null)
   const [postDraft, setPostDraft] = useState('')
+  const [postImage, setPostImage] = useState<File | null>(null)
+  const [postImagePreview, setPostImagePreview] = useState<string | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const chooseImage = (file: File | undefined) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { flash('Choisissez une image pour la publication.'); return }
+    if (file.size > 10 * 1024 * 1024) { flash('L’image doit faire moins de 10 Mo.'); return }
+    if (postImagePreview) URL.revokeObjectURL(postImagePreview)
+    setPostImage(file)
+    setPostImagePreview(URL.createObjectURL(file))
+  }
+  const clearImage = () => {
+    if (postImagePreview) URL.revokeObjectURL(postImagePreview)
+    setPostImage(null)
+    setPostImagePreview(null)
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
   const [publishingPost, setPublishingPost] = useState(false)
   const [sessionUser, setSessionUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
@@ -166,24 +184,26 @@ function App() {
   const publishPost = async (event: React.FormEvent) => {
     event.preventDefault()
     const content = postDraft.trim()
-    if (!content) { flash('Écrivez quelque chose avant de publier.'); return }
+    if (!content && !postImage) { flash('Écrivez quelque chose ou ajoutez une photo avant de publier.'); return }
     if (!sessionUser) { flash('Connectez-vous pour publier.'); return }
     if (content.length > 5000) { flash('Votre publication dépasse la limite de 5 000 caractères.'); return }
     setPublishingPost(true)
     try {
-      const created = await createPost(sessionUser.id, content, 'text')
+      const imageUrl = postImage ? await uploadPostImage(sessionUser.id, postImage) : null
+      const storedBody = imageUrl ? [content, `[image]${imageUrl}[/image]`].filter(Boolean).join('\n') : content
+      const created = await createPost(sessionUser.id, storedBody, 'text')
       const authorName: string = String(profile?.full_name || sessionUser.user_metadata?.full_name || '')
       const nextPost: Post = {
         id: created.id, authorId: sessionUser.id, name: authorName,
         handle: profile?.username ? `@${profile.username}` : sessionUser.email ? `@${sessionUser.email.split('@')[0]}` : '',
         role: profile?.bio || '', avatar: authorName.split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase(),
-        avatarUrl: profile?.avatar_url ?? null, time: 'à l’instant', body: content,
+        avatarUrl: profile?.avatar_url ?? null, time: 'à l’instant', body: storedBody,
         tags: content.match(/#[\w-]+/g) ?? [], stats: { likes: 0, comments: 0, shares: 0 },
         kind: 'thought', liked: false, saved: false, verifiedType: profile?.verified_type ?? null,
         reactionCounts: { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
       }
       setPosts(current => [nextPost, ...current])
-      setPostDraft('')
+      setPostDraft(''); clearImage()
       setFeedFilter('all')
       setFeedQuery('')
       flash('Votre publication est en ligne.')
@@ -270,15 +290,17 @@ function App() {
                   <textarea value={postDraft} onChange={event => setPostDraft(event.target.value)} maxLength={5000} placeholder={`Quoi de neuf, ${displayName.split(' ')[0] || 'vous'} ?`} aria-label="Contenu de la publication" rows={3} />
                 </label>
               </div>
+              {postImagePreview && <div className="composer-preview"><img src={postImagePreview} alt="Aperçu de votre photo" /><button type="button" onClick={clearImage} aria-label="Retirer la photo">×</button></div>}
+              <input ref={photoInputRef} className="visually-hidden" type="file" accept="image/*" onChange={event => chooseImage(event.target.files?.[0])} aria-hidden="true" tabIndex={-1} />
               <div className="pro-post-composer-footer">
                 <div className="pro-post-tools">
-                  <button type="button" className="composer-tool-photo" onClick={() => setPostDraft(value => value ? `${value}\n[image]https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=80[/image]` : '[image]https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1200&q=80[/image]')} aria-label="Ajouter une photo"><span>▣</span> Photo/vidéo</button>
+                  <button type="button" className="composer-tool-photo" onClick={() => photoInputRef.current?.click()} aria-label="Ajouter une photo"><span>▣</span> Photo/vidéo</button>
                   <button type="button" onClick={() => setPostDraft(value => value ? value + ' 😊' : '😊 ')} aria-label="Ajouter une humeur"><span>☺</span> Humeur/activité</button>
                   <button type="button" onClick={() => setPostDraft(value => value && !value.endsWith(' ') ? value + ' #' : value + '#')} aria-label="Ajouter un hashtag"><span>#</span> Hashtag</button>
                   <button type="button" onClick={() => flash('Ajoutez un lieu à votre publication.')} aria-label="Ajouter un lieu"><span>⌖</span> Lieu</button>
                   <span className="pro-post-audience" title="Les publications sont visibles selon les règles d’accès configurées sur votre compte">🌐 Public</span>
                 </div>
-                <div className="pro-post-submit-group"><span className={postDraft.length > 4800 ? 'pro-post-counter near-limit' : 'pro-post-counter'}>{postDraft.length}/5000</span><button className="pro-post-submit" disabled={publishingPost || !postDraft.trim()}>{publishingPost ? 'Publication…' : 'Publier'}</button></div>
+                <div className="pro-post-submit-group"><span className={postDraft.length > 4800 ? 'pro-post-counter near-limit' : 'pro-post-counter'}>{postDraft.length}/5000</span><button className="pro-post-submit" disabled={publishingPost || (!postDraft.trim() && !postImage)}>{publishingPost ? 'Publication…' : 'Publier'}</button></div>
               </div>
             </form>
             <div className="feed-controls">
@@ -436,6 +458,7 @@ function PostCard({ post, user, onNotify, onReact, onShare, onSave, onComment, o
   const [menuOpen, setMenuOpen] = useState(false)
   const [hidden, setHidden] = useState(() => { try { return JSON.parse(window.localStorage.getItem('avani:hidden-posts') || '[]').includes(String(post.id)) } catch { return false } })
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [commentFocus, setCommentFocus] = useState(0)
   const setHiddenPersisted = (value: boolean) => {
     setHidden(value)
     try {
@@ -455,7 +478,7 @@ function PostCard({ post, user, onNotify, onReact, onShare, onSave, onComment, o
   }
   const [reactionModalOpen, setReactionModalOpen] = useState(false)
   const submitEdit = (event: React.FormEvent) => { event.preventDefault(); if (draft.trim()) onSaveEdit(draft.trim()) }
-  const openComments = () => { setCommentsOpen(true) }
+  const openComments = () => { setCommentsOpen(true); setCommentFocus(value => value + 1) }
   const counts = post.reactionCounts ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
   const reactionTotal = Object.values(counts).reduce((sum, value) => sum + value, 0)
   const imageMatch = post.body.match(/\[image\](.*?)\[\/image\]/)
@@ -488,12 +511,12 @@ function PostCard({ post, user, onNotify, onReact, onShare, onSave, onComment, o
       <button type="button" onClick={() => void onShare()}><SvgIcon name="share"/> Partager</button>
       <button type="button" className={post.saved ? 'save-action saved' : 'save-action'} onClick={() => void onSave()}><SvgIcon name="save"/> Enregistrer</button>
     </div>
-    <CommentBox postId={post.id} user={user} initialCount={post.stats.comments} open={commentsOpen} onOpenChange={setCommentsOpen} onAction={onComment} onCountChange={onCommentCountChange}/>
+    <CommentBox postId={post.id} user={user} focusSignal={commentFocus} initialCount={post.stats.comments} open={commentsOpen} onOpenChange={setCommentsOpen} onAction={onComment} onCountChange={onCommentCountChange}/>
     {reactionModalOpen && <ReactionModal post={post} onClose={() => setReactionModalOpen(false)}/>}
   </article>
 }
 
-function CommentBox({ postId, user, initialCount = 0, open, onOpenChange, onAction, onCountChange }: { postId: string | number; user: User | null; initialCount?: number; open: boolean; onOpenChange: (open: boolean) => void; onAction: () => void; onCountChange: (count: number) => void }) {
+function CommentBox({ postId, user, initialCount = 0, open, onOpenChange, onAction, onCountChange, focusSignal = 0 }: { postId: string | number; user: User | null; initialCount?: number; open: boolean; onOpenChange: (open: boolean) => void; onAction: () => void; onCountChange: (count: number) => void; focusSignal?: number }) {
   const [comments, setComments] = useState<CommentRecord[]>([])
   const [loaded, setLoaded] = useState(false)
   const [body, setBody] = useState('')
@@ -502,15 +525,26 @@ function CommentBox({ postId, user, initialCount = 0, open, onOpenChange, onActi
   const [busy, setBusy] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const onActionRef = useRef(onAction)
+  onActionRef.current = onAction
+
+  // Le bouton « Commenter » place le curseur dans le champ, comme sur Facebook.
+  useEffect(() => {
+    if (focusSignal > 0 && open) {
+      inputRef.current?.focus()
+      inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
+  }, [focusSignal])
 
   useEffect(() => {
     if (!open || typeof postId !== 'string') return
     const load = async () => {
       setLoading(true)
-      try { setComments(await listComments(postId)); setLoaded(true) } catch { onAction() } finally { setLoading(false) }
+      try { setComments(await listComments(postId)); setLoaded(true) } catch { onActionRef.current() } finally { setLoading(false) }
     }
     void load()
-  }, [open, postId, onAction])
+  }, [open, postId])
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -560,7 +594,7 @@ function CommentBox({ postId, user, initialCount = 0, open, onOpenChange, onActi
           {repliesFor(comment.id).map(reply => <div className="reply-row" key={reply.id}><div className="avatar avatar-xs avatar-gradient">{reply.author?.avatar_url ? <img src={reply.author.avatar_url} alt="" /> : initials(reply)}</div><div><div className="comment-bubble"><strong>{authorName(reply)}{reply.author?.verified_type && <span className="verified">✓</span>}</strong><p>{reply.body}</p></div><div className="comment-meta"><small>{new Date(reply.created_at).toLocaleString('fr-FR')}</small>{user?.id === reply.author_id && <><button onClick={() => { setEditingId(reply.id); setEditingBody(reply.body) }}>Modifier</button><button onClick={() => void remove(reply)}>Supprimer</button></>}</div></div></div>)}
         </div></div>
       </div>)}
-      <form className="comment-form" onSubmit={submit}><div className="avatar avatar-xs avatar-gradient">{user ? 'VO' : '?'}</div><input value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Écrivez votre réponse…' : 'Écrivez un commentaire…'} aria-label={replyTo ? 'Votre réponse' : 'Votre commentaire'} /><button className="primary-button" disabled={busy}>{busy ? 'Envoi…' : replyTo ? 'Répondre' : 'Publier'}</button></form>
+      <form className="comment-form" onSubmit={submit}><div className="avatar avatar-xs avatar-gradient">{user ? 'VO' : '?'}</div><input ref={inputRef} value={body} onChange={event => setBody(event.target.value)} placeholder={replyTo ? 'Écrivez votre réponse…' : 'Écrivez un commentaire…'} aria-label={replyTo ? 'Votre réponse' : 'Votre commentaire'} /><button className="primary-button" disabled={busy}>{busy ? 'Envoi…' : replyTo ? 'Répondre' : 'Publier'}</button></form>
     </div>}
   </div>
 }

@@ -245,16 +245,20 @@ export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry'
 export type ReactionCounts = Record<ReactionType, number>
 export type FeedPostRecord = { id: string; body: string; post_type: string; created_at: string; author: ProfileRecord; likes: number; comments: number; shares: number; liked: boolean; saved: boolean; reaction: ReactionType | null; reactionCounts: ReactionCounts }
 
-export async function listFeedPosts(userId?: string | null) {
+export async function listFeedPosts(userId?: string | null): Promise<FeedPostRecord[]> {
   const client = requireSupabase()
-  const [{ data: posts, error: postsError }, { data: likes, error: likesError }, { data: comments, error: commentsError }, { data: shares, error: sharesError }, savedResult] = await Promise.all([
-    client.from('posts').select('id, body, post_type, created_at, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url, bio, verified_type)').order('created_at', { ascending: false }).limit(50),
-    client.from('likes').select('post_id, user_id, reaction_type'),
-    client.from('comments').select('post_id'),
-    client.from('post_shares').select('post_id'),
-    userId ? client.from('saved_posts').select('post_id').eq('user_id', userId) : Promise.resolve({ data: [], error: null }),
-  ])
+  const { data: posts, error: postsError } = await client.from('posts').select('id, body, post_type, created_at, author:profiles!posts_author_id_fkey(id, username, full_name, avatar_url, bio, verified_type)').order('created_at', { ascending: false }).limit(50)
   if (postsError) throw postsError
+  const rows = (posts ?? []) as any[]
+  if (rows.length === 0) return []
+  // Les compteurs ne portent que sur les publications affichées : on ne charge jamais toute la table.
+  const ids = rows.map(row => row.id)
+  const [{ data: likes, error: likesError }, { data: comments, error: commentsError }, { data: shares, error: sharesError }, savedResult] = await Promise.all([
+    client.from('likes').select('post_id, user_id, reaction_type').in('post_id', ids),
+    client.from('comments').select('post_id').in('post_id', ids),
+    client.from('post_shares').select('post_id').in('post_id', ids),
+    userId ? client.from('saved_posts').select('post_id').eq('user_id', userId).in('post_id', ids) : Promise.resolve({ data: [], error: null }),
+  ])
   if (likesError) throw likesError
   if (commentsError) throw commentsError
   if (sharesError) throw sharesError
@@ -268,9 +272,17 @@ export async function listFeedPosts(userId?: string | null) {
     return all
   }, {})
   const savedIds = new Set(((savedResult.data ?? []) as Array<{ post_id: string }>).map(row => row.post_id))
-  const likeCounts = countBy(likeRows), commentCounts = countBy(comments), shareCounts = countBy(shares)
-  return (posts ?? []).map((row: any) => ({ id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at, author: Array.isArray(row.author) ? row.author[0] : row.author, likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0, liked: myReactions.has(row.id), reaction: myReactions.get(row.id) ?? null, reactionCounts: reactionCountsByPost[row.id] ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }, saved: savedIds.has(row.id) })) as FeedPostRecord[]
+  const likeCounts = countBy(likeRows), commentCounts = countBy(comments as Array<{ post_id: string }> | null), shareCounts = countBy(shares as Array<{ post_id: string }> | null)
+  return rows.map((row: any) => ({
+    id: row.id, body: row.body, post_type: row.post_type, created_at: row.created_at,
+    author: Array.isArray(row.author) ? row.author[0] : row.author,
+    likes: likeCounts[row.id] ?? 0, comments: commentCounts[row.id] ?? 0, shares: shareCounts[row.id] ?? 0,
+    liked: myReactions.has(row.id), reaction: myReactions.get(row.id) ?? null,
+    reactionCounts: reactionCountsByPost[row.id] ?? { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 },
+    saved: savedIds.has(row.id),
+  })) as FeedPostRecord[]
 }
+
 export type ReactionUserRecord = { user_id: string; reaction_type: ReactionType; created_at: string; user: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url'> | null }
 
 export async function listReactionUsers(postId: string, reactionType?: ReactionType | 'all') {
