@@ -6,6 +6,22 @@ import { addGroupMember, createGroup, createPage, getAdminStats, getMySettings, 
 
 type PersonCard = { id: string; name: string; role: string; avatar: string; mutual: string }
 
+// Navigation interne sans rechargement (même mécanisme que le reste de l'application).
+function goTo(path: string) {
+  window.history.pushState({}, '', path)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+async function copyInviteLink(notify: (message: string) => void) {
+  const link = `${window.location.origin}/groups`
+  try {
+    await navigator.clipboard.writeText(link)
+    notify('Lien de la page Groupes copié. Partagez-le avec votre communauté.')
+  } catch {
+    notify(`Copiez ce lien : ${link}`)
+  }
+}
+
 export function ProfilePanel({ user, profile, onProfile }: { user: User | null; profile: ProfileRecord | null; onProfile: (profile: ProfileRecord) => void }) {
   const [fullName, setFullName] = useState(profile?.full_name ?? '')
   const [username, setUsername] = useState(profile?.username ?? '')
@@ -98,8 +114,8 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
       </div>
 
       <div className="group-shortcuts">
-        <button type="button" onClick={() => onAction('Les notifications de groupe sont disponibles dans les réglages de chaque conversation.')}>⌁ Notifications</button>
-        <button type="button" onClick={() => onAction('Les liens d’invitation seront bientôt partageables avec votre communauté.')}>↗ Lien d’invitation</button>
+        <button type="button" onClick={() => goTo('/notifications')}>⌁ Notifications</button>
+        <button type="button" onClick={() => void copyInviteLink(onAction)}>↗ Lien d’invitation</button>
         <button type="button" onClick={() => setOpen(true)}>＋ Nouveau groupe</button>
       </div>
 
@@ -170,4 +186,4 @@ export function SettingsPanel({ user, theme, onThemeChange, onAction }: { user: 
     <label><span><strong>Mode compact</strong><small>Réduire l’espacement du feed pour afficher plus de contenu.</small></span><input type="checkbox" checked={compactMode} disabled={loading || !user} onChange={event => { const value = event.target.checked; setCompactMode(value); void save({ compact: value }) }} /></label>
   </div></section>
 }
-function FeatureEmpty({ title, text, action }: { title: string; text: string; action: string }) { return <section className="feature-panel feature-empty"><div className="placeholder-orb">✦</div><span className="eyebrow">AVANI PRO · ESPACE SÉCURISÉ</span><h2>{title}</h2><p>{text}</p><button className="primary-button">{action} ↗</button></section> }
+function FeatureEmpty({ title, text, action }: { title: string; text: string; action: string }) { return <section className="feature-panel feature-empty"><div className="placeholder-orb">✦</div><span className="eyebrow">AVANI PRO · ESPACE SÉCURISÉ</span><h2>{title}</h2><p>{text}</p><button className="primary-button" type="button" onClick={() => goTo('/')}>{action} ↗</button></section> }
