@@ -66,3 +66,21 @@
   line-height: 1;
   cursor: pointer;
 }
+
+/* En-tête de publication façon Facebook : nom en gras, puis heure · Public. */
+.post-card .post-author strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.post-card .post-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #65676b;
+  font-size: 13px;
+}
+
+.post-card .post-meta-line svg {
+  flex: 0 0 auto;
+}
