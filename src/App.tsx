@@ -122,6 +122,14 @@ function App() {
   const [editingPostId, setEditingPostId] = useState<string | number | null>(null)
   const [postDraft, setPostDraft] = useState('')
   const [postImage, setPostImage] = useState<File | null>(null)
+  const [placeOpen, setPlaceOpen] = useState(false)
+  const [place, setPlace] = useState('')
+  const addPlace = () => {
+    const name = place.trim()
+    if (name) setPostDraft(value => `${value}${value && !value.endsWith(' ') ? ' ' : ''}📍 ${name}`)
+    setPlace('')
+    setPlaceOpen(false)
+  }
   const [postImagePreview, setPostImagePreview] = useState<string | null>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const chooseImage = (file: File | undefined) => {
@@ -292,12 +300,13 @@ function App() {
               </div>
               {postImagePreview && <div className="composer-preview"><img src={postImagePreview} alt="Aperçu de votre photo" /><button type="button" onClick={clearImage} aria-label="Retirer la photo">×</button></div>}
               <input ref={photoInputRef} className="visually-hidden" type="file" accept="image/*" onChange={event => chooseImage(event.target.files?.[0])} aria-hidden="true" tabIndex={-1} />
+              {placeOpen && <div className="composer-place"><input value={place} onChange={event => setPlace(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addPlace() } }} placeholder="Où êtes-vous ?" aria-label="Lieu de la publication" maxLength={80} /><button type="button" className="primary-button" onClick={addPlace} disabled={!place.trim()}>Ajouter</button></div>}
               <div className="pro-post-composer-footer">
                 <div className="pro-post-tools">
                   <button type="button" className="composer-tool-photo" onClick={() => photoInputRef.current?.click()} aria-label="Ajouter une photo"><span>▣</span> Photo/vidéo</button>
                   <button type="button" onClick={() => setPostDraft(value => value ? value + ' 😊' : '😊 ')} aria-label="Ajouter une humeur"><span>☺</span> Humeur/activité</button>
                   <button type="button" onClick={() => setPostDraft(value => value && !value.endsWith(' ') ? value + ' #' : value + '#')} aria-label="Ajouter un hashtag"><span>#</span> Hashtag</button>
-                  <button type="button" onClick={() => flash('Ajoutez un lieu à votre publication.')} aria-label="Ajouter un lieu"><span>⌖</span> Lieu</button>
+                  <button type="button" onClick={() => setPlaceOpen(value => !value)} aria-expanded={placeOpen} aria-label="Ajouter un lieu"><span>⌖</span> Lieu</button>
                   <span className="pro-post-audience" title="Les publications sont visibles selon les règles d’accès configurées sur votre compte">🌐 Public</span>
                 </div>
                 <div className="pro-post-submit-group"><span className={postDraft.length > 4800 ? 'pro-post-counter near-limit' : 'pro-post-counter'}>{postDraft.length}/5000</span><button className="pro-post-submit" disabled={publishingPost || (!postDraft.trim() && !postImage)}>{publishingPost ? 'Publication…' : 'Publier'}</button></div>

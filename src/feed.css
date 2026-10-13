@@ -84,3 +84,16 @@
 .post-card .post-meta-line svg {
   flex: 0 0 auto;
 }
+
+/* Composeur : champ du lieu. */
+.composer-place {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.composer-place input {
+  flex: 1;
+  min-width: 0;
+}
