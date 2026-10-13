@@ -31,6 +31,29 @@ La migration `007_message_attachments.sql` crée le bucket privé `message-attac
 
 Le parcours d’inscription est en deux étapes dans `AuthModal.tsx`, avec Google OAuth Supabase. Les toasts d’interface restent visibles 8 secondes puis disparaissent automatiquement. La persistance de session est activée par `persistSession`, `autoRefreshToken` et `detectSessionInUrl` dans `src/lib/supabase.ts`.
 
+## Colonnes attendues par le fil
+
+Le fil lit trois colonnes qui ne sont pas toutes déclarées dans les migrations du dépôt. Le code tolère
+leur absence (la requête est rejouée sans la colonne) mais les fonctionnalités restent réduites tant que la
+base ne les porte pas :
+
+| Table | Colonne | Usagé par | Sans la colonne |
+|---|---|---|---|
+| `likes` | `reaction_type` | réactions J’aime / J’adore / Haha / Wouah / Triste / Grrr | toutes les lignes comptées comme « J’aime » |
+| `comments` | `parent_id` | réponses imbriquées sous un commentaire | réponses enregistrées comme commentaires au premier niveau |
+| `posts` | `media_path` | photos de publications | publications texte uniquement |
+
+Pour aligner la base sur le code, exécuter dans Supabase → SQL Editor (à valider par le propriétaire du projet) :
+
+```sql
+alter table public.likes    add column if not exists reaction_type text not null default 'like'
+  check (reaction_type in ('like','love','haha','wow','sad','angry'));
+alter table public.comments add column if not exists parent_id uuid references public.comments(id) on delete cascade;
+create index if not exists comments_post_parent_idx on public.comments(post_id, parent_id, created_at);
+```
+
+Aucune de ces instructions n’est lancée par l’application : elles sont documentées ici pour le déploiement.
+
 ## Routes client / API
 
 Avec Supabase, le frontend appelle la Data API via `supabase-js` :

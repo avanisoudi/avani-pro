@@ -11,7 +11,18 @@ npm install
 npm run dev
 ```
 
-Build de production : `npm run build`, puis `npm run preview`.
+Build de production : `npm run build`, puis `npm run preview`. Lint : `npx oxlint`. Types : `npx tsc -b`.
+Logique du fil (compteurs de réactions, texte/médias, horaires) : `npm run test:feed`.
+
+## Fil d'actualité
+
+La carte de publication vit dans `src/components/PostCard.tsx` et `src/feed.css` (namespace `fpost-*`) :
+en-tête (avatar, nom, badge, heure relative + audience, croix et menu ⋯), texte avec « Voir plus »,
+médias pleine largeur, ligne d'engagement (icônes superposées + total exact, commentaires, partages),
+barre J'aime / Commenter / Partager / Enregistrer, puis zone de commentaires ouverte par le bouton
+« Commenter » (chargement à la première ouverture, focus du champ, repli par la croix).
+Les calculs partagés (réactions, formats, médias) sont dans `src/lib/feed.ts` : le fil hydraté depuis
+Supabase et la publication que l'on vient de créer passent par le même convertisseur `toFeedPost`.
 
 ## Variables d’environnement
 
