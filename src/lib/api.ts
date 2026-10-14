@@ -3,7 +3,8 @@ import { requireSupabase } from './supabase'
 import { describeAccessError, isCheckConstraintError, isMissingColumnError, isMissingRelationError, isPermissionError } from './postgres'
 import type { QueryError } from './postgres'
 import { resolvePostMediaPaths } from './postMedia'
-import { conversationFromMembershipRow, conversationFromRow, messageFromRow, nextTolerantToken, publicGroupFromRow, tokenName } from './messagesModel'
+import { conversationFromMembershipRow, conversationFromRow, conversationPreview, messageFromRow, nextTolerantToken, publicGroupFromRow, tokenName } from './messagesModel'
+import type { ConversationPreview } from './messagesModel'
 import type { PublicGroupModel } from './messagesModel'
 
 export type ProfileRecord = { id: string; username: string; full_name: string; avatar_url: string | null; bio: string | null; verified_type: string | null; followers_count?: number; following_count?: number }
@@ -25,7 +26,7 @@ export type MessageRecord = {
   sender?: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url'>
   reply_to?: Pick<MessageRecord, 'id' | 'body' | 'sender_id'> | null
 }
-export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; conversation_members?: { user_id: string; profile: ProfileRecord | null }[] }
+export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; last_read_at?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord | null }[] }
 
 export const MESSAGE_ATTACHMENT_BUCKET = 'message-attachments'
 export const MAX_MESSAGE_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -140,13 +141,50 @@ export async function listConversations(userId: string) {
   const client = requireSupabase()
   const { data, error } = await client
     .from('conversation_members')
-    .select(`conversation:conversations(${CONVERSATION_COLUMNS}), profile:profiles(id, username, full_name, avatar_url, bio, verified_type)`)
+    .select(`last_read_at, conversation:conversations(${CONVERSATION_COLUMNS}), profile:profiles(id, username, full_name, avatar_url, bio, verified_type)`)
     .eq('user_id', userId)
   if (error) throw new Error(describeAccessError(error, 'La liste de tes conversations') ?? error.message)
   const rows = (data ?? []) as any[]
   return rows
     .map(conversationFromMembershipRow)
     .filter((conversation): conversation is ConversationRecord => Boolean(conversation))
+}
+
+/**
+ * Aperçus de la liste de gauche : une seule requête « messages » pour toutes les
+ * conversations visibles (les plus récents d'abord), d'où l'aperçu, l'heure et le
+ * nombre de non-lus. `limit` borne la lecture : au-delà, le badge est marqué
+ * tronqué par le modèle plutôt que de mentir sur le total.
+ */
+export async function listConversationPreviews(userId: string, conversations: Array<Pick<ConversationRecord, 'id' | 'last_read_at'>>, limit = 150) {
+  const ids = conversations.map(item => item.id).filter(Boolean)
+  if (!ids.length) return {} as Record<string, ConversationPreview>
+  const client = requireSupabase()
+  let loaded: any[]
+  try {
+    loaded = (await retryWithoutMissing<any>({
+      optional: ['deleted_at', 'message_type', 'attachment_name'],
+      attempt: tokens => client
+        .from('messages')
+        .select(['id, conversation_id, sender_id, body, created_at', ...tokens].join(', '))
+        .in('conversation_id', ids)
+        .order('created_at', { ascending: false })
+        .limit(limit),
+    })).rows as any[]
+  } catch (caught) {
+    throw writeError(caught, 'L’aperçu des conversations')
+  }
+  const buckets = new Map<string, any[]>()
+  for (const row of loaded) {
+    const list = buckets.get(row.conversation_id)
+    if (list) list.push(row)
+    else buckets.set(row.conversation_id, [row])
+  }
+  const truncated = loaded.length >= limit
+  return Object.fromEntries(conversations.map(item => [
+    item.id,
+    conversationPreview(buckets.get(item.id) ?? [], { lastReadAt: item.last_read_at ?? null, myId: userId, truncated }),
+  ])) as Record<string, ConversationPreview>
 }
 
 /**

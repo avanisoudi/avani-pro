@@ -29,7 +29,7 @@ export function nextTolerantToken(error: unknown, tokens: string[], alreadyMissi
   return null
 }
 
-export type ConversationModel = { id: string; title: string | null; is_group: boolean; updated_at: string; conversation_members?: { user_id: string; profile: unknown }[] }
+export type ConversationModel = { id: string; title: string | null; is_group: boolean; updated_at: string; last_read_at?: string | null; conversation_members?: { user_id: string; profile: unknown }[] }
 
 /** Ligne `conversation_members` avec sa conversation embarquée -> conversation du modèle client. */
 export function conversationFromMembershipRow(row: any): ConversationModel | null {
@@ -40,6 +40,7 @@ export function conversationFromMembershipRow(row: any): ConversationModel | nul
     title: embedded.title ?? null,
     is_group: Boolean(embedded.is_group),
     updated_at: embedded.updated_at ?? new Date(0).toISOString(),
+    last_read_at: row.last_read_at ?? null,
     conversation_members: [{ user_id: row.user_id ?? row.profile?.id ?? '', profile: row.profile ?? null }],
   }
 }
@@ -79,4 +80,70 @@ export function messageFromRow<T = any>(row: any): T {
     sender: Array.isArray(row?.sender) ? row.sender[0] : row?.sender,
     reply_to: Array.isArray(row?.reply_to) ? row.reply_to[0] ?? null : row?.reply_to ?? null,
   } as T
+}
+
+/**
+ * Aperçu de conversation pour la liste de gauche, comme Messenger : dernier message
+ * lisible, heure du fil et nombre de messages non lus. Les lignes sont fournies du
+ * plus récent au plus ancien ; rien n'est inventé quand la conversation est vide.
+ */
+export type ConversationPreview = { preview: string; at: string | null; unread: number; truncated: boolean }
+
+export function conversationPreview(
+  rows: any[],
+  options: { lastReadAt?: string | null; myId: string; truncated?: boolean },
+): ConversationPreview {
+  const readable = rows.filter(row => row && typeof row === 'object')
+  const newest = readable.find(row => !row.deleted_at) ?? readable[0] ?? null
+  let preview = ''
+  if (newest?.deleted_at) preview = 'Message supprimé'
+  else if (newest?.attachment_name) preview = newest.attachment_name
+  else if (newest && newest.message_type && newest.message_type !== 'text') preview = 'Pièce jointe'
+  else preview = String(newest?.body ?? '').replace(/\s+/g, ' ').trim()
+  const unread = readable.filter(row =>
+    !row.deleted_at
+    && row.sender_id !== options.myId
+    && (!options.lastReadAt || Date.parse(row.created_at ?? '') > Date.parse(options.lastReadAt)))
+    .length
+  return { preview, at: newest?.created_at ?? null, unread, truncated: Boolean(options.truncated) }
+}
+
+/** Badge de non-lus façon Messenger : le nombre, sinon « 9+ » si la lecture était bornée. */
+export function unreadBadge(unread: number, truncated = false): string {
+  if (!(unread > 0)) return ''
+  if (truncated || unread > 9) return '9+'
+  return String(unread)
+}
+
+/** Heure d'une ligne de liste : l'heure du jour même, « Hier », le jour de la semaine, sinon la date. */
+export function formatRowTime(value: string | null | undefined, now = new Date()): string {
+  if (!value) return ''
+  const at = new Date(value)
+  if (Number.isNaN(at.getTime())) return ''
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const days = Math.floor((midnight.getTime() - new Date(at.getFullYear(), at.getMonth(), at.getDate()).getTime()) / 86400000)
+  if (days <= 0) return at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  if (days === 1) return 'Hier'
+  if (days < 7) return at.toLocaleDateString('fr-FR', { weekday: 'long' })
+  return at.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+/** Compteur de messages du fil : le nombre réellement chargé, majoré si l'historique continue. */
+export function threadCountLabel(loaded: number, hasOlder: boolean): string {
+  const unit = loaded > 1 ? 'messages' : 'message'
+  return hasOlder ? `${loaded}+ ${unit} dans ce fil` : `${loaded} ${unit} dans ce fil`
+}
+
+/** Réactions reçues, de la plus nombreuse à la moins nombreuse (pastilles hors bulle). */
+export function topMessageReactions<K extends string>(counts: Partial<Record<K, number>> | undefined, limit = 3): Array<[K, number]> {
+  if (!counts) return []
+  return (Object.entries(counts) as Array<[K, number]>)
+    .filter(([, count]) => (count ?? 0) > 0)
+    .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0) || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+}
+
+export function reactionTotal(counts: Record<string, number> | undefined): number {
+  if (!counts) return 0
+  return Object.values(counts).reduce((total, count) => total + (count || 0), 0)
 }
