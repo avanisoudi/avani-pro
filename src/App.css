@@ -1077,3 +1077,20 @@
 
 @media(min-width:761px){body{background:var(--avani-bg,#f4f7fb)!important}.app-shell{display:grid!important;grid-template-columns:254px minmax(560px,630px) 286px!important;max-width:1240px!important;margin:0 auto!important;min-height:100vh!important;background:var(--avani-bg,#f4f7fb)!important}.sidebar{display:block!important;min-height:100vh!important}.right-rail{display:block!important}.main-content{display:block!important;min-width:0!important}.mobile-tabbar{display:none!important}.topbar{display:flex!important}.stories-section,.feed-post-list,.feed-controls{display:block!important}}
 
+
+/* Messagerie en direct : etat de charge partielle, note de migration, groupe public reel.
+   Le theme ajoute (et non remplace) les regles masquees pour les elements devenus reels. */
+.messages-alert{display:flex;align-items:flex-start;gap:12px;margin:8px 12px 12px;padding:11px 12px;border:1px solid rgba(224,49,49,.45);border-left-width:3px;border-radius:10px;background:rgba(255,90,90,.08)}
+.messages-alert strong{display:block;font-size:12px;color:#ffdadf}
+.messages-alert p{margin:4px 0 0;font-size:11px;line-height:1.45;color:#ffb9c2;overflow-wrap:anywhere}
+.messages-alert button{margin-left:auto;flex:none;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:transparent;color:#fff;font-size:10px;padding:7px 9px;cursor:pointer}
+.messages-note{margin:6px 14px 10px;font-size:10px;line-height:1.45;color:#a9b5d2}
+.messages-note code{font-family:'DM Mono',monospace;font-size:9px;color:var(--cyan)}
+.messages-panel .public-group-section{display:block}
+.public-group-row{display:flex;align-items:center;gap:10px;padding:9px 7px;border-radius:10px}
+.public-group-row:hover{background:rgba(79,124,255,.09)}
+.public-group-info{min-width:0;flex:1}
+.public-group-info strong{display:block;font-size:11px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.public-group-info small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.35;overflow-wrap:anywhere}
+.public-group-row button{flex:none;border:1px solid rgba(34,211,238,.4);border-radius:8px;background:rgba(34,211,238,.1);color:var(--cyan);font-size:10px;padding:7px 10px;cursor:pointer}
+.feature-actions{display:flex;align-items:center;gap:10px}

@@ -27,6 +27,10 @@ La migration `004_persistent_interactions.sql` ajoute `saved_posts` et `post_sha
 
 La migration `006_group_chat.sql` ajoute `groups.conversation_id` et les policies de membres. La création d’un groupe crée aussi une ligne `conversations` avec `is_group=true` et ajoute le propriétaire à `conversation_members`. Le groupe est ensuite visible dans `MessagesPanel`, avec historique Postgres, envoi durable, abonnement Realtime et invitation de profils dans le groupe et son chat. Cette migration est une **étape d’activation de déploiement**, pas une faille : tant qu’elle n’est pas exécutée dans le SQL Editor, le code déployé ne peut pas créer les relations groupe/chat attendues.
 
+La migration `009_messages_live.sql` met la messagerie et les groupes publics à l’état réel attendu par le client. Elle ajoute les colonnes lues par l’écran (`messages.message_type`, `reply_to_id` + sa clé étrangère nommée `messages_reply_to_id_fkey`, `attachment_name`, `attachment_mime_type`, `attachment_size_bytes`, `updated_at`, `deleted_at`), élargit `messages_body_check` à `0..10000` pour permettre les pièces jointes sans légende et la suppression logique, crée la table `message_reactions` avec ses policies, puis ouvre les droits qui manquaient : `UPDATE` de `conversation_members` (marquer lu), `UPDATE`/`DELETE` de ses propres messages, `INSERT` dans `conversation_members` pour rejoindre soi-même le chat d’un groupe public, `SELECT` du roster d’un groupe public (comptage de membres juste), un trigger qui fait avancer `conversations.updated_at` à chaque message (ordre de la liste) et l’ajout gardé des tables `messages`, `message_reactions`, `conversation_members` et `conversations` à la publication `supabase_realtime`. Le script est idempotent : relançable sans effet de bord.
+
+Tant que cette migration n’est pas exécutée, l’application reste utilisable mais partielle, et elle le dit : les colonnes absentes sont abandonnées une à une (`retryWithoutMissing` dans `src/lib/api.ts`), les réactions sont masquées avec une note, une jointure de groupe qui réussit à moitié affiche explicitement ce qui manque, et toute erreur refusée par RLS est traduite en français avec le nom du fichier à exécuter (`describeAccessError` dans `src/lib/postgres.ts`). Aucun écran n’invente de données : il n’y a plus de conversation, de membre ou de comptage simulé côté client.
+
 La migration `007_message_attachments.sql` crée le bucket privé `message-attachments`. Les objets utilisent le chemin `<conversation_id>/<uploader_id>/<uuid>-<nom>`. Les membres de la conversation peuvent créer une URL signée de lecture; seul l’auteur de l’upload peut modifier ou supprimer son objet. Le frontend limite les pièces jointes à 25 Mo et accepte les images, vidéos, PDF et fichiers texte. Il faut exécuter cette migration une fois dans Supabase avant d’utiliser le bouton `＋` dans le composeur de messages.
 
 Le parcours d’inscription est en deux étapes dans `AuthModal.tsx`, avec Google OAuth Supabase. Les toasts d’interface restent visibles 8 secondes puis disparaissent automatiquement. La persistance de session est activée par `persistSession`, `autoRefreshToken` et `detectSessionInUrl` dans `src/lib/supabase.ts`.
@@ -83,6 +87,7 @@ Avec Supabase, le frontend appelle la Data API via `supabase-js` :
 | Connexion | `supabase.auth.signInWithPassword` | Public |
 | Profil | `GET /rest/v1/profiles?id=eq.<userId>` | Lecture publique, écriture propriétaire |
 | Conversations | `GET /rest/v1/conversation_members?user_id=eq.<userId>` | Membre connecté |
+| Conversations (liste en direct) | canal Realtime `inbox:<user_id>` sur `conversation_members` (filtré) + `messages` | RLS de `messages` filtre les événements |
 | Messages | `GET /rest/v1/messages?conversation_id=eq.<id>` | Membre de la conversation |
 | Envoyer message | `POST /rest/v1/messages` | `sender_id = auth.uid()` + membre |
 | Notifications | `GET /rest/v1/notifications?user_id=eq.<userId>` | Propriétaire |
@@ -111,6 +116,10 @@ supabase.channel(`conversation:${conversationId}`)
 Pour une production à grande échelle, ajouter présence (`presence`) pour le statut en ligne et broadcast pour l’indicateur de saisie; conserver Postgres Changes pour l’historique durable. Toujours retirer le channel au démontage React.
 
 ## Présence en ligne
+
+La liste des conversations est tenue en direct par le canal `inbox:<user_id>` de `MessagesPanel` : un `INSERT` sur `conversation_members` filtré `user_id=eq.<user_id>` (invitation, jointure de groupe) et un `INSERT` sur `messages` non filtré déclenchent une relecture debouncée de 900 ms. Les événements `messages` ne sont reçus que pour les conversations où RLS autorise la lecture, ce qui remplace une liste de filtres impossibles à énumérer ; le composant ne duplique jamais une ligne déjà présente (déduplication sur l’`id` serveur) et nomme l’expéditeur via `listProfilesByIds` parce que la charge utile Realtime ne contient pas l’embed profil.
+
+`GroupsPanel` écoute de la même façon `groups` (INSERT/UPDATE) et `group_members` (INSERT filtré sur son propre `user_id`) pour rafraîchir mes groupes et les groupes publics, sans polling.
 
 Le hook `src/lib/usePresence.ts` ouvre le canal partagé `avani:presence` avec une clé utilisateur stable, publie `{ user_id, online_at }` avec `track()` et recalcule le nombre de clés présentes sur les événements `sync`, `join` et `leave`. Le channel est retiré et l’état est dépublié au démontage ou à la déconnexion. La présence ne nécessite pas de table SQL : elle est gérée par Supabase Realtime.
 
