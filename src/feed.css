@@ -1162,3 +1162,17 @@
 .app-shell.theme-dark .fcomposer-place input { background: #3a3b3c; color: #e4e6eb; }
 .app-shell.theme-dark .fcomposer-place button { background: #4e4f50; color: #e4e6eb; }
 .app-shell.theme-dark .fcomposer-place button:hover { background: #5c5d5f; }
+
+/* Facebook encadre la ligne de compteurs : un filet au-dessus (content / compteurs) et
+   un filet en dessous (compteurs / actions). Sans compteurs, un seul filet subsiste. */
+.fpost-engagement {
+  border-top: 1px solid var(--fp-hairline);
+}
+
+.fpost-actions {
+  border-top: 1px solid var(--fp-hairline);
+}
+
+.fpost-engagement + .fpost-actions {
+  border-top: 0;
+}

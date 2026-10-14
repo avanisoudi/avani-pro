@@ -117,6 +117,8 @@ Pour une production à grande échelle, ajouter présence (`presence`) pour le s
 
 ## Présence en ligne
 
+Les compteurs affichés dans la colonne de gauche viennent d'une seule requête groupée : `listConversationPreviews()` lit les 150 messages les plus récents des conversations visibles (`in(conversation_id, ids)` + `order(created_at, desc)`) et le modèle `conversationPreview()` en tire l'aperçu, l'heure et le nombre de non-lus, comparé à `conversation_members.last_read_at` — colonne déjà portée par la base 001 et sélectionnée par `listConversations()`. Quand la lecture est bornée, le badge est marqué `9+` au lieu d'un total faux. Le badge ne tombe à zéro que si `markConversationRead()` a réellement écrit (`false` = policy ou colonne absente ⇒ le compteur reste affiché).
+
 La liste des conversations est tenue en direct par le canal `inbox:<user_id>` de `MessagesPanel` : un `INSERT` sur `conversation_members` filtré `user_id=eq.<user_id>` (invitation, jointure de groupe) et un `INSERT` sur `messages` non filtré déclenchent une relecture debouncée de 900 ms. Les événements `messages` ne sont reçus que pour les conversations où RLS autorise la lecture, ce qui remplace une liste de filtres impossibles à énumérer ; le composant ne duplique jamais une ligne déjà présente (déduplication sur l’`id` serveur) et nomme l’expéditeur via `listProfilesByIds` parce que la charge utile Realtime ne contient pas l’embed profil.
 
 `GroupsPanel` écoute de la même façon `groups` (INSERT/UPDATE) et `group_members` (INSERT filtré sur son propre `user_id`) pour rafraîchir mes groupes et les groupes publics, sans polling.

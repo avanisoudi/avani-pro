@@ -1122,3 +1122,51 @@
 .profile-form-modern .profile-bio-field{grid-column:1/-1}.profile-form-footer{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:4px}.profile-form-footer .form-status{font-size:12px;color:var(--muted,#777b92);line-height:1.5}.profile-form-footer .primary-button{min-height:43px;border-radius:12px;padding:11px 18px;background:linear-gradient(110deg,#6657ed,#397eea);box-shadow:0 7px 18px rgba(91,87,231,.2)}
 @media(max-width:680px){.profile-cover{height:150px;padding:19px 18px}.profile-cover-caption{max-width:125px;text-align:right;font-size:8px;line-height:1.5}.profile-identity{padding:0 18px 21px;gap:13px;flex-wrap:wrap}.profile-avatar-upload{width:100px;height:100px;margin-top:-46px;border-width:4px}.profile-avatar-upload>span{font-size:27px}.profile-avatar-upload i{width:28px;height:28px;font-size:17px}.profile-identity-copy{padding-top:12px;flex-basis:calc(100% - 115px)}.profile-identity-copy h2{font-size:22px}.profile-identity-copy .eyebrow{font-size:8px}.profile-bio-preview{font-size:12px;margin-top:8px}.profile-edit-jump{margin:0 0 0 auto;padding:9px 11px;font-size:11px}.profile-section-divider{margin:0 18px}.profile-workspace{padding:23px 18px 25px}.profile-workspace-heading{display:block}.profile-save-state{display:inline-block;max-width:100%;margin-top:12px;text-align:left}.profile-form-modern{grid-template-columns:minmax(0,1fr);gap:15px}.profile-form-modern .profile-bio-field,.profile-form-footer{grid-column:1}.profile-form-footer{align-items:stretch;flex-direction:column}.profile-form-footer .primary-button{width:100%}}
 [data-theme="dark"] .profile-page{background:var(--panel,#171a2b);border-color:rgba(135,124,255,.2)}[data-theme="dark"] .profile-avatar-upload{border-color:var(--panel,#171a2b)}[data-theme="dark"] .profile-section-divider{background:rgba(255,255,255,.1)}[data-theme="dark"] .profile-form-modern input,[data-theme="dark"] .profile-form-modern textarea,[data-theme="dark"] .profile-input-prefix{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.14);color:#f4f5ff}
+/* ---------- Compteurs de la messagerie : placement Facebook/Messenger ---------- */
+/* Une ligne de fil = pastilles de réactions HORS bulle (chevauchant son bord externe),
+   bulle, puis pied de ligne avec l'heure et les outils. Les compteurs ne sont plus
+   dans le texte du message. */
+.message-line{display:flex;flex-direction:column;gap:0;max-width:min(72%,520px);margin:6px 0 2px}
+.message-line:not(.mine){align-self:flex-start;align-items:flex-start}
+.message-line.mine{align-self:flex-end;align-items:flex-end}
+.message-line .message-bubble,.message-line .message-bubble.mine{align-self:stretch!important;max-width:100%!important;margin:0!important}
+.message-reaction-pills{display:flex;align-items:center;gap:2px;margin:0 10px -9px;padding:1px 7px;border-radius:999px;border:1px solid #d8e0e7;background:#fff;box-shadow:0 1px 2px rgba(17,39,58,.14);font-size:11px;line-height:16px;color:#4a5568;position:relative;z-index:1}
+.message-reaction-pill{display:inline-flex;align-items:center;gap:2px;margin-right:-2px}
+.message-reaction-pill em{font-style:normal;font-size:14px;line-height:16px}
+.message-reaction-pill small{color:#667781;font-size:10px}
+.message-reaction-pills b{margin-left:3px;color:#667781;font:400 11px/16px Arial,sans-serif}
+.message-foot{display:flex;align-items:center;gap:8px;margin-top:3px;padding:0 4px;color:#667781;font-size:11px;line-height:14px}
+.message-line.mine .message-foot{flex-direction:row-reverse}
+.message-time{white-space:nowrap}
+.message-tools{display:flex;align-items:center;gap:6px;opacity:0;transition:opacity .12s ease}
+.message-line:hover .message-tools,.message-line:focus-within .message-tools{opacity:1}
+@media (hover:none){.message-tools{opacity:1}}
+.message-reactions{display:flex;align-items:center;gap:1px;padding:1px 3px;border:1px solid #d8e0e7;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(17,39,58,.14)}
+.message-reaction{display:inline-flex;align-items:center;gap:2px;border:0;border-radius:999px;background:transparent;padding:2px 4px;font-size:14px;line-height:16px;cursor:pointer;color:#667781}
+.message-reaction:hover{background:#f0f2f5;transform:translateY(-1px)}
+.message-reaction.selected{background:rgba(18,140,126,.14)}
+.message-reaction small{font-size:9px;line-height:1}
+.message-meta-actions{display:flex;align-items:center;gap:2px;padding:1px 4px;border:1px solid #d8e0e7;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(17,39,58,.14)}
+.message-meta-actions button{border:0;border-radius:999px;background:transparent;color:#4a5568;font-size:10px;padding:4px 8px;cursor:pointer}
+.message-meta-actions button:hover{background:#f0f2f5;color:#128c7e}
+.message-edit{display:grid;gap:6px}
+.message-edit textarea{border:1px solid #d8e0e7;border-radius:8px;padding:6px;font-size:12px;color:#111b21;background:#fff}
+.message-edit button{justify-self:start;border:0;background:#e7f6f3;color:#128c7e;border-radius:6px;padding:5px 9px;font-size:10px}
+
+/* Ligne de conversation : aperçu à gauche, heure et badge de non-lus à droite */
+.conversation-row{align-items:flex-start}
+.conversation-row-main{min-width:0;flex:1}
+.conversation-row .conversation-preview{display:block;margin-top:3px;color:#667781!important;font-size:11px;line-height:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conversation-row.unread strong{font-weight:700;color:#111b21}
+.conversation-row-side{display:grid;justify-items:end;gap:5px;flex:none;margin-left:8px}
+.conversation-row-time{color:#667781;font-size:11px;line-height:14px}
+.conversation-row.unread .conversation-row-time{color:#128c7e;font-weight:600}
+.unread-pill{display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#128c7e;color:#fff;font:500 10px/1 Arial,sans-serif}
+.messages-note button{margin-left:6px;border:0;background:transparent;color:var(--cyan);font-size:10px;text-decoration:underline;cursor:pointer}
+
+@media (max-width: 760px) {
+  .message-line{max-width:min(86%,100%)!important}
+  .message-line .message-bubble,.message-line .message-bubble.mine{max-width:100%!important}
+  .message-foot{flex-wrap:wrap}
+  .conversation-row .conversation-preview{max-width:150px}
+}

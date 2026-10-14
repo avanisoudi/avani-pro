@@ -5,7 +5,7 @@
  */
 import { applyReaction, formatCount, formatPostTime, isEditedPost, parsePostContent, reactionState, topReactions } from '../../src/lib/feed'
 import { MAX_POST_MEDIA_FILES, describeMediaError, isStoredMediaPath, mediaKind, mediaPostType, validateMediaSelection } from '../../src/lib/postMedia'
-import { conversationFromMembershipRow, conversationFromRow, messageFromRow, nextTolerantToken, publicGroupFromRow, tokenName } from '../../src/lib/messagesModel'
+import { conversationFromMembershipRow, conversationFromRow, conversationPreview, formatRowTime, messageFromRow, nextTolerantToken, publicGroupFromRow, reactionTotal, threadCountLabel, tokenName, topMessageReactions, unreadBadge } from '../../src/lib/messagesModel'
 import { describeAccessError, isCheckConstraintError, isMissingColumnError, isMissingRelationError, isPermissionError } from '../../src/lib/postgres'
 import type { Post } from '../../src/lib/feed'
 
@@ -167,6 +167,43 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
   check('jointure reussie : conversation disponible pour ouvrir le fil', joined.conversation?.id === 'c1' && joined.note === null)
   const partial = { group: { id: 'g2', name: 'Atelier', member_count: 1 }, conversation: null, note: 'Groupe rejoint. Son chat reste à créer : la colonne groups.conversation_id (migration 006) manque à la base.' }
   check('jointure partielle annonce le chat manquant au lieu de mentir', partial.conversation === null && partial.note.includes('006'))
+}
+
+// ---------------------------------------------------------------------------
+// Compteurs Facebook/Messenger : aperçu de conversation, badge de non-lus, pastilles
+// ---------------------------------------------------------------------------
+{
+  const now = new Date('2026-10-14T10:00:00Z')
+  const rows = [
+    { id: 'm3', conversation_id: 'c1', sender_id: 'u2', body: 'On  \n cale 14h', created_at: '2026-10-14T09:58:00Z' },
+    { id: 'm2', conversation_id: 'c1', sender_id: 'u1', body: 'déjà lu', created_at: '2026-10-14T09:00:00Z' },
+    { id: 'm1', conversation_id: 'c1', sender_id: 'u2', body: 'vieux', created_at: '2026-10-13T09:00:00Z', deleted_at: '2026-10-13T10:00:00Z' },
+  ]
+  const preview = conversationPreview(rows, { lastReadAt: '2026-10-14T09:30:00Z', myId: 'u1' })
+  check('aperçu = dernier message lisible, espaces normalisés', preview.preview === 'On cale 14h', preview.preview)
+  check('une seule ligne de non-lus comptee (apres last_read_at, hors mes messages)', preview.unread === 1 && preview.at === '2026-10-14T09:58:00Z', JSON.stringify(preview))
+  check('badge simple sans troncature', unreadBadge(preview.unread, preview.truncated) === '1')
+  check('badge majoré au-dela de 9 ou si la lecture est bornée', unreadBadge(12) === '9+' && unreadBadge(4, true) === '9+' && unreadBadge(0) === '')
+  const pieceJointe = conversationPreview([{ id: 'm9', sender_id: 'u2', body: '', created_at: '2026-10-14T09:00:00Z', attachment_name: 'plan.pdf' }], { myId: 'u1' })
+  check('piece jointe annoncee par son nom', pieceJointe.preview === 'plan.pdf', pieceJointe.preview)
+  const supprime = conversationPreview([{ id: 'm8', sender_id: 'u2', body: 'x', created_at: '2026-10-14T09:00:00Z', deleted_at: '2026-10-14T09:10:00Z' }], { myId: 'u1' })
+  check('message retire = mention explicite, pas un apercu vide', supprime.preview === 'Message supprimé' && supprime.unread === 0)
+  const vide = conversationPreview([], { lastReadAt: null, myId: 'u1' })
+  check('conversation vide = aucun texte invente', vide.preview === '' && vide.at === null && vide.unread === 0)
+  const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  check('heure du jour affichee en heures:minutes', formatRowTime('2026-10-14T09:58:00Z', now) === hhmm('2026-10-14T09:58:00Z'), formatRowTime('2026-10-14T09:58:00Z', now))
+  const weekday = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { weekday: 'long' })
+  check('hier puis jour de la semaine puis date', formatRowTime('2026-10-13T09:00:00Z', now) === 'Hier' && formatRowTime('2026-10-11T09:00:00Z', now) === weekday('2026-10-11T09:00:00Z') && formatRowTime('2026-06-03T09:00:00Z', now) === '03/06/26', [formatRowTime('2026-10-13T09:00:00Z', now), formatRowTime('2026-10-11T09:00:00Z', now), formatRowTime('2026-06-03T09:00:00Z', now)].join(' / '))
+  check('heure absente ou invalide reste muette', formatRowTime(null, now) === '' && formatRowTime('pas-une-date', now) === '')
+}
+check('compteur du fil majoré quand l historique continue', threadCountLabel(48, true) === '48+ messages dans ce fil' && threadCountLabel(1, false) === '1 message dans ce fil' && threadCountLabel(0, false) === '0 message dans ce fil')
+{
+  const counts = { like: 3, love: 12, haha: 0, wow: 0, sad: 0, angry: 0 }
+  const top = topMessageReactions(counts)
+  check('pastilles triees par volume, zero exclu', top.length === 2 && top[0][0] === 'love' && top[0][1] === 12 && top[1][0] === 'like', JSON.stringify(top))
+  check('total des reactions somme toutes les cles', reactionTotal(counts) === 15 && reactionTotal(undefined) === 0)
+  check('trois pastilles au plus, comme Facebook', topMessageReactions({ like: 1, love: 2, haha: 3, wow: 4, sad: 5, angry: 6 }).length === 3)
+  check('aucune reaction = aucune pastille', topMessageReactions({ like: 0, love: 0 }).length === 0)
 }
 
 const failed = results.filter(result => !result.ok)
