@@ -316,3 +316,135 @@ html[data-theme="light"] .messages-alert { background: rgba(255, 235, 237, .9) !
 html[data-theme="light"] .messages-alert strong { color: #8a1c26 !important }
 html[data-theme="light"] .messages-alert p { color: #a3323d !important }
 html[data-theme="light"] .messages-alert button { border-color: rgba(138, 28, 38, .35) !important; color: #8a1c26 !important }
+
+/* ---------- 6. Panneau Réglages : interrupteurs de fonctionnalités ---------- */
+.settings-flags { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line, #ced0d4); border-radius: 14px; background: var(--panel-2, #f7f8fa) }
+.settings-flags > strong { font-size: 13px; color: var(--white, #050505) }
+.settings-flags > small { color: var(--muted, #65676b); font-size: 11px; line-height: 1.45 }
+.settings-flags-note { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--panel, #fff); border: 1px solid var(--line, #ced0d4); color: #c2453b; font-size: 11px; line-height: 1.45 }
+.settings-flags ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none }
+.settings-flags li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--panel, #fff); border: 1px solid var(--line, #ced0d4) }
+.settings-flags li span { display: grid; gap: 2px; min-width: 0 }
+.settings-flags li strong { font-size: 12px; color: var(--white, #050505) }
+.settings-flags li small { font-size: 11px; color: var(--muted, #65676b); line-height: 1.4 }
+.settings-flags li button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line, #ced0d4); background: transparent; color: var(--muted, #65676b); font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap }
+.settings-flags li button[aria-checked="true"] { border-color: transparent; background: var(--avani-accent-soft, #e7f3ff); color: var(--avani-accent, #1877f2) }
+.settings-flags li button:disabled { opacity: .55; cursor: not-allowed }
+
+/* ---------- 7. Référence « Avani neon » ---------- */
+/*
+ * Direction visuelle retenue : violet → bleu électrique → cyan, au lieu du bleu réseau
+ * social copié collé. Les couches précédentes écrivaient cette couleur en dur (43 fois
+ * `#1877f2`, 9 fois `#e7f3ff`) ; elles consomment désormais `--avani-accent` et
+ * `--avani-accent-soft`, donc la marque se change ici et nulle part ailleurs.
+ *
+ * Les valeurs `:root` existent pour que la variable soit résolue même avant `initTheme()`
+ * (premier paint, page d’accueil publique) : sans elles, `var(--avani-accent)` tombe à la
+ * valeur héritée et l'interface se retrouve sans couleur d'accent pendant un frame.
+ */
+:root {
+  --avani-violet: #6d5efc;
+  --avani-blue: #2d6bff;
+  --avani-cyan: #22d3ee;
+  --avani-accent: #6d5efc;
+  --avani-accent-soft: #efeaff;
+  --avani-accent-line: #d9d2ff;
+  --avani-ramp: linear-gradient(135deg, #7c3aed 0%, #2d6bff 52%, #22d3ee 100%);
+  --avani-glow: rgba(109, 94, 252, .32);
+  --avani-line: #dcd7f5;
+  --avani-bg: #f4f3ff;
+}
+
+html[data-theme="light"] {
+  --avani-bg: #f4f3ff;
+  --avani-text: #17152b;
+  --avani-muted: #5f5b7a;
+  --avani-accent: #6d5efc;
+  --avani-accent-soft: #efeaff;
+  --avani-accent-line: #d9d2ff;
+  --avani-glow: rgba(109, 94, 252, .26);
+  --panel: #ffffff;
+  --panel-2: #f7f6ff;
+  --line: var(--avani-line);
+  --ink: #e6e2fb;
+  --muted: var(--avani-muted);
+  --soft: #3b3757;
+  --white: var(--avani-text);
+  --avani-blue: #1d4ed8;
+  --avani-cyan: #0891b2;
+}
+
+html[data-theme="dark"] {
+  /* Nuit violette plutôt que gris anthracite : même rampe, densité plus basse. */
+  --avani-bg: #0b0a1a;
+  --avani-text: #eceafb;
+  --avani-muted: #a9a4c9;
+  --avani-accent: #9b8cff;
+  --avani-accent-soft: #241f45;
+  --avani-accent-line: #35305e;
+  --avani-glow: rgba(139, 92, 246, .38);
+  --panel: #14132a;
+  --panel-2: #1c1a38;
+  --line: #2c2953;
+  --ink: #241f45;
+  --muted: var(--avani-muted);
+  --soft: #cbc7e6;
+  --white: var(--avani-text);
+  --avani-blue: #6aa0ff;
+  --avani-cyan: #5eead4;
+}
+
+/* Rampe sur ce qui porte la marque : logo, boutons primaires, halo de survol. */
+html[data-theme="light"] .brand-mark,
+html[data-theme="dark"] .brand-mark { background: var(--avani-ramp) !important; box-shadow: 0 10px 26px -14px var(--avani-glow) !important; transform: none !important }
+html[data-theme="light"] .brand,
+html[data-theme="light"] .brand-pro,
+html[data-theme="light"] .brand-word,
+html[data-theme="dark"] .brand,
+html[data-theme="dark"] .brand-pro,
+html[data-theme="dark"] .brand-word { color: var(--avani-accent) !important }
+html[data-theme="light"] .primary-button,
+html[data-theme="dark"] .primary-button { background-image: var(--avani-ramp) !important; background-color: var(--avani-accent) !important; border-color: transparent !important; color: #fff !important; box-shadow: 0 12px 30px -18px var(--avani-glow) !important }
+html[data-theme="light"] .primary-button:hover,
+html[data-theme="dark"] .primary-button:hover { filter: brightness(1.06); box-shadow: 0 16px 36px -16px var(--avani-glow) !important }
+
+/* Halo au survol des surfaces : l'effet « premium » demandé, sans toucher aux hauteurs. */
+html[data-theme="light"] .post-card,
+html[data-theme="light"] .rail-card,
+html[data-theme="light"] .feature-panel,
+html[data-theme="light"] .composer-card,
+html[data-theme="light"] .media-card,
+html[data-theme="dark"] .post-card,
+html[data-theme="dark"] .rail-card,
+html[data-theme="dark"] .feature-panel,
+html[data-theme="dark"] .composer-card,
+html[data-theme="dark"] .media-card { border-color: var(--avani-line) !important; transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease }
+html[data-theme="light"] .post-card:hover,
+html[data-theme="light"] .rail-card:hover,
+html[data-theme="light"] .media-card:hover,
+html[data-theme="dark"] .post-card:hover,
+html[data-theme="dark"] .rail-card:hover,
+html[data-theme="dark"] .media-card:hover { box-shadow: 0 18px 40px -26px var(--avani-glow) !important; border-color: var(--avani-accent-line) !important }
+
+/* Navigations active : l'accent remplace le bleu réseau social, y compris les barres. */
+html[data-theme="light"] .topbar-nav button.active,
+html[data-theme="dark"] .topbar-nav button.active { color: var(--avani-accent) !important; border-bottom-color: var(--avani-accent) !important }
+html[data-theme="light"] .nav-button.active,
+html[data-theme="dark"] .nav-button.active { background: var(--avani-accent-soft) !important; color: var(--avani-accent) !important }
+html[data-theme="light"] .mobile-tabbar .nav-button.active,
+html[data-theme="dark"] .mobile-tabbar .nav-button.active { color: var(--avani-accent) !important }
+html[data-theme="light"] .feed-filter .filter-active,
+html[data-theme="dark"] .feed-filter .filter-active { color: var(--avani-accent) !important; border-bottom-color: var(--avani-accent) !important }
+
+/* anneaux et repères : stories, présence, pastilles */
+html[data-theme="light"] .story-avatar,
+html[data-theme="dark"] .story-avatar { border-color: var(--avani-accent) !important }
+html[data-theme="light"] .online-dot,
+html[data-theme="dark"] .online-dot { background: var(--avani-cyan) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--avani-cyan) 26%, transparent) }
+html[data-theme="light"] .nav-badge,
+html[data-theme="dark"] .nav-badge { background: var(--avani-violet) !important; color: #fff !important }
+html[data-theme="light"] .pulse-dot,
+html[data-theme="dark"] .pulse-dot { background: var(--avani-cyan) !important }
+
+/* Le point d'insertion suit la marque, dans les deux modes. */
+html[data-theme] :focus-visible { outline: 2px solid var(--avani-accent); outline-offset: 2px }

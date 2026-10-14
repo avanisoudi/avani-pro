@@ -10,6 +10,8 @@ import { readFileSync } from 'node:fs'
 import { adoptCloudTheme, applyTheme, getTheme, nextTheme, readStoredTheme, resolveInitialTheme, setTheme, subscribeTheme, THEME_STORAGE_KEY } from '../../src/lib/theme'
 import { describeAccessError, isCheckConstraintError, isMissingColumnError, isMissingRelationError, isPermissionError } from '../../src/lib/postgres'
 import type { Post } from '../../src/lib/feed'
+import { clipsFromPosts, countLabel, hashtagCloud, isStoryLive, isVideoMedia, isVideoPost, postsWithTag, sortByEngagement, storyRings, storyStats } from '../../src/lib/mediaFeed'
+import type { StoryRecord } from '../../src/lib/socialApi'
 
 const results: Array<{ name: string; ok: boolean; detail: string }> = []
 const check = (name: string, ok: boolean, detail = '') => {
@@ -293,6 +295,48 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
   const sentAt = '2026-02-01T00:00:00Z'
   const ordered = [{ id: 'b', updated_at: sentAt }, ...before.filter(item => item.id !== 'b').sort((x, y) => Date.parse(y.updated_at) - Date.parse(x.updated_at))]
   check('conversation animee remonte en tete de liste', ordered[0].id === 'b' && ordered[1].id === 'a')
+}
+
+// ---------------------------------------------------------------------------
+// Surfaces média : Vidéos, Reels, Stories — dérivations sans donnée inventée
+// ---------------------------------------------------------------------------
+{
+  const base = { id: 'x', name: 'Amélie', handle: '@amelie', role: '', avatar: 'AM', time: 'à l’instant', body: '', tags: [], stats: { likes: 0, comments: 0, shares: 0 }, kind: 'thought' }
+  const videoPost: Post = { ...base, id: 'v1', kind: 'video', body: 'Essai #Atelier #Noël', tags: ['Atelier', 'Noël'], stats: { likes: 3, comments: 1, shares: 0 }, media: ['/x/poster.jpg', '/x/clip.mp4'] } as unknown as Post
+  const typedOnly: Post = { ...base, id: 'v2', kind: 'video', media: [] } as unknown as Post
+  const extensionOnly: Post = { ...base, id: 'v3', kind: 'image', media: ['/x/montage.webm'] } as unknown as Post
+  const photoPost: Post = { ...base, id: 'p1', kind: 'image', media: ['/x/photo.jpg'] } as unknown as Post
+
+  check('extension vidéo reconnue, photo exclue', isVideoMedia('a/b.MP4') && isVideoMedia('clip.webm?t=1') && !isVideoMedia('photo.jpg'))
+  check('publication vidéo = type déclaré OU média vidéo', isVideoPost(videoPost) && isVideoPost(typedOnly) && isVideoPost(extensionOnly) && !isVideoPost(photoPost))
+  const clips = clipsFromPosts([photoPost, videoPost, extensionOnly])
+  check('un clip par vidéo, l’image ne devient pas une vidéo', clips.length === 2 && clips.every(clip => clip.src !== undefined))
+  check('affiche = premier média non vidéo, sinon absente', clips[0].poster === '/x/poster.jpg' && clips[1].poster === null)
+  check('vue inconnue reste null, jamais un zero rassurant', clips.every(clip => clip.views === null))
+
+  check('hashtag comparé sans casse ni accents', postsWithTag([videoPost, photoPost], '#noël').length === 1 && postsWithTag([videoPost, photoPost], 'atelier').length === 1)
+  check('nuage de hashtags: le plus employé devant', hashtagCloud([videoPost, { ...videoPost, id: 'v9' } as unknown as Post]).map(item => item.tag).join(',') === '#Atelier,#Noël')
+  check('tri par reactions réelles, ordre chronologique à égalité', sortByEngagement([photoPost, videoPost]).map(post => post.id).join(',') === `${videoPost.id},${photoPost.id}`)
+  check('compteur indisponible annoncé comme tel', countLabel(null, 'vues') === 'vues indisponibles' && countLabel(1234, 'vues') === `${(1234).toLocaleString('fr-FR')} vues`, countLabel(1234, 'vues'))
+  check('compteur NaN ne devient pas un chiffre', countLabel(Number.NaN, 'vues') === 'vues indisponibles')
+
+  const now = Date.parse('2026-01-02T00:00:00Z')
+  const story = (id: string, author: string, at: string, until: string, over: Partial<Record<string, unknown>> = {}) => ({
+    id, author_id: author, media_path: `${author}/${id}.jpg`, media_type: 'image', caption: null, privacy: 'public', created_at: at, expires_at: until, author: { id: author, username: author, full_name: author === 'u1' ? 'Amélie Rivard' : 'Karim Belkacem', avatar_url: null, verified_type: null }, ...over,
+  }) as unknown as StoryRecord
+  const live = [story('s2', 'u1', '2026-01-01T10:00:00Z', '2026-01-03T10:00:00Z'), story('s1', 'u1', '2026-01-01T09:00:00Z', '2026-01-03T09:00:00Z'), story('s3', 'u2', '2026-01-01T11:00:00Z', '2026-01-01T11:30:00Z')]
+  check('une story dont la fenêtre est passée nest pas « en ligne »', isStoryLive(live[2], new Date(now)) === false && isStoryLive(live[0], new Date(now)) === true)
+  const rings = storyRings(live.filter(item => isStoryLive(item, new Date(now))), 'u1', ['s1'])
+  check('bagues regroupees par auteur, la mienne en tete', rings.length === 1 && rings[0].authorId === 'u1' && rings[0].mine === true)
+  check('stories d une bague triees de la plus ancienne a la plus recente', rings[0].stories.map(item => item.id).join(',') === 's1,s2')
+  check('bague « non vue » des qu une story na pas ete vue', rings[0].unseen === true)
+  const two = storyRings(live.filter(item => isStoryLive(item, new Date(now))), 'u1', ['s1', 's2'])
+  check('toutes vues = bague vue, mon compte reste premier', two.every(ring => ring.unseen === false) && two[0].mine === true)
+  const mine = [...live, story('s4', 'u1', '2025-12-30T09:00:00Z', '2025-12-31T09:00:00Z')]
+  const stats = storyStats(mine, 'u1', new Date(now))
+  check('stats createur = ce qui est mesurable, rien destime', stats.live === 2 && stats.videos === 0 && stats.withCaption === 0 && stats.expired === 1, JSON.stringify(stats))
+  check('les stories d’autrui ne gonflent pas mes statistiques', storyStats(mine, 'u2', new Date(now)).live === 0)
+  check('initiales de bague, deux lettres maximum', storyRings(live.filter(item => isStoryLive(item, new Date(now))), 'u2')[0].initials === 'AR')
 }
 
 const failed = results.filter(result => !result.ok)

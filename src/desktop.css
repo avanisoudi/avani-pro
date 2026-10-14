@@ -9,7 +9,7 @@
   :root {
     --av-navy: #17246b;
     --av-navy-2: #1f3596;
-    --av-blue: #1877f2;
+    --av-blue: var(--avani-accent);
     --av-sky: #4aa3ff;
     --av-bg: #f0f2f5;
     --av-line: #e4e6eb;
@@ -381,7 +381,7 @@
   }
 
   .app-shell .nav-button.active {
-    background: #e7f3ff !important;
+    background: var(--avani-accent-soft) !important;
     color: var(--av-blue) !important;
     box-shadow: none !important;
   }
@@ -683,7 +683,7 @@
   }
 
   .app-shell .feed-filter-tabs button.filter-active {
-    background: #e7f3ff !important;
+    background: var(--avani-accent-soft) !important;
     color: var(--av-blue) !important;
   }
 

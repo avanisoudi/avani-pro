@@ -54,7 +54,35 @@ Créer `.env.local` à partir de `.env.example` avec `VITE_SUPABASE_URL` et `VIT
 
 Créer un **Static Site** avec la commande `npm install && npm run build` et le dossier publié `dist`. Ajouter les variables Supabase dans l’onglet Environment et une réécriture `/*` vers `/index.html` pour le fallback SPA. Le fichier `render.yaml` fournit déjà cette configuration.
 
-## Thème clair et sombre
+## Vidéos, Reels, Stories
+
+Quatre routes nouvelles, toutes branchées sur la base réelle (`src/components/MediaPanels.tsx`,
+logique pure dans `src/lib/mediaFeed.ts`, testée par `npm run test:feed`) :
+
+- **`/videos`** — grille des publications qui portent une vidéo. Une publication est « vidéo »
+  si `posts.post_type = 'video'` **ou** si un média a une extension vidéo (mp4, mov, webm, ogv,
+  avi) : les deux chemins existent en base. Compteurs lus dans `likes`, `comments`,
+  `post_shares`. Aucun compteur de vues n'est affiché : `posts` ne le porte pas.
+- **`/reels`** — même source, en pile verticale avec `scroll-snap` ; `IntersectionObserver`
+  lance la vidéo visible et met les autres en pause, son coupé par défaut, un tap met en
+  pause. Bouton « Suivre » branché sur `follows`.
+- **`/stories`** — bagues groupées par auteur, visionneuse (5 s sur une photo, durée réelle
+  sur une vidéo), légende, confidentialité, suppression, archive personnelle (au-delà des
+  24 h), et **réponse privée** qui ouvre une vraie conversation via `createDirectConversation`.
+  Les vues viennent de `story_views` ; sans la table, l'écran l'écrit au lieu d'afficher 0.
+- **`/marketplace` et `/live`** — écrans d'état, pas de catalogue ni de lecteur simulés.
+
+Les huit surfaces (stories, videos, reels, marketplace, live, messages, groups, pages) sont
+pilotées par `feature_flags` : **Réglages → Fonctionnalités**. Lecture publique, écriture
+réservée aux rôles `admin` / `super_admin` (policy RLS). Un drapeau absent vaut « ouvert » ;
+seule une ligne `enabled = false` masque une entrée du haut. Sans la table, rien ne se
+masque — et la note du missing file s'affiche.
+
+Migrations à exécuter (dans cet ordre, idempotentes) : `010_stories.sql`,
+`011_feature_flags.sql`, `012_user_settings_et_types.sql` — voir
+`supabase/migrations/README.md` pour la table attendue par chaque requête du client.
+
+## Thème clair et sombre : référence « Avani neon »
 
 Un seul contrôle : **Réglages → Apparence**. La barre du haut n'a plus de bascule (elle doublonnait le
 réglage et écrivait la même colonne du compte deux fois). Le magasin de `src/lib/theme.ts` est l'unique
@@ -63,6 +91,12 @@ propriétaire de l'état : il applique `data-theme` et `color-scheme` sur `<html
 abonnés (`useSyncExternalStore` dans `App.tsx` pour la classe de coquille, dans le panneau Réglages pour le
 `<select>`). Sans choix explicite, l'application suit `prefers-color-scheme`, y compris quand l'onglet change
 d'avis pendant la session. `user_settings.appearance` n'est repris qu'au premier branchement sur l'appareil.
+
+La marque ne s'écrit plus en dur : les couches historiques posaient `#1877f2` quarante-trois fois et
+`#e7f3ff` neuf fois. Ces valeurs consomment maintenant `--avani-accent` et `--avani-accent-soft`, donc la
+rampe violet → bleu électrique → cyan se change dans la section 7 de `src/themes.css` et nulle part
+ailleurs — la page d'accueil publique (`landing.css`) garde ses couleurs propres. Le mode sombre passe du
+gris anthracite à une nuit violette, et les surfaces (fil, cartes, panneaux) prennent un halo au survol.
 
 Le CSS des deux thèmes vit dans `src/themes.css`, importé en dernier : il reprend surface par surface les
 couleurs que les couches historiques écrivaient en dur, ce qui rendait le mode sombre inerte et le mode clair

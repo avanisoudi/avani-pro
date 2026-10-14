@@ -1,0 +1,96 @@
+/*
+ * Surfaces média : Vidéos, Reels, Stories, écrans d'état.
+ *
+ * Tout passe par les variables de thème (`--panel`, `--line`, `--white`, `--muted`,
+ * `--avani-accent`) : ces trois panneaux doivent être lisibles en clair comme en sombre
+ * sans feuille dédiée, ce qui était précisément le défaut des couches historiques.
+ * Importée avant `themes.css`, donc la palette « Avani neon » reprise là-bas s'applique ici.
+ */
+
+.media-panel { padding: 18px }
+
+.media-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px }
+.media-toolbar > button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line, #ced0d4); background: transparent; color: var(--muted, #65676b); font: inherit; font-size: 12px; cursor: pointer }
+.media-toolbar > button:hover { color: var(--white, #050505) }
+
+.media-tags { display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 6px }
+.media-tags button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line, #ced0d4); background: transparent; color: var(--muted, #65676b); font: inherit; font-size: 12px; cursor: pointer }
+.media-tags button small { color: var(--soft, #444950); font-size: 10px }
+.media-tags button.on,
+.media-toolbar > button.on { border-color: transparent; background: var(--avani-accent-soft, var(--avani-accent-soft)); color: var(--avani-accent, var(--avani-accent)) }
+
+.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 14px }
+.media-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line, #ced0d4); border-radius: 14px; background: var(--panel, #fff) }
+.media-card video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; background: #000 }
+.media-card-head { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 8px }
+.media-card-head strong { display: block; font-size: 13px; color: var(--white, #050505) }
+.media-card-head small { color: var(--muted, #65676b); font-size: 11px }
+.media-card-body { margin: 0; font-size: 13px; line-height: 1.45; color: var(--soft, #444950); white-space: pre-wrap }
+.media-card-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: var(--muted, #65676b) }
+.media-card-foot button { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line, #ced0d4); background: transparent; color: inherit; font: inherit; font-size: 12px; cursor: pointer }
+.media-card-foot button.on { border-color: transparent; background: var(--avani-accent-soft, var(--avani-accent-soft)); color: var(--avani-accent, var(--avani-accent)) }
+
+.media-state { display: grid; gap: 6px; padding: 16px; border-radius: 12px; border: 1px dashed var(--line, #ced0d4); color: var(--muted, #65676b); font-size: 13px }
+.media-state strong { color: var(--white, #050505); font-size: 14px }
+.media-state p { margin: 0; line-height: 1.5 }
+.media-state-error { border-style: solid; border-color: #f0584d }
+.media-state-note { border-style: solid }
+
+/* Reels : pile en scroll-snap, une vidéo par écran */
+.reels-stack { display: grid; gap: 12px; max-height: min(76vh, 720px); overflow-y: auto; scroll-snap-type: y mandatory; border-radius: 16px; padding: 12px; background: var(--panel-2, #f7f8fa) }
+.reel-item { position: relative; scroll-snap-align: center; border-radius: 14px; overflow: hidden; background: #000; cursor: pointer }
+.reel-item video { display: block; width: 100%; max-height: min(72vh, 680px); object-fit: contain }
+.reel-meta { position: absolute; inset: auto 0 0 0; padding: 40px 14px 54px; background: linear-gradient(180deg, transparent, rgba(4, 6, 12, .82)); color: #f4f6fb; pointer-events: none }
+.reel-meta strong { display: block; font-size: 13px }
+.reel-meta p { margin: 4px 0 0; font-size: 12px; line-height: 1.4; max-height: 3.6em; overflow: hidden }
+.reel-meta span { display: block; margin-top: 6px; font-size: 11px; color: #b9c6e3 }
+.reel-actions { position: absolute; right: 10px; bottom: 12px; display: grid; gap: 6px }
+.reel-actions button { padding: 6px 10px; border-radius: 999px; border: 0; background: rgba(12, 14, 22, .62); color: #f4f6fb; font: inherit; font-size: 12px; cursor: pointer; backdrop-filter: blur(6px) }
+.reel-actions button.on { background: var(--avani-accent, var(--avani-accent)); color: #fff }
+
+/* Stories : bagues, visionneuse, archive */
+.story-rings { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 14px }
+.story-rings > button { display: grid; justify-items: center; gap: 4px; width: 82px; padding: 6px 2px; border: 0; border-radius: 12px; background: transparent; color: inherit; font: inherit; cursor: pointer }
+.story-ring-avatar { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--panel-2, #f7f8fa); color: var(--white, #050505); font-weight: 700; font-size: 16px; box-shadow: 0 0 0 2px var(--line, #ced0d4) }
+.story-ring-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50% }
+.story-rings > button.unseen .story-ring-avatar { background-image: var(--avani-ramp, linear-gradient(135deg, #7c3aed, #22d3ee)); color: #fff; box-shadow: 0 0 0 2px transparent, 0 8px 22px -12px var(--avani-accent, #6d5efc) }
+.story-rings > button small { max-width: 78px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--muted, #65676b) }
+.story-rings > button em { font-size: 10px; font-style: normal; color: var(--avani-accent, var(--avani-accent)) }
+
+.story-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line, #ced0d4); border-radius: 12px; background: var(--panel-2, #f7f8fa) }
+.story-form label { display: grid; gap: 4px; font-size: 11px; color: var(--muted, #65676b) }
+.story-form input,
+.story-form select { padding: 8px; border-radius: 8px; border: 1px solid var(--line, #ced0d4); background: var(--panel, #fff); color: var(--white, #050505); font: inherit; font-size: 12px }
+
+.story-stats { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 10px 0 0; font-size: 12px; color: var(--muted, #65676b) }
+.story-stats strong { color: var(--white, #050505); font-size: 14px }
+.story-stats-note { flex: 1 1 240px; color: #c2453b }
+
+.story-archive { margin-top: 14px }
+.story-archive h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted, #65676b) }
+.story-archive div { display: flex; flex-wrap: wrap; gap: 6px }
+.story-archive span { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line, #ced0d4); font-size: 11px; color: var(--soft, #444950) }
+
+.story-viewer { position: fixed; inset: 0; z-index: 60; display: grid; grid-template-rows: auto 1fr auto; gap: 8px; padding: 14px; background: rgba(6, 8, 14, .92); color: #f4f6fb; overflow: auto }
+.story-viewer-progress { display: flex; gap: 4px }
+.story-viewer-progress i { flex: 1; height: 3px; border-radius: 999px; background: rgba(244, 246, 251, .28) }
+.story-viewer-progress i.on { background: #f4f6fb }
+.story-viewer-head { display: flex; align-items: center; gap: 10px; font-size: 12px }
+.story-viewer-head strong { flex: 1 }
+.story-viewer-head button { padding: 6px 10px; border: 0; border-radius: 999px; background: rgba(244, 246, 251, .16); color: inherit; font: inherit; cursor: pointer }
+.story-media { width: 100%; max-height: 72vh; object-fit: contain; border-radius: 12px; background: #000 }
+.story-caption { margin: 0; font-size: 13px; line-height: 1.5 }
+.story-viewer-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px }
+.story-viewer-foot div { display: flex; gap: 6px }
+.story-viewer-foot button { padding: 6px 12px; border: 0; border-radius: 999px; background: rgba(244, 246, 251, .16); color: inherit; font: inherit; font-size: 12px; cursor: pointer }
+.story-viewer-foot button:disabled { opacity: .45; cursor: not-allowed }
+
+.soon-actions { display: flex; gap: 8px; margin-top: 12px }
+
+@media (max-width: 760px) {
+  .media-panel { padding: 12px }
+  .media-grid { grid-template-columns: 1fr }
+  .story-form { grid-template-columns: 1fr }
+  .reels-stack { max-height: none; padding: 0; background: transparent; gap: 10px }
+  .story-viewer { position: fixed; padding: 10px }
+}
