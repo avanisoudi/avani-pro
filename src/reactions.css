@@ -42,8 +42,7 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
-.rx-button .svg-icon,
-.post-actions .rx-button .svg-icon {
+.rx-button .svg-icon {
   display: inline-block !important;
   width: 20px !important;
   height: 20px !important;
@@ -134,78 +133,8 @@
   opacity: 1;
 }
 
-/* Résumé des réactions */
-.rx-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 34px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--rx-line);
-  color: var(--rx-muted);
-  font-size: 14px;
-}
-
-.rx-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.rx-count:hover .rx-total {
-  text-decoration: underline;
-}
-
-.rx-stack {
-  display: inline-flex;
-  align-items: center;
-}
-
-.rx-stack-icon {
-  width: 20px;
-  height: 20px;
-  margin-left: -5px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  box-sizing: content-box;
-  background: #fff;
-}
-
-.rx-stack-icon:first-child {
-  margin-left: 0;
-}
-
-.rx-total {
-  color: var(--rx-muted);
-}
-
-.rx-meta {
-  display: flex;
-  gap: 12px;
-  flex: 0 0 auto;
-}
-
-.rx-meta button {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.rx-meta button:hover {
-  text-decoration: underline;
-}
+/* Résumé des réactions : la ligne d’engagement (total + icônes superposées)
+ * est rendue dans .fpost-engagement, voir src/feed.css. */
 
 /* Thème sombre */
 .app-shell.theme-dark {
@@ -224,8 +153,6 @@
 
 /* Bouton colorisé selon la réaction choisie (bat les règles de bureau/mobile) */
 .rx-button.is-active,
-.post-actions .rx-button.is-active,
-.app-shell .post-actions .rx-button.is-active,
-.app-shell.theme-light .post-actions .rx-button.is-active {
+.fpost-actions .rx-button.is-active {
   color: var(--rx-active, #1877f2) !important;
 }
