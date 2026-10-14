@@ -154,5 +154,5 @@
 /* Bouton colorisé selon la réaction choisie (bat les règles de bureau/mobile) */
 .rx-button.is-active,
 .fpost-actions .rx-button.is-active {
-  color: var(--rx-active, #1877f2) !important;
+  color: var(--rx-active, var(--avani-accent)) !important;
 }

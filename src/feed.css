@@ -13,7 +13,7 @@
   --fp-hairline: #e4e6eb;
   --fp-hover: #f2f2f2;
   --fp-bubble: #f0f2f5;
-  --fp-blue: #1877f2;
+  --fp-blue: var(--avani-accent);
   --fp-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   display: block;
   margin: 0 0 12px;
@@ -278,7 +278,7 @@
 }
 
 .fpost-tags span {
-  color: #1877f2;
+  color: var(--avani-accent);
   font-size: 15px;
   line-height: 20px;
   cursor: pointer;
@@ -799,7 +799,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--fp-blue, #1877f2);
+  color: var(--fp-blue, var(--avani-accent));
   font: 600 15px/20px Arial, sans-serif;
   cursor: pointer;
   white-space: nowrap;
@@ -953,7 +953,7 @@
   height: 40px;
   overflow: hidden;
   border-radius: 50%;
-  background: linear-gradient(135deg, #5f35dc, #1877f2);
+  background: linear-gradient(135deg, #5f35dc, var(--avani-accent));
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -1095,7 +1095,7 @@
   padding: 0 16px;
   border: 0;
   border-radius: 6px;
-  background: #1877f2;
+  background: var(--avani-accent);
   color: #fff;
   font: inherit;
   font-size: 15px;

@@ -1,5 +1,5 @@
 import { requireSupabase } from './supabase'
-import { describeAccessError, isMissingColumnError } from './postgres'
+import { describeAccessError, isMissingColumnError, isMissingRelationError, isPermissionError } from './postgres'
 import type { ProfileRecord } from './api'
 
 export async function updateMyProfile(userId: string, values: Pick<ProfileRecord, 'full_name' | 'username' | 'bio'> | { avatar_url: string }) {
@@ -333,4 +333,111 @@ export async function saveMySettings(userId: string, values: Record<string, unkn
   const { data, error } = await requireSupabase().from('user_settings').upsert({ user_id: userId, ...values, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }).select().single()
   if (error) throw error
   return data
+}
+
+/* ---------------------------------------------------------------------------
+ * Drapeaux de fonctionnalité et vues de stories.
+ *
+ * Ces deux surfaces étaient jusqu'ici réclamées par le client sans qu'aucune
+ * migration du dépôt ne les crée : elles sont donc traitées comme « optionnelles,
+ * mais jamais silencieuses ». Une table absente se dit, avec le nom du fichier à
+ * exécuter ; elle n'est jamais maquillée en « tout désactivé » ou en compteur à zéro.
+ * ------------------------------------------------------------------------- */
+export type FeatureFlag = { key: string; enabled: boolean; description: string | null }
+
+/** État des lieux des drapeaux. `note` explique ce qui manque, sans jeter l'erreur au visage du fil. */
+export async function readFeatureFlags(): Promise<{ flags: FeatureFlag[]; note: string | null }> {
+  const client = requireSupabase()
+  const { data, error } = await client.from('feature_flags').select('key, enabled, description').order('key')
+  if (!error) return { flags: (data ?? []) as FeatureFlag[], note: null }
+  if (isMissingRelationError(error, 'feature_flags')) {
+    return { flags: [], note: 'Aucun drapeau en base : la table `feature_flags` est créée par `supabase/migrations/011_feature_flags.sql`. Toutes les fonctions restent ouvertes en attendant.' }
+  }
+  if (isPermissionError(error)) {
+    return { flags: [], note: describeAccessError(error, 'Les drapeaux de fonctionnalité ne peuvent pas être lus', '011_feature_flags.sql') ?? 'Lecture des drapeaux refusée par les règles d’accès (RLS).' }
+  }
+  throw error
+}
+
+/**
+ * Écriture réservée à l'administration (policy `only admin can write feature flags`).
+ * L'échec est renvoyé tel quel, en français, pour être affiché : un drapeau qui ne
+ * s'enregistre pas doit se voir.
+ */
+export async function setFeatureFlag(key: string, enabled: boolean): Promise<{ error: string | null }> {
+  const client = requireSupabase()
+  const { error } = await client.from('feature_flags').upsert({ key, enabled, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+  if (!error) return { error: null }
+  if (isMissingRelationError(error, 'feature_flags')) return { error: 'Impossible d’enregistrer ce drapeau : exécute d’abord `supabase/migrations/011_feature_flags.sql` dans le SQL Editor.' }
+  if (isPermissionError(error)) return { error: 'Seule l’administration peut activer ou couper une fonctionnalité (policy RLS de `feature_flags`).' }
+  return { error: describeAccessError(error, 'Ce drapeau n’a pas pu être enregistré', '011_feature_flags.sql') ?? (error.message || 'Échec d’enregistrement du drapeau.') }
+}
+
+export type StoryEngagement = { counts: Record<string, number>; note: string | null }
+
+/**
+ * Vues de stories, par identifiant. `story_views` est optionnelle : si elle manque,
+ * `counts` reste vide et `note` le explique — les panneaux affichent alors « indisponibles »
+ * au lieu d'un zéro qui ferait croire que personne n'a regardé.
+ */
+export async function listStoryViewCounts(storyIds: string[]): Promise<StoryEngagement> {
+  if (storyIds.length === 0) return { counts: {}, note: null }
+  const client = requireSupabase()
+  const { data, error } = await client.from('story_views').select('story_id').in('story_id', storyIds)
+  if (error) {
+    if (isMissingRelationError(error, 'story_views')) return { counts: {}, note: 'Compteur de vues hors service : la table `story_views` est créée par `supabase/migrations/010_stories.sql`.' }
+    if (isPermissionError(error)) return { counts: {}, note: describeAccessError(error, 'Les vues de stories ne peuvent pas être lues', '010_stories.sql') ?? 'Lecture des vues refusée par les règles d’accès.' }
+    throw error
+  }
+  const counts = ((data ?? []) as Array<{ story_id: string }>).reduce<Record<string, number>>((all, row) => {
+    all[row.story_id] = (all[row.story_id] ?? 0) + 1
+    return all
+  }, {})
+  return { counts, note: null }
+}
+
+/** Marque une vue, une seule fois par appareil et par story (contrainte unique de 010). */
+export async function viewStory(storyId: string, userId: string) {
+  const client = requireSupabase()
+  const { error } = await client.from('story_views').insert({ story_id: storyId, viewer_id: userId })
+  if (!error) return true
+  // Doublon de vue : la contrainte unique fait son travail, ce n'est pas une erreur à montrer.
+  if (error.code === '23505' || /duplicate key/i.test(error.message ?? '')) return true
+  if (isMissingRelationError(error, 'story_views')) return false
+  throw error
+}
+
+/**
+ * Archive personnelle : MES stories, y compris expirées — `listActiveStories` ne rend que
+ * ce qui est encore en avant sur le fil. Rien n'est supprimé en base à l'expiration, seule
+ * la fenêtre de lecture change, ce qui est exactement ce que ce panneau affiche.
+ */
+export async function listMyStoryArchive(userId: string): Promise<StoryRecord[]> {
+  const client = requireSupabase()
+  const { data, error } = await client
+    .from('stories')
+    .select('id, author_id, media_path, media_type, caption, privacy, created_at, expires_at')
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(60)
+  if (error) throw error
+  return (data ?? []) as StoryRecord[]
+}
+
+/**
+ * Stories déjà vues par moi, parmi `storyIds`. Sans cette lecture, l'anneau « à ne pas
+ * manquer » serait décoratif : il serait posé sur toutes les bagues à chaque ouverture.
+ * Ici, il vient de `story_views`, et une vue enregistrée à l'instant disparaît de la liste
+ * au rechargement suivant.
+ */
+export async function listMyStoryViews(userId: string, storyIds: string[]): Promise<{ seen: string[]; note: string | null }> {
+  if (storyIds.length === 0) return { seen: [], note: null }
+  const client = requireSupabase()
+  const { data, error } = await client.from('story_views').select('story_id').eq('viewer_id', userId).in('story_id', storyIds)
+  if (error) {
+    if (isMissingRelationError(error, 'story_views')) return { seen: [], note: 'Anneaux « à voir » indisponibles : la table `story_views` est créée par `supabase/migrations/010_stories.sql`.' }
+    if (isPermissionError(error)) return { seen: [], note: describeAccessError(error, 'Mes vues de stories ne peuvent pas être relues', '010_stories.sql') ?? 'Lecture de mes vues refusée par les règles d’accès.' }
+    throw error
+  }
+  return { seen: ((data ?? []) as Array<{ story_id: string }>).map(row => row.story_id), note: null }
 }

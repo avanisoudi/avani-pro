@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import type { ProfileRecord } from '../lib/api'
 import { createDirectConversation, joinPublicGroup, listPublicGroups, type PublicGroupRecord } from '../lib/api'
 import { adoptCloudTheme, getTheme, setTheme, subscribeTheme } from '../lib/theme'
+import { readFeatureFlags, setFeatureFlag, type FeatureFlag } from '../lib/socialApi'
 import { VerifiedBadge } from './icons'
 import { supabase } from '../lib/supabase'
 import { addGroupMember, createGroup, createPage, getAdminStats, getMySettings, isAdmin, listAuditLogs, listDiscoverableProfiles, listMyGroups, listMyPages, listOpenReports, saveMySettings, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
@@ -259,13 +260,49 @@ export function AdminPanel({ user, onAction }: { user: User | null; onAction: (m
   return <section className="feature-panel admin-panel"><div className="feature-header"><div><span className="eyebrow">CONSOLE ADMIN · {role.toUpperCase()}</span><h2>Vue plateforme</h2><p>Supervision, modération et santé de la communauté.</p></div><span className="admin-shield">✓</span></div><div className="admin-network-summary" aria-label="Résumé réel de la plateforme"><div><span>UTILISATEURS</span><strong>{stats.users}</strong><small>profils enregistrés</small></div><div><span>PAGES</span><strong>{stats.pages}</strong><small>pages enregistrées</small></div><div><span>PUBLICATIONS</span><strong>{stats.posts}</strong><small>publications enregistrées</small></div><button onClick={() => onAction('Ouvrez Groupes pour gérer vos communautés.')}>Ouvrir mes groupes <span>↗</span></button></div><div className="admin-stats"><div><strong>{stats.users}</strong><span>utilisateurs</span></div><div><strong>{stats.pages}</strong><span>pages</span></div><div><strong>{stats.posts}</strong><span>publications</span></div><div className={stats.reports ? 'attention' : ''}><strong>{stats.reports}</strong><span>signalements ouverts</span></div></div><div className="admin-grid"><div><h3>Modération</h3>{reports.length === 0 ? <p className="empty-copy">Aucun signalement ouvert.</p> : reports.map(report => <div className="admin-row" key={report.id}><span>{report.reason}</span><small>{report.status} · {new Date(report.created_at).toLocaleDateString('fr-FR')}</small><button onClick={() => onAction(`Signalement ${report.id.slice(0, 8)} sélectionné.`)}>Ouvrir</button></div>)}</div><div><h3>Audit logs</h3>{logs.length === 0 ? <p className="empty-copy">Aucun événement d’audit.</p> : logs.slice(0, 5).map(log => <div className="admin-row" key={log.id}><span>{log.action}</span><small>{log.entity_type} · {new Date(log.created_at).toLocaleDateString('fr-FR')}</small></div>)}</div></div></section>
 }
 
-export function SettingsPanel({ user, onAction }: { user: User | null; onAction: (message: string) => void }) {
+const FLAG_KEYS: Array<{ key: string; label: string; help: string }> = [
+  { key: 'stories', label: 'Stories', help: 'Fil du haut de page, publication 24 h et archive.' },
+  { key: 'videos', label: 'Vidéos', help: 'Page /videos, alimentée par les publications vidéo du réseau.' },
+  { key: 'reels', label: 'Reels', help: 'Flux vertical /reels, lecture automatique de la vidéo visible.' },
+  { key: 'marketplace', label: 'Marketplace', help: 'Aucune table de petites annonces en base : l’écran reste un état, pas un catalogue.' },
+  { key: 'live', label: 'Live', help: 'Aucune diffusion temps réel branchée : l’écran reste un état, pas un lecteur.' },
+  { key: 'messages', label: 'Messages', help: 'Fils privés et de groupe, Realtime, pièces jointes.' },
+  { key: 'groups', label: 'Groupes', help: 'Groupes publics et privés, chat de groupe.' },
+  { key: 'pages', label: 'Pages', help: 'Pages, abonnés et rôles.' },
+]
+
+export function SettingsPanel({ user, onAction, onFlagsChanged }: { user: User | null; onAction: (message: string) => void; onFlagsChanged?: () => void }) {
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [compactMode, setCompactMode] = useState(false)
   const [loading, setLoading] = useState(Boolean(user))
   // Le thème se lit et se écrit dans le magasin de src/lib/theme.ts : ce panneau est le seul
   // contrôle de l'application, il n'y a plus de bascule dans la barre du haut à garder synchrone.
   const theme = useSyncExternalStore(subscribeTheme, getTheme, () => 'light' as const)
+  // Drapeaux de fonctionnalité : lecture pour tout le monde, écriture réservée à
+  // l'administration (policy RLS de `feature_flags`). Un refus est dit, pas tu.
+  const [flags, setFlags] = useState<FeatureFlag[]>([])
+  const [flagsNote, setFlagsNote] = useState<string | null>(null)
+  const [flagBusy, setFlagBusy] = useState<string | null>(null)
+  const [mayManageFlags, setMayManageFlags] = useState(false)
+  const loadFlags = useCallback(async () => {
+    const result = await readFeatureFlags()
+    setFlags(result.flags)
+    setFlagsNote(result.note)
+  }, [])
+  useEffect(() => {
+    void loadFlags().catch(() => setFlagsNote('Les drapeaux n’ont pas pu être relus.'))
+    if (!user) { setMayManageFlags(false); return }
+    isAdmin(user.id).then(admin => setMayManageFlags(Boolean(admin))).catch(() => setMayManageFlags(false))
+  }, [user, loadFlags])
+  const toggleFlag = async (flag: FeatureFlag) => {
+    setFlagBusy(flag.key)
+    const result = await setFeatureFlag(flag.key, !flag.enabled)
+    setFlagBusy(null)
+    if (result.error) { onAction(result.error); return }
+    await loadFlags().catch(() => undefined)
+    onFlagsChanged?.()
+    onAction(`Fonctionnalité « ${flag.key} » ${flag.enabled ? 'désactivée' : 'activée'} pour tout le monde.`)
+  }
   useEffect(() => {
     if (!user) { setLoading(false); return }
     getMySettings(user.id).then(settings => {
@@ -292,6 +329,25 @@ export function SettingsPanel({ user, onAction }: { user: User | null; onAction:
     <label><span><strong>Apparence</strong><small>Seul réglage de thème de l’application — appliqué immédiatement, enregistré sur cet appareil et sur votre compte.</small></span><select value={theme} disabled={loading} onChange={event => { const next = event.target.value === 'dark' ? 'dark' : 'light'; setTheme(next); void save({ appearance: next }) }}><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
     <label><span><strong>Notifications email</strong><small>Recevoir les alertes importantes de votre réseau.</small></span><input type="checkbox" checked={emailNotifications} disabled={loading || !user} onChange={event => { const value = event.target.checked; setEmailNotifications(value); void save({ email: value }) }} /></label>
     <label><span><strong>Mode compact</strong><small>Réduire l’espacement du feed pour afficher plus de contenu.</small></span><input type="checkbox" checked={compactMode} disabled={loading || !user} onChange={event => { const value = event.target.checked; setCompactMode(value); void save({ compact: value }) }} /></label>
+    <div className="settings-flags">
+      <strong>Fonctionnalités de la plateforme</strong>
+      <small>{mayManageFlags ? 'Ces interrupteurs écrivent dans `feature_flags` et s’appliquent à tous les comptes.' : 'Lecture seule : seuls les administrateurs peuvent activer ou couper une fonctionnalité (policy RLS).'}</small>
+      {flagsNote && <p className="settings-flags-note">{flagsNote}</p>}
+      <ul>
+        {FLAG_KEYS.map(meta => {
+          const stored = flags.find(flag => flag.key === meta.key)
+          const enabled = stored ? stored.enabled : true
+          return (
+            <li key={meta.key}>
+              <span><strong>{meta.label}</strong><small>{meta.help}</small></span>
+              <button type="button" role="switch" aria-checked={enabled} disabled={!mayManageFlags || flagBusy !== null} title={stored ? undefined : 'Aucune ligne pour cette clé : l’interrupteur la créera.'} onClick={() => void toggleFlag(stored ?? { key: meta.key, enabled: true, description: null })}>
+                {flagBusy === meta.key ? '…' : enabled ? 'Ouverte' : 'Coupée'}
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   </div></section>
 }
 function FeatureEmpty({ title, text, action }: { title: string; text: string; action: string }) { return <section className="feature-panel feature-empty"><div className="placeholder-orb">✦</div><span className="eyebrow">AVANI PRO · ESPACE SÉCURISÉ</span><h2>{title}</h2><p>{text}</p><button className="primary-button" type="button" onClick={() => goTo('/')}>{action} ↗</button></section> }

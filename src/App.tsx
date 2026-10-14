@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { User } from '@supabase/supabase-js'
 import './App.css'
 import './mobile.css'
@@ -12,6 +12,8 @@ import { ResetPasswordPanel } from './components/ResetPasswordPanel'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
 import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchPanel } from './components/AdvancedPanels'
+import { ReelsPanel, SoonPanel, StoriesPanel, VideosPanel } from './components/MediaPanels'
+import { readFeatureFlags } from './lib/socialApi'
 import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, recordPostShare, setPostReaction, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord, type ReactionType } from './lib/api'
 import { createStory, listActiveStories, listDiscoverableProfiles, listFollowingIds, listMyGroups, toggleFollow, type StoryRecord } from './lib/socialApi'
 import { getTheme, subscribeTheme } from './lib/theme'
@@ -25,7 +27,31 @@ import type { ComposerMedia } from './lib/postMedia'
 import { NavButton, SvgIcon, VerifiedBadge } from './components/icons'
 
 /** Le type Post et les helpers du fil vivent dans src/lib/feed.ts. */
-type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'saved' | 'notifications'
+type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'saved' | 'notifications' | 'videos' | 'reels' | 'stories' | 'marketplace' | 'live'
+
+/**
+ * Table de routage unique : la valeur d'ouverture et le bouton précédent du navigateur
+ * passent par la même fonction, sinon les deux listes finissent par se contredire
+ * (c'était le cas quand chaque route avait sa chaîne de `startsWith` en double).
+ */
+function navForPath(path: string): NavKey {
+  if (path.startsWith('/videos')) return 'videos'
+  if (path.startsWith('/reels')) return 'reels'
+  if (path.startsWith('/stories')) return 'stories'
+  if (path.startsWith('/marketplace')) return 'marketplace'
+  if (path.startsWith('/live')) return 'live'
+  if (path.startsWith('/groups')) return 'groups'
+  if (path.startsWith('/pages')) return 'pages'
+  if (path.startsWith('/messages')) return 'messages'
+  if (path.startsWith('/notifications')) return 'notifications'
+  if (path.startsWith('/files')) return 'files'
+  if (path.startsWith('/saved')) return 'saved'
+  if (path.startsWith('/admin')) return 'admin'
+  if (path.startsWith('/settings/compte')) return 'settings'
+  if (path.startsWith('/settings') || path.startsWith('/u/')) return 'profile'
+  if (path.startsWith('/search')) return 'explore'
+  return 'feed'
+}
 function PublicHome({ onAuth }: { onAuth: () => void }) {
   return <div className="lp">
     <header className="lp-nav">
@@ -117,7 +143,7 @@ function Stories({ onAction, ownAvatar, userId }: { onAction: (message: string) 
 }
 function App() {
   const initialPath = typeof window === 'undefined' ? '/' : window.location.pathname
-  const initialNav: NavKey = initialPath.startsWith('/groups') ? 'groups' : initialPath.startsWith('/pages') ? 'pages' : initialPath.startsWith('/messages') ? 'messages' : initialPath.startsWith('/notifications') ? 'notifications' : initialPath.startsWith('/search') ? 'explore' : initialPath.startsWith('/files') ? 'files' : initialPath.startsWith('/saved') ? 'saved' : initialPath.startsWith('/admin') ? 'admin' : initialPath.startsWith('/settings') || initialPath.startsWith('/u/') ? 'profile' : 'feed'
+  const initialNav: NavKey = navForPath(initialPath)
   const [active, setActive] = useState<NavKey>(initialNav)
   const [pathname, setPathname] = useState(initialPath)
   const [posts, setPosts] = useState<Post[]>([])
@@ -141,8 +167,35 @@ function App() {
   // classe de coquille, dont dépendent les 129 règles « .theme-light … » du rendu Facebook.
   // La bascule, elle, vit uniquement dans Réglages → Apparence.
   const theme = useSyncExternalStore(subscribeTheme, getTheme, () => 'light' as const)
+  /**
+   * Drapeaux de fonctionnalité (`feature_flags`). Un drapeau absent vaut « ouvert » : seule
+   * une décision explicite de l'administration (`enabled = false`) masque une entrée du haut.
+   * Une table qui manque n'est donc jamais lue comme « tout est coupé », et le motif est
+   * affiché telle quelle par les panneaux.
+   */
+  const [flags, setFlags] = useState<{ values: Record<string, boolean>; note: string | null }>({ values: {}, note: null })
+  const loadFlags = useCallback(async () => {
+    try {
+      const result = await readFeatureFlags()
+      setFlags({ values: Object.fromEntries(result.flags.map(flag => [flag.key, flag.enabled])), note: result.note })
+    } catch (caught) {
+      setFlags(current => ({ ...current, note: caught instanceof Error ? caught.message : 'Les drapeaux de fonctionnalité n’ont pas pu être lus.' }))
+    }
+  }, [])
+  useEffect(() => { void loadFlags() }, [loadFlags])
+  const open = (key: string) => flags.values[key] !== false
+  /** Écran d'état d'une fonction coupée : on dit qui l'a coupée et où la rouvrir. */
+  const closedPanel = (label: string) => (
+    <SoonPanel
+      title={`${label} coupée par l’administration`}
+      text="Le drapeau correspondant est enregistré désactivé dans `feature_flags`. Aucune interface n’est proposée en secours : la fonction est fermée, point."
+      note={flags.note}
+      actionLabel="Rouvrir dans Réglages"
+      onAction={() => navigateTo('/settings/compte', 'settings')}
+    />
+  )
   const navigateTo = (path: string, screen: NavKey) => { window.history.pushState({}, '', path); setPathname(path); setActive(screen) }
-  useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); if (path.startsWith('/groups')) setActive('groups'); else if (path.startsWith('/pages')) setActive('pages'); else if (path.startsWith('/messages')) setActive('messages'); else if (path.startsWith('/notifications')) setActive('notifications'); else if (path.startsWith('/files')) setActive('files'); else if (path.startsWith('/saved')) setActive('saved'); else if (path.startsWith('/admin')) setActive('admin'); else if (path.startsWith('/settings') || path.startsWith('/u/')) setActive('profile'); else if (path.startsWith('/search')) setActive('explore'); else setActive('feed') }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
+  useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); setActive(navForPath(path)) }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 8000) }
   /**
@@ -274,7 +327,10 @@ function App() {
 
   return (
     <div className={`app-shell theme-${theme}`}>
-      <header className="topbar av-navbar"><div className="topbar-brand"><button className="topbar-brand-button" aria-label="Accueil Avani Pro" onClick={() => navigateTo('/', 'feed')}><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span></button><label className="search"><SvgIcon name="search" /><input value={feedQuery} onChange={event => setFeedQuery(event.target.value)} placeholder="Rechercher sur Avani Pro…" aria-label="Recherche globale" /></label></div><nav className="topbar-nav topbar-nav-pro" aria-label="Accès rapide"><button className={active === 'feed' ? 'active' : ''} onClick={() => navigateTo('/', 'feed')} aria-label="Accueil" title="Accueil"><SvgIcon name="home" /><span>Accueil</span></button><button className={active === 'explore' ? 'active' : ''} onClick={() => navigateTo('/search', 'explore')} aria-label="Réseau" title="Réseau"><SvgIcon name="profile" /><span>Réseau</span></button><button className={active === 'pages' ? 'active' : ''} onClick={() => navigateTo('/pages', 'pages')} aria-label="Pages" title="Pages"><SvgIcon name="pages" /><span>Pages</span></button><button className={active === 'groups' ? 'active' : ''} onClick={() => navigateTo('/groups', 'groups')} aria-label="Groupes" title="Groupes"><SvgIcon name="groups" /><span>Groupes</span></button><button type="button" onClick={pickVideoForPost} aria-label="Vidéos" title="Publier une vidéo"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" /><path d="M10 9l5 3-5 3z" /></svg><span>Vidéos</span></button></nav><div className="topbar-status"><span className="pulse-dot" />En ligne</div><div className="top-actions"><button type="button" className="nav-bell" aria-label="Notifications" title="Notifications" onClick={() => navigateTo('/notifications', 'notifications')}><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z" /><path d="M10 19a2 2 0 0 0 4 0" /></svg><span className="nav-badge" aria-hidden="true" /></button><button className="profile-trigger" aria-label="Ouvrir mon profil" onClick={() => navigateTo('/settings', 'profile')}><span className="avatar avatar-sm avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</span><span className="profile-trigger-name">{displayName.split(' ')[0]}</span></button><button className="menu-trigger" aria-expanded={menuOpen} aria-label="Ouvrir le menu principal" onClick={() => setMenuOpen(value => !value)}>☰</button></div>{menuOpen && <div className="main-menu"><button onClick={() => { setMenuOpen(false); navigateTo('/settings', 'settings') }}>Réglages</button><button onClick={() => { setMenuOpen(false); navigateTo('/files', 'files') }}>Mes fichiers</button><button onClick={() => { setMenuOpen(false); navigateTo('/notifications', 'notifications') }}>Notifications</button><button className="menu-danger" onClick={() => { setMenuOpen(false); void signOut() }}>Se déconnecter</button></div>}</header>
+      <header className="topbar av-navbar"><div className="topbar-brand"><button className="topbar-brand-button" aria-label="Accueil Avani Pro" onClick={() => navigateTo('/', 'feed')}><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span></button><label className="search"><SvgIcon name="search" /><input value={feedQuery} onChange={event => setFeedQuery(event.target.value)} placeholder="Rechercher sur Avani Pro…" aria-label="Recherche globale" /></label></div><nav className="topbar-nav topbar-nav-pro" aria-label="Accès rapide"><button className={active === 'feed' ? 'active' : ''} onClick={() => navigateTo('/', 'feed')} aria-label="Accueil" title="Accueil"><SvgIcon name="home" /><span>Accueil</span></button><button className={active === 'explore' ? 'active' : ''} onClick={() => navigateTo('/search', 'explore')} aria-label="Réseau" title="Réseau"><SvgIcon name="profile" /><span>Réseau</span></button><button className={active === 'pages' ? 'active' : ''} onClick={() => navigateTo('/pages', 'pages')} aria-label="Pages" title="Pages"><SvgIcon name="pages" /><span>Pages</span></button><button className={active === 'groups' ? 'active' : ''} onClick={() => navigateTo('/groups', 'groups')} aria-label="Groupes" title="Groupes"><SvgIcon name="groups" /><span>Groupes</span></button>{open('videos') && <button className={active === 'videos' ? 'active' : ''} onClick={() => navigateTo('/videos', 'videos')} aria-label="Vidéos" title="Vidéos du réseau"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" /><path d="M10 9l5 3-5 3z" /></svg><span>Vidéos</span></button>}
+            {open('reels') && <button className={active === 'reels' ? 'active' : ''} onClick={() => navigateTo('/reels', 'reels')} aria-label="Reels" title="Reels verticaux"><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="3" /><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" /></svg><span>Reels</span></button>}
+            {open('stories') && <button className={active === 'stories' ? 'active' : ''} onClick={() => navigateTo('/stories', 'stories')} aria-label="Stories" title="Stories et archive"><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" strokeDasharray="4 3" /><circle cx="12" cy="12" r="3.4" /></svg><span>Stories</span></button>}
+            <button type="button" onClick={pickVideoForPost} aria-label="Publier une vidéo" title="Publier une vidéo"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button></nav><div className="topbar-status"><span className="pulse-dot" />En ligne</div><div className="top-actions"><button type="button" className="nav-bell" aria-label="Notifications" title="Notifications" onClick={() => navigateTo('/notifications', 'notifications')}><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z" /><path d="M10 19a2 2 0 0 0 4 0" /></svg><span className="nav-badge" aria-hidden="true" /></button><button className="profile-trigger" aria-label="Ouvrir mon profil" onClick={() => navigateTo('/settings', 'profile')}><span className="avatar avatar-sm avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</span><span className="profile-trigger-name">{displayName.split(' ')[0]}</span></button><button className="menu-trigger" aria-expanded={menuOpen} aria-label="Ouvrir le menu principal" onClick={() => setMenuOpen(value => !value)}>☰</button></div>{menuOpen && <div className="main-menu"><button onClick={() => { setMenuOpen(false); navigateTo('/settings/compte', 'settings') }}>Réglages</button><button onClick={() => { setMenuOpen(false); navigateTo('/marketplace', 'marketplace') }}>Marketplace</button><button onClick={() => { setMenuOpen(false); navigateTo('/live', 'live') }}>Live</button><button onClick={() => { setMenuOpen(false); navigateTo('/files', 'files') }}>Mes fichiers</button><button onClick={() => { setMenuOpen(false); navigateTo('/notifications', 'notifications') }}>Notifications</button><button className="menu-danger" onClick={() => { setMenuOpen(false); void signOut() }}>Se déconnecter</button></div>}</header>
       <aside className="sidebar sidebar-pro">
         <div className="brand"><span className="brand-mark"><img src="/assets/avani-mark.svg" alt="" /></span><span>AVANI<span className="brand-pro">PRO</span></span></div>
         <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</div><div><strong>{displayName}{profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}</strong><span>{displayUsername}</span></div></div>
@@ -294,7 +350,7 @@ function App() {
           <span className="nav-section-label nav-section-admin">ADMINISTRATION</span>
           <NavButton active={active === 'admin'} onClick={() => navigateTo('/admin', 'admin')} icon="admin" label="Administration" />
         </nav>
-          <div className="sidebar-bottom"><button className={`nav-button muted ${active === 'settings' ? 'active' : ''}`} onClick={() => navigateTo('/settings', 'settings')}><SvgIcon name="settings" /> Réglages</button><div className="security-note"><span className="pulse-dot" /> Espace sécurisé<br /><small>Chiffrement actif</small></div></div>
+          <div className="sidebar-bottom"><button className={`nav-button muted ${active === 'settings' ? 'active' : ''}`} onClick={() => navigateTo('/settings/compte', 'settings')}><SvgIcon name="settings" /> Réglages</button><div className="security-note"><span className="pulse-dot" /> Espace sécurisé<br /><small>Chiffrement actif</small></div></div>
         <div className="premium-card"><strong>Avani Pro Premium</strong><p>Découvrez plus de fonctionnalités et vivez une expérience unique !</p><button type="button" onClick={() => flash('Découvrez Avani Pro Premium.')}>En savoir plus</button></div>
       </aside>
       <nav className="mobile-tabbar mobile-tabbar-pro" aria-label="Navigation rapide"><NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Flux" /><NavButton active={active === 'explore'} onClick={() => navigateTo('/search', 'explore')} icon="explore" label="Découvrir" /><NavButton active={active === 'messages'} onClick={() => navigateTo('/messages', 'messages')} icon="messages" label="Échanges" /><NavButton active={active === 'notifications'} onClick={() => navigateTo('/notifications', 'notifications')} icon="explore" label="Activité" /><NavButton active={active === 'profile'} onClick={() => navigateTo('/settings', 'profile')} icon="profile" label="Espace" /></nav>
@@ -358,7 +414,16 @@ function App() {
         {active === 'files' && <FilesPanel user={sessionUser} onAction={flash} />}
         {active === 'saved' && <SavedPanel user={sessionUser} onAction={flash} />}
         {active === 'notifications' && <NotificationsPanel user={sessionUser} />}
-        {active === 'settings' && <SettingsPanel user={sessionUser} onAction={flash} />}
+        {active === 'videos' && (open('videos') ? <VideosPanel user={sessionUser} onAction={flash} /> : closedPanel('Vidéos'))}
+        {active === 'reels' && (open('reels') ? <ReelsPanel user={sessionUser} onAction={flash} /> : closedPanel('Reels'))}
+        {active === 'stories' && (open('stories') ? <StoriesPanel user={sessionUser} onAction={flash} onMessage={conversationId => { setInitialConversationId(conversationId); navigateTo(`/messages/${conversationId}`, 'messages') }} /> : closedPanel('Stories'))}
+        {active === 'marketplace' && (open('marketplace')
+          ? <SoonPanel title="Marketplace non ouvert" text="Aucune petite annonce n’existe dans la base : ni table `listings`, ni vendeur à contacter. Cette page le déclare au lieu de singer un catalogue." note={flags.note} actionLabel="Retour au fil" onAction={() => navigateTo('/', 'feed')} />
+          : closedPanel('Marketplace'))}
+        {active === 'live' && (open('live')
+          ? <SoonPanel title="Live non ouvert" text="Le direct demande un service de diffusion (signalisation + média). Rien de tout cela n’est branché : aucun compteur de spectateurs ne sera affiché pour faire nombre." note={flags.note} actionLabel="Retour au fil" onAction={() => navigateTo('/', 'feed')} />
+          : closedPanel('Live'))}
+        {active === 'settings' && <SettingsPanel user={sessionUser} onAction={flash} onFlagsChanged={loadFlags} />}
       </main>
 
       <aside className="right-rail"><section className="rail-card online-contacts"><div className="card-heading"><span>Contacts en ligne <i className="online-dot" /></span><button type="button" onClick={() => setActive('messages')}>Voir tout</button></div><div className="contact-list">{networkPeople.slice(0,7).map(person => <button type="button" className="contact-row" key={person.id} onClick={() => setActive('messages')}><span className="avatar avatar-sm avatar-soft">{person.avatar_url ? <img src={person.avatar_url} alt="" /> : person.full_name.slice(0,2).toUpperCase()}</span><strong>{person.full_name}</strong><i className="online-dot" /><span>•••</span></button>)}</div></section><section className="rail-card sponsored-card"><div className="card-heading"><span>Sponsorisé</span><button type="button" onClick={() => flash('Découvrez Avani Pro Premium.')}>Voir plus</button></div><div className="sponsor-banner"><strong>Avani Pro Premium</strong><span>Plus de fonctionnalités, plus de liberté.</span><button type="button" onClick={() => flash('Avani Pro Premium sera bientôt disponible.')}>En savoir plus</button></div></section><details className="rail-card rail-detail network-card" open><summary className="card-heading"><span>Votre réseau</span><button type="button" onClick={event => { event.preventDefault(); setActive('explore') }}>Voir tout ↗</button></summary><div className="network-stat"><strong>{profile?.followers_count ?? 0}</strong><span>followers</span><div className="mini-avatars">{networkPeople.slice(0,3).map(person => <span key={person.id}>{person.full_name.slice(0,2).toUpperCase()}</span>)}<b>+{networkPeople.length}</b></div></div></details><details className="rail-card rail-detail" open><summary className="card-heading"><span>Suggestions d’amis</span><button type="button" onClick={event => { event.preventDefault(); setActive('explore') }}>Voir tout ↗</button></summary><div className="suggestion-list">{networkPeople.slice(0,4).map(person => <div className="suggestion" key={person.id}><div className="avatar avatar-md avatar-soft">{person.avatar_url ? <img src={person.avatar_url} alt="" /> : person.full_name.slice(0,2).toUpperCase()}</div><div className="suggestion-copy"><strong>{person.full_name}{person.verified_type && <VerifiedBadge type={person.verified_type} />}</strong><span>@{person.username}</span><small>{person.bio || ''}</small></div><button className={followed.includes(person.id) ? 'follow-button following' : 'follow-button'} onClick={async () => { if (!sessionUser) return; const isFollowing = followed.includes(person.id); try { const next = await toggleFollow(sessionUser.id, person.id, isFollowing); setFollowed(current => next ? [...current, person.id] : current.filter(id => id !== person.id)); flash(next ? 'Abonnement ajouté.' : 'Abonnement retiré.') } catch { flash('Impossible de modifier cet abonnement.') } }}>{followed.includes(person.id) ? '✓' : '+'}</button></div>)}</div></details><details className="rail-card rail-detail" open><summary className="card-heading"><span>Groupes populaires</span><button type="button" onClick={event => { event.preventDefault(); navigateTo('/groups', 'groups') }}>Voir tout ↗</button></summary><div className="suggestion-list">{networkGroups.slice(0,3).map(group => <div className="suggestion" key={group.id}><div className="group-suggestion-icon group-violet">#</div><div className="suggestion-copy"><strong>{group.name}</strong><span>{group.visibility === 'public' ? 'Public' : 'Privé'}</span><small>Communauté Avani Pro</small></div></div>)}{networkGroups.length === 0 && <p className="empty-copy">Aucun groupe rejoint.</p>}</div></details><footer className="footer-links">À propos · Règles · Confidentialité · Aide<br /><span>© 2026 Avani Pro, Inc.</span></footer></aside>

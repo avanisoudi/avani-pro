@@ -13,7 +13,7 @@
     --m-muted: #65676b;
     --m-line: #e4e6eb;
     --m-hover: #f2f3f5;
-    --m-blue: #1877f2;
+    --m-blue: var(--avani-accent);
     --m-nav-h: 60px;
     --m-top-h: 56px;
   }
