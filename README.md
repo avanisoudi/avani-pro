@@ -43,7 +43,7 @@ Créer `.env.local` à partir de `.env.example` avec `VITE_SUPABASE_URL` et `VIT
 
 ## Activer Supabase
 
-1. Dans Supabase → **SQL Editor**, exécuter `supabase/migrations/001_avani_core.sql`, puis `002_social_features.sql`, `003_realtime_notifications.sql`, `004_persistent_interactions.sql`, `005_admin_accounts.sql`, `006_group_chat.sql`, `007_message_attachments.sql` et `008_post_media.sql` (photos et vidéos du fil).
+1. Dans Supabase → **SQL Editor**, exécuter `supabase/migrations/001_avani_core.sql`, puis `002_social_features.sql`, `003_realtime_notifications.sql`, `004_persistent_interactions.sql`, `005_admin_accounts.sql`, `006_group_chat.sql`, `007_message_attachments.sql`, `008_post_media.sql` (photos et vidéos du fil) et `009_messages_live.sql` (messagerie et groupes publics en direct : colonnes attendues par le client, policies d’écriture, réactions, tri par activité, tables Realtime).
 2. Dans Supabase → **Authentication → URL Configuration**, ajouter `https://avani-pro.onrender.com` et `https://avani-pro.onrender.com/reset-password`.
 3. Dans Render → **Environment**, ajouter `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`, puis relancer le déploiement.
 4. Pour les messages, l’application charge l’historique depuis `messages` et s’abonne aux INSERT Realtime avec RLS. Les groupes créent maintenant une conversation persistante `is_group=true`, affichée dans Messages avec invitation de membres, historique et chat temps réel. Les nouveaux messages, follows, commentaires et likes produisent des notifications grâce à la migration 003. Les publications créées par un utilisateur connecté sont enregistrées dans `posts`. Les détails API/Edge Functions sont dans `docs-supabase.md`.

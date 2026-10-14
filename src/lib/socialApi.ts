@@ -1,5 +1,5 @@
 import { requireSupabase } from './supabase'
-import { isMissingColumnError } from './postgres'
+import { describeAccessError, isMissingColumnError } from './postgres'
 import type { ProfileRecord } from './api'
 
 export async function updateMyProfile(userId: string, values: Pick<ProfileRecord, 'full_name' | 'username' | 'bio'> | { avatar_url: string }) {
@@ -35,31 +35,84 @@ export async function listDiscoverableProfiles(currentUserId: string) {
   return (data ?? []) as ProfileRecord[]
 }
 
+/**
+ * Groupe + conversation de chat. Tout est réel : si la base ne peut pas porter la
+ * conversation liée (colonne `groups.conversation_id` absente, migration 006 non
+ * appliquée), le groupe est quand même créé et le message le dit explicitement.
+ */
 export async function createGroup(ownerId: string, name: string, description: string, visibility: 'private' | 'public') {
   const client = requireSupabase()
-  const { data: conversation, error: conversationError } = await client.from('conversations').insert({ title: name.trim(), is_group: true, created_by: ownerId }).select('id, title, is_group, updated_at').single()
-  if (conversationError) throw conversationError
-  const { error: conversationMemberError } = await client.from('conversation_members').insert({ conversation_id: conversation.id, user_id: ownerId })
-  if (conversationMemberError) throw conversationMemberError
-  const { data, error } = await client.from('groups').insert({ owner_id: ownerId, name: name.trim(), description: description.trim() || null, visibility, conversation_id: conversation.id }).select('id, name, description, visibility, conversation_id, created_at').single()
-  if (error) throw error
-  const { error: memberError } = await client.from('group_members').insert({ group_id: data.id, user_id: ownerId, role: 'owner' })
-  if (memberError) throw memberError
-  return data
+  const groupName = name.trim()
+  if (groupName.length < 2) throw new Error('Un groupe porte un nom d’au moins 2 caractères.')
+  const { data: conversation, error: conversationError } = await client
+    .from('conversations')
+    .insert({ title: groupName, is_group: true, created_by: ownerId })
+    .select('id, title, is_group, updated_at')
+    .single()
+  if (conversationError) throw new Error(describeAccessError(conversationError, 'La création du chat de groupe') ?? conversationError.message)
+  const conversationId = (conversation as { id: string }).id
+  const { error: conversationMemberError } = await client.from('conversation_members').insert({ conversation_id: conversationId, user_id: ownerId })
+  if (conversationMemberError) {
+    await client.from('conversations').delete().eq('id', conversationId).eq('created_by', ownerId)
+    throw new Error(describeAccessError(conversationMemberError, 'L’ajout au chat de groupe') ?? conversationMemberError.message)
+  }
+  const payload: Record<string, unknown> = { owner_id: ownerId, name: groupName, description: description.trim() || null, visibility, conversation_id: conversationId }
+  const attempt = await client.from('groups').insert(payload).select('id, name, description, visibility, conversation_id, created_at').single()
+  if (attempt.error) {
+    // Base sans la colonne de liaison : le groupe est créé sans chat plutôt que de refuser la création.
+    if (isMissingColumnError(attempt.error, 'conversation_id')) {
+      delete payload.conversation_id
+      const fallback = await client.from('groups').insert(payload).select('id, name, description, visibility, created_at').single()
+      if (fallback.error) throw new Error(describeAccessError(fallback.error, 'La création du groupe') ?? fallback.error.message)
+      await client.from('conversation_members').delete().eq('conversation_id', conversationId).eq('user_id', ownerId)
+      await client.from('conversations').delete().eq('id', conversationId).eq('created_by', ownerId)
+      return { ...(fallback.data as Record<string, unknown>), conversation_id: null, chat_note: 'Groupe créé sans chat : la colonne groups.conversation_id (migration 006) manque à la base.' }
+    }
+    throw new Error(describeAccessError(attempt.error, 'La création du groupe') ?? attempt.error.message)
+  }
+  const group = attempt.data as Record<string, unknown>
+  const { error: memberError } = await client.from('group_members').insert({ group_id: group.id, user_id: ownerId, role: 'owner' })
+  if (memberError) throw new Error(describeAccessError(memberError, 'L’ajout du fondateur au groupe') ?? memberError.message)
+  return group
 }
 
+/** Mes groupes : la liaison de chat est optionnelle, la liste doit rester affichable. */
 export async function listMyGroups(userId: string) {
-  const { data, error } = await requireSupabase().from('group_members').select('group:groups(id, name, description, visibility, conversation_id, created_at, owner_id)').eq('user_id', userId)
-  if (error) throw error
-  return (data ?? []).map((row: any) => row.group)
+  const client = requireSupabase()
+  const attempt = await client
+    .from('group_members')
+    .select('role, joined_at, group:groups(id, name, description, visibility, conversation_id, created_at, owner_id)')
+    .eq('user_id', userId)
+  let rows = attempt.data as any[] | null
+  if (attempt.error) {
+    if (!isMissingColumnError(attempt.error, 'conversation_id')) throw new Error(describeAccessError(attempt.error, 'La liste de tes groupes') ?? attempt.error.message)
+    const fallback = await client
+      .from('group_members')
+      .select('role, joined_at, group:groups(id, name, description, visibility, created_at, owner_id)')
+      .eq('user_id', userId)
+    if (fallback.error) throw new Error(describeAccessError(fallback.error, 'La liste de tes groupes') ?? fallback.error.message)
+    rows = fallback.data as any[]
+  }
+  return (rows ?? [])
+    .map((row: any) => {
+      const group = Array.isArray(row.group) ? row.group[0] : row.group
+      if (!group || !group.id) return null
+      return { ...group, role: row.role ?? 'member', joined_at: row.joined_at ?? null }
+    })
+    .filter(Boolean) as Array<Record<string, unknown> & { id: string; role: string }>
 }
 
-export async function addGroupMember(groupId: string, conversationId: string, memberId: string) {
+/** Ajoute un membre au groupe et à son chat, en un seul message d’erreur si le chat refuse. */
+export async function addGroupMember(groupId: string, conversationId: string | null, memberId: string) {
   const client = requireSupabase()
-  const { error: groupError } = await client.from('group_members').insert({ group_id: groupId, user_id: memberId, role: 'member' })
-  if (groupError) throw groupError
-  const { error: conversationError } = await client.from('conversation_members').insert({ conversation_id: conversationId, user_id: memberId })
-  if (conversationError) throw conversationError
+  const { error: groupError } = await client.from('group_members').upsert({ group_id: groupId, user_id: memberId, role: 'member' }, { onConflict: 'group_id,user_id', ignoreDuplicates: true })
+  if (groupError) throw new Error(describeAccessError(groupError, 'L’invitation au groupe') ?? groupError.message)
+  if (!conversationId) return { chatJoined: false, note: 'Membre ajouté au groupe. Ce groupe n’a pas encore de chat associé (migration 006).' }
+  const { error: conversationError } = await client.from('conversation_members').upsert({ conversation_id: conversationId, user_id: memberId }, { onConflict: 'conversation_id,user_id', ignoreDuplicates: true })
+  if (conversationError) {
+    return { chatJoined: false, note: `Membre ajouté au groupe, mais pas à son chat : ${describeAccessError(conversationError, 'L’ajout au chat') ?? conversationError.message}` }
+  }
+  return { chatJoined: true, note: null }
 }
 
 export async function isAdmin(userId: string) {
