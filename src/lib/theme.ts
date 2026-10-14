@@ -42,13 +42,19 @@ export function nextTheme(current: ThemeName): ThemeName {
   return current === 'dark' ? 'light' : 'dark'
 }
 
-/** Écrit le thème là où le CSS le regarde : attribut sur `<html>` et préférence de rendu native. */
-export function applyTheme(theme: ThemeName) {
+/**
+ * Écrit le thème là où le CSS le regarde : attribut sur `<html>` et préférence de rendu
+ * native. `persist: false` sert au démarrage, quand le thème vient du système et non d'un
+ * choix : sans ça, le premier rendu inscrirait « l'utilisateur a choisi » et la préférence
+ * système ne serait plus jamais suivie.
+ */
+export function applyTheme(theme: ThemeName, options: { persist?: boolean } = {}) {
   if (typeof document === 'undefined') return
   document.documentElement.dataset.theme = theme
   document.documentElement.style.colorScheme = theme
   document.documentElement.classList.remove('theme-light', 'theme-dark')
   document.documentElement.classList.add(`theme-${theme}`)
+  if (options.persist === false) return
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
   } catch {
@@ -73,4 +79,56 @@ export function watchSystemTheme(onChange: (theme: ThemeName) => void) {
   return () => {
     if (typeof media.removeEventListener === 'function') media.removeEventListener('change', listener)
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Magasin unique du thème.
+ *
+ * Un seul endroit qui applique le CSS, un seul qui écrit dans localStorage, un seul
+ * qui écoute le système. Le panneau Réglages est le seul contrôle visible de
+ * l'application : la barre du haut n'affiche plus de bascule dupliquée, et l'écriture
+ * de `user_settings.appearance` n'existe que dans ce panneau (une seule fois).
+ * ------------------------------------------------------------------------- */
+let currentTheme: ThemeName | null = null
+const themeListeners = new Set<() => void>()
+
+/** Thème courant ; calculé une seule fois si personne ne l'a encore posé. */
+export function getTheme(): ThemeName {
+  if (!currentTheme) currentTheme = resolveInitialTheme(readStoredTheme(), prefersDarkScheme())
+  return currentTheme
+}
+
+/** Abonnement, taillé pour `useSyncExternalStore`. Renvoie le désabonnement. */
+export function subscribeTheme(listener: () => void) {
+  themeListeners.add(listener)
+  return () => { themeListeners.delete(listener) }
+}
+
+/** Applique, persiste et prévient les abonnés. Ne pas rejouer `applyTheme` à côté. */
+export function setTheme(theme: ThemeName, options: { persist?: boolean } = {}) {
+  currentTheme = theme
+  applyTheme(theme, options)
+  for (const listener of themeListeners) listener()
+}
+
+/** À appeler une fois, avant le premier rendu : pose le thème et écoute le système. */
+export function initTheme(): ThemeName {
+  const initial = getTheme()
+  // Le choix enregistré est un vrai choix : on le confirme en base de locale. Ce qui vient
+  // de `prefers-color-scheme` ne doit surtout pas être enregistré comme un choix.
+  setTheme(initial, { persist: Boolean(readStoredTheme()) })
+  watchSystemTheme(next => setTheme(next, { persist: false }))
+  return initial
+}
+
+/**
+ * Reprise de la préférence du compte (`user_settings.appearance`), seulement si cet appareil
+ * n'a encore rien choisi : un choix pris localement est plus récent que la ligne en base.
+ * Renvoie `true` quand la valeur du compte a été retenue.
+ */
+export function adoptCloudTheme(appearance: unknown): boolean {
+  if (readStoredTheme()) return false
+  if (appearance !== 'dark' && appearance !== 'light') return false
+  setTheme(appearance)
+  return true
 }

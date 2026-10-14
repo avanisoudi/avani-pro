@@ -6,7 +6,8 @@
 import { applyReaction, formatCount, formatPostTime, isEditedPost, parsePostContent, reactionState, topReactions } from '../../src/lib/feed'
 import { MAX_POST_MEDIA_FILES, describeMediaError, isStoredMediaPath, mediaKind, mediaPostType, validateMediaSelection } from '../../src/lib/postMedia'
 import { conversationFromMembershipRow, conversationFromRow, conversationPreview, formatRowTime, messageFromRow, nextTolerantToken, publicGroupFromRow, reactionTotal, threadCountLabel, tokenName, topMessageReactions, unreadBadge } from '../../src/lib/messagesModel'
-import { applyTheme, nextTheme, readStoredTheme, resolveInitialTheme } from '../../src/lib/theme'
+import { readFileSync } from 'node:fs'
+import { adoptCloudTheme, applyTheme, getTheme, nextTheme, readStoredTheme, resolveInitialTheme, setTheme, subscribeTheme, THEME_STORAGE_KEY } from '../../src/lib/theme'
 import { describeAccessError, isCheckConstraintError, isMissingColumnError, isMissingRelationError, isPermissionError } from '../../src/lib/postgres'
 import type { Post } from '../../src/lib/feed'
 
@@ -172,7 +173,8 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
 
 
 // ---------------------------------------------------------------------------
-// Theme : resolution du choix, application au document, persistance
+// Theme : magasin unique src/lib/theme.ts — resolution, application,
+// persistance, abonnements, reprise de la valeur du compte
 // ---------------------------------------------------------------------------
 {
   const html = { dataset: {} as Record<string, string>, style: {} as Record<string, string>, classList: new Set<string>() }
@@ -194,10 +196,62 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
     check('choix persiste sous la cle partagee', readStoredTheme() === 'dark', String(readStoredTheme()))
     applyTheme('light')
     check('la classe precedente est retiree, pas cumulee', html.classList.has('theme-light') && !html.classList.has('theme-dark'))
+    applyTheme('dark', { persist: false })
+    check('persistance facultative : le theme systeme ne devient pas un choix', readStoredTheme() === 'light', String(readStoredTheme()))
+
+    // Magasin unique : une seule voie applique, persiste et previent.
+    let seen = 0
+    const unsubscribe = subscribeTheme(() => { seen += 1 })
+    setTheme('dark')
+    check('setTheme applique le CSS et previent les abonnes', html.dataset.theme === 'dark' && seen === 1, `vu=${seen}`)
+    check('un choix explicite est enregistre', readStoredTheme() === 'dark', String(readStoredTheme()))
+    setTheme('light', { persist: false })
+    check('persist:false applique sans enregistrer de faux choix', html.dataset.theme === 'light' && readStoredTheme() === 'dark')
+    unsubscribe()
+    setTheme('dark')
+    check('desabonne = plus aucun rappel', seen === 2, `vu=${seen}`)
+    check('getTheme renvoie le theme courant du magasin', getTheme() === 'dark', getTheme())
+
+    // Reprise du compte : la valeur locale a toujours la priorite.
+    store.set(THEME_STORAGE_KEY, 'light')
+    check('un choix local gagne sur user_settings.appearance', adoptCloudTheme('dark') === false && getTheme() === 'dark', getTheme())
+    store.delete(THEME_STORAGE_KEY)
+    check('rien de choisi sur l appareil : la valeur du compte est reprise', adoptCloudTheme('dark') === true && getTheme() === 'dark')
+    check('la reprise du compte est ensuite enregistree', readStoredTheme() === 'dark', String(readStoredTheme()))
+    store.delete(THEME_STORAGE_KEY)
+    check('valeur de compte inconnue rejetee, pas forcee', adoptCloudTheme('bleu') === false && adoptCloudTheme(null) === false)
   } finally {
     globals.document = previous.document
     globals.window = previous.window
   }
+}
+
+// ---------------------------------------------------------------------------
+// Doublons : la bascule ne doit exister qu'à un seul endroit, et s'écrire une seule fois
+// ---------------------------------------------------------------------------
+{
+  const read = (path: string) => {
+    try {
+      return readFileSync(path, 'utf8')
+    } catch {
+      return ''
+    }
+  }
+  const app = read('src/App.tsx')
+  const main = read('src/main.tsx')
+  const settings = read('src/components/FeaturePanels.tsx')
+  const css = read('src/themes.css')
+  const readable = app.length > 0 && main.length > 0 && settings.length > 0
+  check('sources lisibles depuis la racine du depot', readable, 'lancer `npm run test:feed` a la racine')
+  check('plus aucune bascule dans la barre du haut', !app.includes('theme-toggle') && !css.includes('theme-toggle'), 'src/App.tsx, src/themes.css')
+  check('l icone soleil/lune n est plus importee', !app.includes('SunIcon') && !app.includes('MoonIcon'))
+  check('App ne reecrit pas le theme : il le lit seulement', !app.includes('applyTheme(') && app.includes('useSyncExternalStore(subscribeTheme, getTheme'), 'la classe de coquille en depend')
+  check('un seul point d entree du theme (main.tsx)', main.includes('initTheme()') && !main.includes('applyTheme('), 'src/main.tsx')
+  const writes = (settings.match(/appearance: next\.appearance/g) ?? []).length
+  const calls = (settings.match(/saveMySettings\(/g) ?? []).length
+  check('user_settings.appearance ecrit au seul endroit', writes === 1, `${writes} payload(s) dans FeaturePanels.tsx`)
+  check('une seule ecriture de la table des reglages', calls === 1, `${calls} appel(s) a saveMySettings`)
+  check('le panneau Reglages est le seul controle', settings.includes('setTheme(next)') && settings.includes('adoptCloudTheme'))
 }
 
 // ---------------------------------------------------------------------------

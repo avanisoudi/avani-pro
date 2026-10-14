@@ -60,21 +60,3 @@ export function NavButton({ active, onClick, icon, label, badge }: { active: boo
     </button>
   )
 }
-
-/** Bascule de thème, dessinée à la main (aucun logo tiers) : soleil et croissant. */
-export function SunIcon() {
-  return (
-    <svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="4.4" />
-      <path d="M12 2.4v2.2M12 19.4v2.2M2.4 12h2.2M19.4 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6" />
-    </svg>
-  )
-}
-
-export function MoonIcon() {
-  return (
-    <svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4z" />
-    </svg>
-  )
-}

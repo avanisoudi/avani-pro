@@ -211,8 +211,7 @@ html[data-theme="dark"] .mobile-tabbar .nav-button { color: #b0b3b8 !important }
 html[data-theme="dark"] .mobile-tabbar .nav-button.active { color: #2d8cff !important }
 html[data-theme="light"] .mobile-tabbar { background: #fff !important; border-top-color: #ced0d4 !important }
 
-/* ---------- 3. Bouton de bascule ---------- */
-.theme-toggle,
+/* ---------- 3. Cloche de notifications (la bascule de thème vit dans Réglages) ---------- */
 .nav-bell {
   display: grid;
   place-items: center;
@@ -225,20 +224,15 @@ html[data-theme="light"] .mobile-tabbar { background: #fff !important; border-to
   cursor: pointer;
 }
 
-.theme-toggle:hover,
 .nav-bell:hover { background: #d8dadf }
 
-.theme-toggle .svg-icon,
 .nav-bell .svg-icon { width: 20px; height: 20px }
 
-/* Les cloches et soleil/lune sont dessinés au trait : sans ces propriétés, un `<path>`
-   fermé est rendu en aplat noir quelle que soit la couleur du conteneur. */
-.theme-toggle svg,
+/* La cloche est dessinée au trait : sans ces propriétés, un `<path>` fermé est rendu en
+   aplat noir quelle que soit la couleur du conteneur — le défaut qui déformait les icônes. */
 .nav-bell svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
 
-html[data-theme="dark"] .theme-toggle,
 html[data-theme="dark"] .nav-bell { background: #3a3b3c; color: #e4e6eb }
-html[data-theme="dark"] .theme-toggle:hover,
 html[data-theme="dark"] .nav-bell:hover { background: #4e4f50 }
 
 /* ---------- 4. Mode clair : fonds sombres écrits en dur dans les couches de base ---------- */

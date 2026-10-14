@@ -54,15 +54,20 @@ Créer `.env.local` à partir de `.env.example` avec `VITE_SUPABASE_URL` et `VIT
 
 Créer un **Static Site** avec la commande `npm install && npm run build` et le dossier publié `dist`. Ajouter les variables Supabase dans l’onglet Environment et une réécriture `/*` vers `/index.html` pour le fallback SPA. Le fichier `render.yaml` fournit déjà cette configuration.
 
-## Architecture
-
 ## Thème clair et sombre
 
-La bascule est dans la barre du haut (icône soleil/lune) et dans **Réglages → Apparence**. Le choix est
-enregistré dans `localStorage` (`avani:theme`) et, quand une session existe, dans `user_settings.appearance`.
-Sans choix explicite, l'application suit `prefers-color-scheme` du système ; un onglet réveillé après une
-pause suit de nouveau le système tant que rien n'a été choisi. Le CSS des deux thèmes vit dans
-`src/themes.css`, importé en dernier : il reprend les surfaces dont les couches historiques écrivaient une
-couleur en dur, ce qui rendait le mode sombre inerte et le mode clair limité au bureau.
+Un seul contrôle : **Réglages → Apparence**. La barre du haut n'a plus de bascule (elle doublonnait le
+réglage et écrivait la même colonne du compte deux fois). Le magasin de `src/lib/theme.ts` est l'unique
+propriétaire de l'état : il applique `data-theme` et `color-scheme` sur `<html>`, enregistre le choix dans
+`localStorage` (`avani:theme`) — jamais la préférence du système, qui n'est pas un choix — et prévient les
+abonnés (`useSyncExternalStore` dans `App.tsx` pour la classe de coquille, dans le panneau Réglages pour le
+`<select>`). Sans choix explicite, l'application suit `prefers-color-scheme`, y compris quand l'onglet change
+d'avis pendant la session. `user_settings.appearance` n'est repris qu'au premier branchement sur l'appareil.
+
+Le CSS des deux thèmes vit dans `src/themes.css`, importé en dernier : il reprend surface par surface les
+couleurs que les couches historiques écrivaient en dur, ce qui rendait le mode sombre inerte et le mode clair
+limité au bureau.
+
+## Architecture
 
 Voir `plan.md` pour les choix structurants et `TODO.md` pour les tranches restantes : Auth, migrations SQL/RLS, Storage, Realtime, pages, groupes et `/admin`.
