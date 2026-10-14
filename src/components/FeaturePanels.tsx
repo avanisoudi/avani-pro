@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { User } from '@supabase/supabase-js'
 import type { ProfileRecord } from '../lib/api'
 import { createDirectConversation, joinPublicGroup, listPublicGroups, type PublicGroupRecord } from '../lib/api'
-import { readStoredTheme } from '../lib/theme'
+import { adoptCloudTheme, getTheme, setTheme, subscribeTheme } from '../lib/theme'
 import { VerifiedBadge } from './icons'
 import { supabase } from '../lib/supabase'
 import { addGroupMember, createGroup, createPage, getAdminStats, getMySettings, isAdmin, listAuditLogs, listDiscoverableProfiles, listMyGroups, listMyPages, listOpenReports, saveMySettings, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
@@ -259,21 +259,25 @@ export function AdminPanel({ user, onAction }: { user: User | null; onAction: (m
   return <section className="feature-panel admin-panel"><div className="feature-header"><div><span className="eyebrow">CONSOLE ADMIN · {role.toUpperCase()}</span><h2>Vue plateforme</h2><p>Supervision, modération et santé de la communauté.</p></div><span className="admin-shield">✓</span></div><div className="admin-network-summary" aria-label="Résumé réel de la plateforme"><div><span>UTILISATEURS</span><strong>{stats.users}</strong><small>profils enregistrés</small></div><div><span>PAGES</span><strong>{stats.pages}</strong><small>pages enregistrées</small></div><div><span>PUBLICATIONS</span><strong>{stats.posts}</strong><small>publications enregistrées</small></div><button onClick={() => onAction('Ouvrez Groupes pour gérer vos communautés.')}>Ouvrir mes groupes <span>↗</span></button></div><div className="admin-stats"><div><strong>{stats.users}</strong><span>utilisateurs</span></div><div><strong>{stats.pages}</strong><span>pages</span></div><div><strong>{stats.posts}</strong><span>publications</span></div><div className={stats.reports ? 'attention' : ''}><strong>{stats.reports}</strong><span>signalements ouverts</span></div></div><div className="admin-grid"><div><h3>Modération</h3>{reports.length === 0 ? <p className="empty-copy">Aucun signalement ouvert.</p> : reports.map(report => <div className="admin-row" key={report.id}><span>{report.reason}</span><small>{report.status} · {new Date(report.created_at).toLocaleDateString('fr-FR')}</small><button onClick={() => onAction(`Signalement ${report.id.slice(0, 8)} sélectionné.`)}>Ouvrir</button></div>)}</div><div><h3>Audit logs</h3>{logs.length === 0 ? <p className="empty-copy">Aucun événement d’audit.</p> : logs.slice(0, 5).map(log => <div className="admin-row" key={log.id}><span>{log.action}</span><small>{log.entity_type} · {new Date(log.created_at).toLocaleDateString('fr-FR')}</small></div>)}</div></div></section>
 }
 
-export function SettingsPanel({ user, theme, onThemeChange, onAction }: { user: User | null; theme: 'light' | 'dark'; onThemeChange: (theme: 'light' | 'dark') => void; onAction: (message: string) => void }) {
+export function SettingsPanel({ user, onAction }: { user: User | null; onAction: (message: string) => void }) {
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [compactMode, setCompactMode] = useState(false)
   const [loading, setLoading] = useState(Boolean(user))
+  // Le thème se lit et se écrit dans le magasin de src/lib/theme.ts : ce panneau est le seul
+  // contrôle de l'application, il n'y a plus de bascule dans la barre du haut à garder synchrone.
+  const theme = useSyncExternalStore(subscribeTheme, getTheme, () => 'light' as const)
   useEffect(() => {
     if (!user) { setLoading(false); return }
     getMySettings(user.id).then(settings => {
       const prefs = (settings?.notification_preferences as Record<string, unknown> | null) ?? {}
       setEmailNotifications(prefs.email !== false)
       setCompactMode(Boolean(prefs.compact))
-      // Un choix déjà pris sur cet appareil est plus récent que la ligne en base : sans
-      // cette garde, la bascule de la barre du haut se faisait annuler au rechargement.
-      if (!readStoredTheme() && (settings?.appearance === 'dark' || settings?.appearance === 'light')) onThemeChange(settings.appearance)
-    }).catch(() => undefined).finally(() => setLoading(false))
-  }, [user, onThemeChange])
+      // La valeur du compte n'est retenue que si cet appareil n'a encore rien choisi : un choix
+      // local est plus récent, sinon ce panneau annulerait la bascule à chaque rechargement.
+      adoptCloudTheme(settings?.appearance)
+    }).catch(error => onAction(error instanceof Error ? error.message : 'Réglages non relus depuis votre compte.'))
+      .finally(() => setLoading(false))
+  }, [user, onAction])
   const save = async (next: { email?: boolean; compact?: boolean; appearance?: 'light' | 'dark' }) => {
     if (!user) { onAction('Connectez-vous pour synchroniser vos préférences.'); return }
     try {
@@ -285,7 +289,7 @@ export function SettingsPanel({ user, theme, onThemeChange, onAction }: { user: 
     } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible d’enregistrer cette préférence.') }
   }
   return <section className="feature-panel settings-panel"><div className="feature-header"><div><span className="eyebrow">ESPACE PERSONNEL</span><h2>Réglages</h2><p>{user ? 'Préférences synchronisées avec votre compte.' : 'Connectez-vous pour synchroniser vos préférences avec votre compte.'}</p></div><span className="admin-shield">⚙</span></div><div className="settings-list">
-    <label><span><strong>Apparence</strong><small>Choisissez le thème d’Avani Pro.</small></span><select value={theme} disabled={loading} onChange={event => { const next = event.target.value as 'light' | 'dark'; onThemeChange(next); void save({ appearance: next }) }}><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+    <label><span><strong>Apparence</strong><small>Seul réglage de thème de l’application — appliqué immédiatement, enregistré sur cet appareil et sur votre compte.</small></span><select value={theme} disabled={loading} onChange={event => { const next = event.target.value === 'dark' ? 'dark' : 'light'; setTheme(next); void save({ appearance: next }) }}><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
     <label><span><strong>Notifications email</strong><small>Recevoir les alertes importantes de votre réseau.</small></span><input type="checkbox" checked={emailNotifications} disabled={loading || !user} onChange={event => { const value = event.target.checked; setEmailNotifications(value); void save({ email: value }) }} /></label>
     <label><span><strong>Mode compact</strong><small>Réduire l’espacement du feed pour afficher plus de contenu.</small></span><input type="checkbox" checked={compactMode} disabled={loading || !user} onChange={event => { const value = event.target.checked; setCompactMode(value); void save({ compact: value }) }} /></label>
   </div></section>
