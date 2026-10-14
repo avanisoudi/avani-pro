@@ -5,6 +5,8 @@
  */
 import { applyReaction, formatCount, formatPostTime, isEditedPost, parsePostContent, reactionState, topReactions } from '../../src/lib/feed'
 import { MAX_POST_MEDIA_FILES, describeMediaError, isStoredMediaPath, mediaKind, mediaPostType, validateMediaSelection } from '../../src/lib/postMedia'
+import { conversationFromMembershipRow, conversationFromRow, messageFromRow, nextTolerantToken, publicGroupFromRow, tokenName } from '../../src/lib/messagesModel'
+import { describeAccessError, isCheckConstraintError, isMissingColumnError, isMissingRelationError, isPermissionError } from '../../src/lib/postgres'
 import type { Post } from '../../src/lib/feed'
 
 const results: Array<{ name: string; ok: boolean; detail: string }> = []
@@ -111,6 +113,61 @@ check('seuls les chemins d’objets sont signés', isStoredMediaPath('uid/posts/
 }
 check('erreur de bucket manquant = message actionnable', describeMediaError(new Error('Bucket not found')).includes('008_post_media.sql'), describeMediaError(new Error('Bucket not found')))
 check('erreur RLS = message actionnable', describeMediaError(new Error('new row violates row-level security policy')).includes('RLS'))
+
+// ---------------------------------------------------------------------------
+// Messagerie en direct : tolérance de schéma, mappers, diagnostic d’accès
+// ---------------------------------------------------------------------------
+check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages!messages_reply_to_id_fkey(id, body)') === 'reply_to' && tokenName('deleted_at') === 'deleted_at' && tokenName('group_members(count)') === 'group_members')
+{
+  const missingColumn = { code: '42703', message: 'column conversations.last_message_id does not exist', details: null, hint: null }
+  check('colonne absente -> le jeton fautif est proposé', nextTolerantToken(missingColumn, ['updated_at', 'last_message_id'], []) === 'last_message_id')
+  check('un jeton déjà abandonné nest pas proposé deux fois', nextTolerantToken(missingColumn, ['last_message_id'], ['last_message_id']) === null)
+  check('les jetons obligatoires ne sautent pas', nextTolerantToken(missingColumn, ['updated_at'], []) === null)
+  const embed = { code: 'PGRST204', message: "Could not find the 'sender' column of 'messages' in the schema cache", details: null, hint: null }
+  check('embed inconnu -> abandon du jeton', nextTolerantToken(embed, ['sender:profiles(id)', 'body'], []) === 'sender:profiles(id)')
+  const rls = { code: '42501', message: 'new row violates row-level security policy for table "messages"', details: null, hint: null }
+  check('refus RLS : aucune tolérance, erreur remontée', nextTolerantToken(rls, ['deleted_at'], []) === null)
+  check('absence de relation : aucune tolérance', nextTolerantToken({ code: '42P01', message: 'relation public.message_reactions does not exist', details: null, hint: null }, ['message_reactions'], []) === null)
+}
+{
+  const row = { id: 'c1', title: null, is_group: true, updated_at: '2026-01-01T00:00:00Z', user_id: 'u1', profile: { id: 'u2', username: 'kofi' }, conversation: { id: 'c1', title: null, is_group: 1, updated_at: null } }
+  const conversation = conversationFromMembershipRow(row)
+  check('conversation embarquée : normalisation complète', conversation?.title === null && conversation?.is_group === true && conversation?.updated_at === new Date(0).toISOString(), JSON.stringify(conversation))
+  check(' conversation_members est reconstruite pour le comptage', conversation?.conversation_members?.[0]?.user_id === 'u1')
+  check('embed en tableau accepté', conversationFromRow([{ id: 'c2', title: 'Fil', is_group: false, updated_at: '2026-02-02T00:00:00Z' }]) === null && conversationFromMembershipRow({ conversation: [{ id: 'c2', title: 'Fil', is_group: false, updated_at: 'x' }] })?.title === 'Fil')
+  check('conversation sans id = ligne écartée, pas un objet vide', conversationFromMembershipRow({ conversation: { title: 'X' } }) === null && conversationFromRow(null) === null)
+}
+{
+  const counted = publicGroupFromRow({ id: 'g1', name: 'Design', description: null, conversation_id: 'c1', created_at: '2026-01-01T00:00:00Z', group_members: [{ count: 7 }] })
+  check('comptage agrégé lu depuis group_members(count)', counted.member_count === 7 && counted.name === 'Design' && counted.description === null)
+  check('roster en lignes compté à défaut d agrégat', publicGroupFromRow({ id: 'g2', name: 'A', group_members: [{}, {}, {}] }).member_count === 3)
+  check('comptage indisponible = null, jamais un faux 0', publicGroupFromRow({ id: 'g3', name: 'B' }).member_count === null && publicGroupFromRow({ id: 'g4', group_members: [] }).member_count === 0)
+  check('groupe sans titre nommé, conversation absente signalée', publicGroupFromRow({ id: 'g5' }).name === 'Groupe sans titre' && publicGroupFromRow({ id: 'g5' }).conversation_id === null)
+}
+{
+  const message = messageFromRow({ id: 'm1', sender_id: 'u1', body: 'Salut', sender: [{ id: 'u1', username: 'kofi' }], reply_to: [{ id: 'm0', body: 'ok' }], deleted_at: null })
+  check('embeds en tableau aplaties', message.sender?.username === 'kofi' && message.reply_to?.id === 'm0')
+  const bare = messageFromRow({ id: 'm2', sender_id: 'u2', body: 'Direct Realtime' })
+  check('ligne Realtime sans embed : sender null et reply_to null, pas undefined', bare.sender === undefined && bare.reply_to === null && bare.body === 'Direct Realtime')
+}
+{
+  const rlsError = { code: '42501', message: 'new row violates row-level security policy for table "messages"', details: null, hint: null }
+  check('refus RLS traduit en migration a executer', (describeAccessError(rlsError, 'L envoi du message') ?? '').includes('009_messages_live.sql') && (describeAccessError(rlsError, 'L envoi du message') ?? '').includes('SQL Editor'))
+  const checkError = { code: '23514', message: 'new row for relation \"messages\" violates check constraint \"messages_body_check\"', details: null, hint: null }
+  check('contrainte messages_body_check citée avec son remède', isCheckConstraintError(checkError, 'messages_body_check') && (describeAccessError(checkError, 'La suppression du message') ?? '').includes('assouplir'))
+  const missingTable = { code: '42P01', message: 'relation \"public.message_reactions\" does not exist', details: null, hint: null }
+  check('table de réactions absente : la migration est nommée', isMissingRelationError(missingTable, 'message_reactions') && (describeAccessError(missingTable, 'Les réactions') ?? '').includes('message_reactions'))
+  const missingColumn = { code: '42703', message: 'column groups.conversation_id does not exist', details: null, hint: null }
+  check('colonne de rattachement du chat : migration 006 citée', isMissingColumnError(missingColumn, 'conversation_id') && (describeAccessError(missingColumn, 'Le groupe') ?? '').includes('006'))
+  check('erreur non interpretee reste muette pour garder la langue du serveur', describeAccessError({ code: 'PGRST116', message: 'JSON object requested, multiple (or no) rows returned', details: null, hint: null }, 'Le message') === null)
+  check('isPermissionError reconnaît les deux codes RLS', isPermissionError(rlsError) && isPermissionError({ code: 'PGRST301', message: 'failed to authorize', details: null, hint: null }) && !isPermissionError(missingColumn))
+}
+{
+  const joined = { group: { id: 'g1', name: 'Design', member_count: 2 }, conversation: conversationFromRow({ id: 'c1', title: 'Design', is_group: true, updated_at: '2026-03-03T00:00:00Z' }), note: null }
+  check('jointure reussie : conversation disponible pour ouvrir le fil', joined.conversation?.id === 'c1' && joined.note === null)
+  const partial = { group: { id: 'g2', name: 'Atelier', member_count: 1 }, conversation: null, note: 'Groupe rejoint. Son chat reste à créer : la colonne groups.conversation_id (migration 006) manque à la base.' }
+  check('jointure partielle annonce le chat manquant au lieu de mentir', partial.conversation === null && partial.note.includes('006'))
+}
 
 const failed = results.filter(result => !result.ok)
 console.log(`\n${results.length - failed.length}/${results.length} vérifications du fil réussies`)
