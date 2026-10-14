@@ -56,4 +56,13 @@ Créer un **Static Site** avec la commande `npm install && npm run build` et le 
 
 ## Architecture
 
+## Thème clair et sombre
+
+La bascule est dans la barre du haut (icône soleil/lune) et dans **Réglages → Apparence**. Le choix est
+enregistré dans `localStorage` (`avani:theme`) et, quand une session existe, dans `user_settings.appearance`.
+Sans choix explicite, l'application suit `prefers-color-scheme` du système ; un onglet réveillé après une
+pause suit de nouveau le système tant que rien n'a été choisi. Le CSS des deux thèmes vit dans
+`src/themes.css`, importé en dernier : il reprend les surfaces dont les couches historiques écrivaient une
+couleur en dur, ce qui rendait le mode sombre inerte et le mode clair limité au bureau.
+
 Voir `plan.md` pour les choix structurants et `TODO.md` pour les tranches restantes : Auth, migrations SQL/RLS, Storage, Realtime, pages, groupes et `/admin`.

@@ -34,7 +34,7 @@ end $$;
 do $$
 begin
   alter table public.messages add constraint messages_type_check
-    check (message_type in ('text', 'image', 'file', 'system'));
+    check (message_type in ('text', 'image', 'file')); -- les trois seuls types que le client sait rendre
 exception
   when duplicate_object then null;
 end $$;

@@ -5,7 +5,8 @@
  */
 import { applyReaction, formatCount, formatPostTime, isEditedPost, parsePostContent, reactionState, topReactions } from '../../src/lib/feed'
 import { MAX_POST_MEDIA_FILES, describeMediaError, isStoredMediaPath, mediaKind, mediaPostType, validateMediaSelection } from '../../src/lib/postMedia'
-import { conversationFromMembershipRow, conversationFromRow, messageFromRow, nextTolerantToken, publicGroupFromRow, tokenName } from '../../src/lib/messagesModel'
+import { conversationFromMembershipRow, conversationFromRow, conversationPreview, formatRowTime, messageFromRow, nextTolerantToken, publicGroupFromRow, reactionTotal, threadCountLabel, tokenName, topMessageReactions, unreadBadge } from '../../src/lib/messagesModel'
+import { applyTheme, nextTheme, readStoredTheme, resolveInitialTheme } from '../../src/lib/theme'
 import { describeAccessError, isCheckConstraintError, isMissingColumnError, isMissingRelationError, isPermissionError } from '../../src/lib/postgres'
 import type { Post } from '../../src/lib/feed'
 
@@ -167,6 +168,77 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
   check('jointure reussie : conversation disponible pour ouvrir le fil', joined.conversation?.id === 'c1' && joined.note === null)
   const partial = { group: { id: 'g2', name: 'Atelier', member_count: 1 }, conversation: null, note: 'Groupe rejoint. Son chat reste à créer : la colonne groups.conversation_id (migration 006) manque à la base.' }
   check('jointure partielle annonce le chat manquant au lieu de mentir', partial.conversation === null && partial.note.includes('006'))
+}
+
+
+// ---------------------------------------------------------------------------
+// Theme : resolution du choix, application au document, persistance
+// ---------------------------------------------------------------------------
+{
+  const html = { dataset: {} as Record<string, string>, style: {} as Record<string, string>, classList: new Set<string>() }
+  const store = new Map<string, string>()
+  const globals = globalThis as Record<string, unknown>
+  const previous = { document: globals.document, window: globals.window }
+  globals.document = { documentElement: { ...html, classList: { add: (n: string) => html.classList.add(n), remove: (...ns: string[]) => ns.forEach(n => html.classList.delete(n)) } } }
+  globals.window = { localStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v) } } }
+  try {
+    check('choix enregistre gagne sur la preference du systeme', resolveInitialTheme('dark', false) === 'dark' && resolveInitialTheme('light', true) === 'light')
+    check('sans choix, le systeme tranche (le defaut force etait le bug)', resolveInitialTheme(null, true) === 'dark' && resolveInitialTheme(null, false) === 'light')
+    check('valeur inconnue jetee plutot que fiee', resolveInitialTheme('bleu', true) === 'dark' && resolveInitialTheme('', false) === 'light')
+    check('bascule = inverse, jamais la meme valeur', nextTheme('dark') === 'light' && nextTheme('light') === 'dark')
+    check('stockage inaccessible = theme par defaut, sans planter', readStoredTheme({ getItem: () => { throw new Error('quota') } } as unknown as Pick<Storage, 'getItem'>) === null)
+    applyTheme('dark')
+    check('data-theme pose sur <html> (la cascade CSS en depend)', html.dataset.theme === 'dark', String(html.dataset.theme))
+    check('classe theme-* appliquee, jamais les deux', html.classList.has('theme-dark') && !html.classList.has('theme-light'))
+    check('color-scheme natif suit le theme', html.style.colorScheme === 'dark', String(html.style.colorScheme))
+    check('choix persiste sous la cle partagee', readStoredTheme() === 'dark', String(readStoredTheme()))
+    applyTheme('light')
+    check('la classe precedente est retiree, pas cumulee', html.classList.has('theme-light') && !html.classList.has('theme-dark'))
+  } finally {
+    globals.document = previous.document
+    globals.window = previous.window
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Aperçus de conversations et compteurs (badge de non-lus, heure relative)
+// ---------------------------------------------------------------------------
+{
+  const rows = [
+    { id: 'm3', sender_id: 'u2', body: 'On  se  voit\n14h', created_at: '2026-10-14T09:58:00Z' },
+    { id: 'm2', sender_id: 'u1', body: 'dejà lu', created_at: '2026-10-14T09:00:00Z' },
+    { id: 'm1', sender_id: 'u2', body: 'vieux', created_at: '2026-10-12T09:00:00Z' },
+  ]
+  const preview = conversationPreview(rows, { lastReadAt: '2026-10-14T09:30:00Z', myId: 'u1' })
+  check('aperçu = dernier message, espaces normalises', preview.preview === 'On se voit 14h', preview.preview)
+  check('non-lus = messages des autres apres last_read_at', preview.unread === 1, JSON.stringify(preview))
+  check('heure du fil = dernier message, pas le mien', preview.at === '2026-10-14T09:58:00Z')
+  check('conversation sans dernier message = apercu vide, pas invente', conversationPreview([], { myId: 'u1' }).preview === '')
+  check('message supprime annonce, sans compte', conversationPreview([{ id: 'x', sender_id: 'u2', body: 'cache', created_at: '2026-01-01T00:00:00Z', deleted_at: '2026-01-02T00:00:00Z' }], { myId: 'u1' }).preview === 'Message supprimé')
+  check('piece jointe annoncee par son nom', conversationPreview([{ id: 'y', sender_id: 'u2', body: '', created_at: '2026-01-01T00:00:00Z', attachment_name: 'plan.pdf' }], { myId: 'u1' }).preview === 'plan.pdf')
+  check('badge simple sans troncature', unreadBadge(3) === '3' && unreadBadge(1) === '1')
+  check('badge majore au-dela de 9 ou si la lecture est bornee', unreadBadge(12) === '9+' && unreadBadge(4, true) === '9+' && unreadBadge(0) === '')
+  const now = new Date('2026-10-14T10:00:00Z')
+  const hhmm = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  check('heure du jour en heures:minutes', formatRowTime('2026-10-14T09:58:00Z', now) === hhmm('2026-10-14T09:58:00Z'))
+  check('hier puis jour abrege capitalise puis date courte', formatRowTime('2026-10-13T09:00:00Z', now) === 'Hier' && formatRowTime('2026-10-11T09:00:00Z', now) === 'Dim' && formatRowTime('2026-06-03T09:00:00Z', now) === '03/06/26', [formatRowTime('2026-10-13T09:00:00Z', now), formatRowTime('2026-10-11T09:00:00Z', now), formatRowTime('2026-06-03T09:00:00Z', now)].join(' / '))
+  check('heure absente ou invalide reste muette', formatRowTime(null, now) === '' && formatRowTime('pas-une-date', now) === '')
+}
+{
+  const counts = { like: 3, love: 12, haha: 0, wow: 0, sad: 0, angry: 0 }
+  check('pastilles triees par volume, zero exclu', topMessageReactions(counts).map(([k]) => k).join(',') === 'love,like')
+  check('total des reactions, aucune reaction = 0', reactionTotal(counts) === 15 && reactionTotal(undefined) === 0)
+  check('trois pastilles au plus, comme Messenger', topMessageReactions({ like: 1, love: 2, haha: 3, wow: 4, sad: 5, angry: 6 }).length === 3)
+  check('aucune reaction = aucune pastille', topMessageReactions({ like: 0, love: 0 }).length === 0)
+  check('compteur de fil majore quand historique continue', threadCountLabel(48, true) === '48+ messages dans ce fil' && threadCountLabel(1, false) === '1 message dans ce fil')
+}
+{
+  // La conversation active doit remonter en tete apres un envoi (elle portait le bug
+  // inverse : le tri la faisait repartir en bas de liste).
+  const before = [{ id: 'a', updated_at: '2026-01-02T00:00:00Z' }, { id: 'b', updated_at: '2026-01-01T00:00:00Z' }]
+  const sentAt = '2026-02-01T00:00:00Z'
+  const ordered = [{ id: 'b', updated_at: sentAt }, ...before.filter(item => item.id !== 'b').sort((x, y) => Date.parse(y.updated_at) - Date.parse(x.updated_at))]
+  check('conversation animee remonte en tete de liste', ordered[0].id === 'b' && ordered[1].id === 'a')
 }
 
 const failed = results.filter(result => !result.ok)

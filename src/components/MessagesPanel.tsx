@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
+import { formatRowTime, reactionTotal, threadCountLabel, topMessageReactions, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
+import { createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
@@ -22,6 +23,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [reloadToken, setReloadToken] = useState(0)
   const [reactionsLive, setReactionsLive] = useState(true)
   const senderCache = useRef(new Map<string, ProfileRecord>())
+  const [previews, setPreviews] = useState<Record<string, ConversationPreview>>({})
+  const [previewError, setPreviewError] = useState('')
   const [joiningPublicGroup, setJoiningPublicGroup] = useState<string | null>(null)
   const [selected, setSelected] = useState<ConversationRecord | null>(null)
   const [messages, setMessages] = useState<MessageRecord[]>([])
@@ -137,10 +140,15 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     setListError('')
     listConversations(user.id)
       .then(items => {
-        if (cancelled) return
+        if (cancelled) return undefined
         const sortedItems = items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
         setConversations(sortedItems)
         setSelected(current => current && sortedItems.some(item => item.id === current.id) ? current : (sortedItems.find(item => item.id === initialConversationId) ?? sortedItems[0] ?? null))
+        // Les aperçus (dernier message, heure, non-lus) partent de la même liste :
+        // une seule requête `messages` borde toute la colonne de gauche.
+        return listConversationPreviews(user.id, sortedItems)
+          .then(rows => { if (!cancelled) { setPreviews(rows); setPreviewError('') } })
+          .catch(caught => { if (!cancelled) setPreviewError(caught instanceof Error ? caught.message : 'Aperçus de conversations indisponibles.') })
       })
       .catch(caught => { if (!cancelled) setListError(caught instanceof Error ? caught.message : 'Impossible de charger tes conversations.') })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -174,6 +182,24 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
   }, [user])
 
+  const refreshMessageReactions = useCallback(async (items: MessageRecord[]) => {
+    if (!items.length || !user) return
+    try {
+      const rows = await listMessageReactions(items.map(item => item.id))
+      const counts: Record<string, Record<ReactionType, number>> = {}
+      const mine: Record<string, ReactionType | null> = {}
+      for (const item of items) counts[item.id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+      for (const row of rows) {
+        if (!counts[row.message_id]) counts[row.message_id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+        counts[row.message_id][row.reaction_type] += 1
+        if (row.user_id === user.id) mine[row.message_id] = row.reaction_type
+      }
+      for (const item of items) if (!(item.id in mine)) mine[item.id] = null
+      setMessageReactions(counts)
+      setMyReactions(mine)
+    } catch { /* la lecture des reactions ne doit jamais vider le fil */ }
+  }, [user])
+
   useEffect(() => {
     if (!selected || !user || !supabase) return
     let cancelled = false
@@ -192,7 +218,11 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         }
       })
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les messages.') })
-    void markConversationRead(selected.id, user.id)
+    void markConversationRead(selected.id, user.id).then(read => {
+      // `markConversationRead` renvoie false quand la policy ou la colonne manque :
+      // dans ce cas on ne fait pas semblant d'avoir tout lu, le badge reste.
+      if (read && !cancelled) setPreviews(current => ({ ...current, [selected.id]: { preview: current[selected.id]?.preview ?? '', at: current[selected.id]?.at ?? null, unread: 0, truncated: false } }))
+    })
 
     const client = supabase
     const refreshReactionsFor = async (messageIds: string[]) => {
@@ -278,7 +308,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       if (typingTimeout.current) window.clearTimeout(typingTimeout.current)
       void client.removeChannel(channel)
     }
-  }, [selected, user])
+  // `refreshMessageReactions` est memoise sur [user] : le citer ne provoque pas de
+  // reabonnement, et garantit que l'effet voit la version courante en cas de changement.
+  }, [selected, user, refreshMessageReactions])
 
   const broadcastTyping = async (active: boolean) => {
     if (!selected || !user || !supabase) return
@@ -329,7 +361,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       setAttachment(null)
       // L'ordre de la liste est tenu par `conversations.updated_at`, que le trigger
       // `touch_conversation_on_message` (migration 009) fait avancer à chaque message.
-      setConversations(current => current.filter(item => item.id !== selected.id).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)).concat([{ ...selected, updated_at: message.created_at }]))
+      setConversations(current => [{ ...selected, updated_at: message.created_at }, ...current.filter(item => item.id !== selected.id).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))])
+      setPreviews(current => ({ ...current, [selected.id]: { preview: message.body.replace(/\s+/g, ' ').trim() || 'Pièce jointe', at: message.created_at, unread: current[selected.id]?.unread ?? 0, truncated: false } }))
     } catch (caught) {
       setDraft(body)
       onAction(caught instanceof Error ? caught.message : 'Message non envoyé.')
@@ -353,23 +386,6 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
   }
 
-  const refreshMessageReactions = async (items: MessageRecord[]) => {
-    if (!items.length || !user) return
-    try {
-      const rows = await listMessageReactions(items.map(item => item.id))
-      const counts: Record<string, Record<ReactionType, number>> = {}
-      const mine: Record<string, ReactionType | null> = {}
-      for (const item of items) counts[item.id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
-      for (const row of rows) {
-        if (!counts[row.message_id]) counts[row.message_id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
-        counts[row.message_id][row.reaction_type] += 1
-        if (row.user_id === user.id) mine[row.message_id] = row.reaction_type
-      }
-      for (const item of items) if (!(item.id in mine)) mine[item.id] = null
-      setMessageReactions(counts)
-      setMyReactions(mine)
-    } catch { /* keep message rendering independent from reaction reads */ }
-  }
 
   const reactToMessage = async (messageId: string, reaction: ReactionType) => {
     if (!user) return
@@ -383,6 +399,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   }
 
   const reactionOptions: Array<[ReactionType, string]> = [['like', '👍'], ['love', '❤️'], ['haha', '😂'], ['wow', '😮'], ['sad', '😢'], ['angry', '😡']]
+  const reactionEmoji = Object.fromEntries(reactionOptions) as Record<ReactionType, string>
 
   const saveEdit = async () => {
     if (!editingId || !user || !editingBody.trim()) return
@@ -417,6 +434,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         <div><span className="eyebrow">MESSAGERIE</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => { setGroupMode(false); setNewConversationOpen(true) }}>＋ Discussion</button><button type="button" onClick={() => { setGroupMode(true); setNewConversationOpen(true) }}>＋ Groupe</button></div>
       </div>
       <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label><div className="message-filters"><button className={listFilter === 'all' ? 'active' : ''} type="button" onClick={() => setListFilter('all')}>Toutes</button><button className={listFilter === 'public' ? 'active' : ''} type="button" onClick={() => setListFilter('public')}>Groupes publics</button><button className={listFilter === 'private' ? 'active' : ''} type="button" onClick={() => setListFilter('private')}>Privées</button></div>
+      {previewError && <p className="messages-note">{previewError} <button type="button" onClick={() => setReloadToken(value => value + 1)}>Réessayer</button></p>}
       {!reactionsLive && <p className="messages-note">Réactions masquées&nbsp;: la table <code>message_reactions</code> est absente de la base. Exécute <code>supabase/migrations/009_messages_live.sql</code> pour les activer.</p>}
       {(error || listError) && <div className="messages-alert" role="alert">
         <div><strong>La messagerie est incomplète.</strong><p>{error || listError}</p></div>
@@ -441,41 +459,69 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       </div>}
       {conversations.length > 0 && visibleConversations.length === 0 && <p className="empty-copy">{listFilter === 'public' ? 'Aucune conversation de groupe public : rejoins un groupe ci-dessous ou attend une invitation.' : listFilter === 'private' ? 'Aucune discussion privée. ＋ Discussion pour en ouvrir une.' : 'Aucune conversation ne correspond à cette recherche.'}</p>}
       {conversations.length === 0 && publicGroups.length === 0 && <p className="empty-copy">{listError ? 'Aucune conversation chargée — vois la bannière ci-dessus.' : 'Aucune conversation pour le moment. Lance une discussion privée ou rejoins un groupe public.'}</p>}
-      {visibleConversations.map(conversation => <button className={`conversation-row ${selected?.id === conversation.id ? 'selected' : ''}`} key={conversation.id} onClick={() => setSelected(conversation)}>
-        <div className="avatar avatar-md avatar-soft">{conversation.title?.slice(0, 2).toUpperCase() || ''}</div>
-        <div><strong>{conversation.title || ''}</strong><small>{connection === 'connected' ? 'Temps réel actif' : connection === 'reconnecting' ? 'Reconnexion…' : ''}</small></div>
-      </button>)}
+      {visibleConversations.map(conversation => {
+        const preview = previews[conversation.id]
+        const badge = unreadBadge(preview?.unread ?? 0, preview?.truncated ?? false)
+        return <button className={`conversation-row ${selected?.id === conversation.id ? 'selected' : ''} ${badge ? 'unread' : ''}`} key={conversation.id} onClick={() => setSelected(conversation)}>
+          <div className="avatar avatar-md avatar-soft">{conversation.title?.slice(0, 2).toUpperCase() || ''}</div>
+          <div className="conversation-row-main">
+            <strong>{conversation.title || 'Conversation sans titre'}</strong>
+            <small className="conversation-preview">{preview?.preview || (connection === 'connected' ? 'Temps réel actif' : connection === 'reconnecting' ? 'Reconnexion…' : '')}</small>
+          </div>
+          <div className="conversation-row-side">
+            {preview?.at && <span className="conversation-row-time">{formatRowTime(preview.at)}</span>}
+            {badge ? <span className="unread-pill" aria-label={`${preview?.unread ?? 0} messages non lus`}>{badge}</span> : null}
+          </div>
+        </button>
+      })}
     </div>
 
     <div className="message-thread">
       {selected ? <>
         <div className="thread-head">
-          <div className="thread-title"><div className="avatar avatar-md avatar-soft">{(selected.title || 'AV').slice(0, 2).toUpperCase()}</div><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? 'Connecté en temps réel' : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'}</small></div></div><div className="thread-head-actions"><button type="button" onClick={() => onAction(selected.is_group ? 'Les membres du groupe sont accessibles depuis cet espace.' : 'Cette conversation est privée entre ses membres.')}>ⓘ</button></div>
+          <div className="thread-title"><div className="avatar avatar-md avatar-soft">{(selected.title || 'AV').slice(0, 2).toUpperCase()}</div><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? 'Connecté en temps réel' : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'} · {threadCountLabel(messages.length, hasOlder)}</small></div></div><div className="thread-head-actions"><button type="button" onClick={() => onAction(selected.is_group ? 'Les membres du groupe sont accessibles depuis cet espace.' : 'Cette conversation est privée entre ses membres.')}>ⓘ</button></div>
         </div>
 
         <div className="message-scroll" aria-live="polite">
           {hasOlder && <button type="button" className="message-button" onClick={() => void loadOlder()} disabled={loadingOlder}>{loadingOlder ? 'Chargement…' : 'Charger les anciens messages'}</button>}
           {messages.length === 0 && <p className="empty-copy">Commencez la conversation.</p>}
-          {messages.map(message => <div className={`message-bubble ${message.sender_id === user.id ? 'mine' : ''}`} key={message.id}>
-            {message.reply_to && <button type="button" className="message-reply-preview" onClick={() => document.getElementById(`message-${message.reply_to?.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>↳ {message.reply_to.body}</button>}
-            {editingId === message.id ? <div><textarea value={editingBody} onChange={event => setEditingBody(event.target.value)} aria-label="Modifier le message" /><button type="button" onClick={() => void saveEdit()}>Enregistrer</button><button type="button" onClick={() => { setEditingId(null); setEditingBody('') }}>Annuler</button></div> : <>
-              {message.attachment_path && !message.deleted_at && <MessageAttachment message={message} />}<span id={`message-${message.id}`}>{message.deleted_at ? 'Ce message a été supprimé.' : message.body}</span>
-              <small>{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</small>
-              {!message.deleted_at && <>
-                <div className="message-reactions" aria-label="Réactions au message" hidden={!reactionsLive}>
-                  {reactionOptions.map(([type, emoji]) => {
-                    const count = messageReactions[message.id]?.[type] ?? 0
-                    const selectedReaction = myReactions[message.id] === type
-                    return <button key={type} type="button" className={`message-reaction ${selectedReaction ? 'selected' : ''}`} onClick={() => void reactToMessage(message.id, type)} aria-label={`Réagir ${type}${count ? `, ${count}` : ''}`} aria-pressed={selectedReaction}><span aria-hidden="true">{emoji}</span>{count > 0 && <small>{count}</small>}</button>
-                  })}
-                </div>
-                <div className="message-meta-actions">
-                  <button type="button" onClick={() => setReplyTo(message)}>Répondre</button>
-                {message.sender_id === user.id && <><button type="button" onClick={() => { setEditingId(message.id); setEditingBody(message.body) }}>Modifier</button><button type="button" onClick={() => void removeMessage(message)}>Supprimer</button></>}
-                </div>
-              </>}
-            </>}
-          </div>)}
+          {messages.map(message => {
+            const mine = message.sender_id === user.id
+            const counts = messageReactions[message.id]
+            const total = reactionTotal(counts)
+            const pills = topMessageReactions(counts)
+            // Emplacement façon Messenger : les compteurs de réactions chevauchent le
+            // bord externe de la bulle (à droite pour mes messages), l'heure et la mention
+            // « modifié » sortent de la bulle, et les outils n'apparaissent qu'au survol.
+            return <div className={`message-line ${mine ? 'mine' : ''}`} key={message.id} id={`message-${message.id}`}>
+              {total > 0 && <div className="message-reaction-pills" aria-label={`${total} réaction${total > 1 ? 's' : ''} sur ce message`}>
+                {pills.map(([type, count]) => <span className="message-reaction-pill" key={type}><em aria-hidden="true">{reactionEmoji[type]}</em>{count > 1 && <small>{count}</small>}</span>)}
+                <b>{total}</b>
+              </div>}
+              <div className={`message-bubble ${mine ? 'mine' : ''}`}>
+                {message.reply_to && <button type="button" className="message-reply-preview" onClick={() => document.getElementById(`message-${message.reply_to?.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>↳ {message.reply_to.body}</button>}
+                {editingId === message.id ? <div className="message-edit"><textarea value={editingBody} onChange={event => setEditingBody(event.target.value)} aria-label="Modifier le message" /><button type="button" onClick={() => void saveEdit()}>Enregistrer</button><button type="button" onClick={() => { setEditingId(null); setEditingBody('') }}>Annuler</button></div> : <>
+                  {message.attachment_path && !message.deleted_at && <MessageAttachment message={message} />}<span>{message.deleted_at ? 'Ce message a été supprimé.' : message.body}</span>
+                </>}
+              </div>
+              <div className="message-foot">
+                <span className="message-time">{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</span>
+                {!message.deleted_at && <div className="message-tools">
+                  <div className="message-reactions" aria-label="Réactions au message" hidden={!reactionsLive}>
+                    {reactionOptions.map(([type, emoji]) => {
+                      const count = counts?.[type] ?? 0
+                      const selectedReaction = myReactions[message.id] === type
+                      return <button key={type} type="button" className={`message-reaction ${selectedReaction ? 'selected' : ''}`} onClick={() => void reactToMessage(message.id, type)} aria-label={`Réagir ${type}${count ? `, ${count}` : ''}`} aria-pressed={selectedReaction}><span aria-hidden="true">{emoji}</span>{count > 0 && <small>{count}</small>}</button>
+                    })}
+                  </div>
+                  <div className="message-meta-actions">
+                    <button type="button" onClick={() => setReplyTo(message)}>Répondre</button>
+                    {mine && <><button type="button" onClick={() => { setEditingId(message.id); setEditingBody(message.body) }}>Modifier</button><button type="button" onClick={() => void removeMessage(message)}>Supprimer</button></>}
+                  </div>
+                </div>}
+              </div>
+            </div>
+          })}
         </div>
 
         {Object.keys(typing).length > 0 && <div className="typing-indicator">{Object.values(typing).filter(Boolean).join(', ')} {Object.keys(typing).length > 1 ? 'écrivent…' : 'écrit…'}</div>}
