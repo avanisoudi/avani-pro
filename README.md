@@ -24,13 +24,22 @@ barre J'aime / Commenter / Partager / Enregistrer, puis zone de commentaires ouv
 Les calculs partagés (réactions, formats, médias) sont dans `src/lib/feed.ts` : le fil hydraté depuis
 Supabase et la publication que l'on vient de créer passent par le même convertisseur `toFeedPost`.
 
+Le composeur (`src/components/PostComposer.tsx`) ouvre le sélecteur de fichiers du système : jusqu'à
+4 médias par publication, JPEG/PNG/WebP/GIF (10 Mo max par photo) et MP4/WebM (50 Mo max par vidéo,
+100 Mo par publication). Les aperçus sont locaux et retirables avant publication ; un texte seul, des
+médias seuls ou les deux ensemble se publient. Les fichiers sont téléversés dans le bucket Storage
+`post-media` sous `<id-utilisateur>/posts/…` et seules ces clés d'objets sont enregistrées dans
+`posts.media_paths` (jamais les URL, qui expirent) ; à l'affichage, une requête unique produit des URL
+signées, avec repli sur l'URL publique. Sans la colonne `media_paths`, la première image passe quand même
+par `posts.media_path`. Voir `supabase/migrations/008_post_media.sql` (à exécuter manuellement).
+
 ## Variables d’environnement
 
 Créer `.env.local` à partir de `.env.example` avec `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`. La clé publishable est la seule clé utilisée par React. Ne jamais exposer `SUPABASE_SECRET_KEY`, `service_role` ou `SUPABASE_JWKS_URL` côté client : les opérations admin doivent passer par des Edge Functions protégées.
 
 ## Activer Supabase
 
-1. Dans Supabase → **SQL Editor**, exécuter `supabase/migrations/001_avani_core.sql`, puis `002_social_features.sql`, `003_realtime_notifications.sql`, `004_persistent_interactions.sql`, `005_admin_accounts.sql` et `006_group_chat.sql`.
+1. Dans Supabase → **SQL Editor**, exécuter `supabase/migrations/001_avani_core.sql`, puis `002_social_features.sql`, `003_realtime_notifications.sql`, `004_persistent_interactions.sql`, `005_admin_accounts.sql`, `006_group_chat.sql`, `007_message_attachments.sql` et `008_post_media.sql` (photos et vidéos du fil).
 2. Dans Supabase → **Authentication → URL Configuration**, ajouter `https://avani-pro.onrender.com` et `https://avani-pro.onrender.com/reset-password`.
 3. Dans Render → **Environment**, ajouter `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`, puis relancer le déploiement.
 4. Pour les messages, l’application charge l’historique depuis `messages` et s’abonne aux INSERT Realtime avec RLS. Les groupes créent maintenant une conversation persistante `is_group=true`, affichée dans Messages avec invitation de membres, historique et chat temps réel. Les nouveaux messages, follows, commentaires et likes produisent des notifications grâce à la migration 003. Les publications créées par un utilisateur connecté sont enregistrées dans `posts`. Les détails API/Edge Functions sont dans `docs-supabase.md`.

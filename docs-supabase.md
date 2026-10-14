@@ -41,7 +41,8 @@ base ne les porte pas :
 |---|---|---|---|
 | `likes` | `reaction_type` | réactions J’aime / J’adore / Haha / Wouah / Triste / Grrr | toutes les lignes comptées comme « J’aime » |
 | `comments` | `parent_id` | réponses imbriquées sous un commentaire | réponses enregistrées comme commentaires au premier niveau |
-| `posts` | `media_path` | photos de publications | publications texte uniquement |
+| `posts` | `media_path` | première photo ou vidéo d'une publication | publications texte uniquement |
+| `posts` | `media_paths` (`text[]`) | publications à plusieurs médias (grille type Facebook) | une seule image par publication |
 
 Pour aligner la base sur le code, exécuter dans Supabase → SQL Editor (à valider par le propriétaire du projet) :
 
@@ -50,7 +51,25 @@ alter table public.likes    add column if not exists reaction_type text not null
   check (reaction_type in ('like','love','haha','wow','sad','angry'));
 alter table public.comments add column if not exists parent_id uuid references public.comments(id) on delete cascade;
 create index if not exists comments_post_parent_idx on public.comments(post_id, parent_id, created_at);
+alter table public.posts add column if not exists media_paths text[] not null default '{}';
 ```
+
+## Médias des publications (photos et vidéos)
+
+`supabase/migrations/008_post_media.sql` prépare le bucket et les règles d'accès. Le fichier est fourni,
+idempotent, **jamais exécuté par l'application** : à coller dans Supabase → SQL Editor.
+
+| Besoin | Ce que fait l'application | Sans la migration |
+|---|---|---|
+| Dépôt du fichier | `POST /storage/v1/object/post-media/<userId>/posts/<uuid>-<nom>` | message d'erreur explicite citant le fichier 008, aucun objet orphelin |
+| Lecture des visuels | `POST /storage/v1/object/sign/post-media` (une requête pour tout le fil), repli URL publique | les visuels du bucket privé restent inaccessibles |
+| Ordre et nombre | `posts.media_paths` (`text[]`) | repli sur `posts.media_path` : première image uniquement |
+
+Les politiques `users upload/update/delete own media` de la migration 002 couvrent déjà l'écriture,
+puisque chaque objet est rangé sous le dossier de l'auteur. Il manque seulement la **lecture** pour un
+bucket privé, ajoutée par la 008. Pour des visuels accessibles sans compte, décommenter la ligne
+`update storage.buckets set public = true ...` du fichier : l'application signe alors aussi les URL, aucun
+changement de code n'est nécessaire. La variable `VITE_POST_MEDIA_BUCKET` permet de pointer un autre bucket.
 
 Aucune de ces instructions n’est lancée par l’application : elles sont documentées ici pour le déploiement.
 
@@ -71,6 +90,7 @@ Avec Supabase, le frontend appelle la Data API via `supabase-js` :
 | Groupes | `GET/POST /rest/v1/groups` | Public ou membre |
 | Commentaires | `GET/POST /rest/v1/comments` | Lecture publique, écriture authentifiée |
 | Fichiers | `POST /storage/v1/object/files/<userId>/<name>` | Propriétaire via Storage RLS |
+| Photo/vidéo de publication | `POST /storage/v1/object/post-media/<userId>/posts/…` puis `POST /storage/v1/object/sign/post-media` | Dépôt par le propriétaire, lecture par les membres authentifiés |
 | Signalements | `POST /rest/v1/reports` | Utilisateur connecté |
 
 Les helpers sont dans `src/lib/api.ts`. Les accès directs sont protégés par RLS : masquer un bouton ne remplace jamais une policy SQL.
