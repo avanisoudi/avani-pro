@@ -129,6 +129,8 @@ Pour vérifier les données persistées, utiliser la Data API avec une clé publ
 
 ## Edge Functions
 
+Le thème est une donnée de compte, pas un détail de rendu : `user_settings.appearance` (`light` | `dark`) est lu au premier branchement seulement — si l'utilisateur a déjà choisi sur cet appareil (`localStorage.avani:theme`), ce choix local gagne, sinon un changement fait depuis la barre du haut serait annulé au rechargement. La synchronisation s'appuie sur la policy existante `users update own settings` ; un échec est annoncé à l'écran, le thème restant appliqué localement.
+
 `supabase/functions/messages/index.ts` est le point de départ pour une API serveur optionnelle. Les routes recommandées sont `POST /messages` (validation et insertion), `POST /conversations` (création atomique), `POST /attachments/sign` (URL Storage courte) et `POST /moderation/report`. Elles doivent valider le JWT via `Authorization: Bearer`, utiliser la clé serveur uniquement côté Edge Function et déléguer les droits métier à RLS.
 
 ## Render

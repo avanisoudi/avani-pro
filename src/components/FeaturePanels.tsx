@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import type { ProfileRecord } from '../lib/api'
 import { createDirectConversation, joinPublicGroup, listPublicGroups, type PublicGroupRecord } from '../lib/api'
+import { readStoredTheme } from '../lib/theme'
+import { VerifiedBadge } from './icons'
 import { supabase } from '../lib/supabase'
 import { addGroupMember, createGroup, createPage, getAdminStats, getMySettings, isAdmin, listAuditLogs, listDiscoverableProfiles, listMyGroups, listMyPages, listOpenReports, saveMySettings, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
 
@@ -72,6 +74,7 @@ export function ExplorePanel({ user, onAction, onMessage }: { user: User | null;
   const [followed, setFollowed] = useState<string[]>([])
   const [visiblePeople, setVisiblePeople] = useState<PersonCard[]>([])
   useEffect(() => { if (user) listDiscoverableProfiles(user.id).then(items => { if (items.length) setVisiblePeople(items.map(item => ({ id: item.id, name: item.full_name, role: item.bio || '', avatar: item.full_name.split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(), mutual: item.verified_type ? `Compte vérifié · ${item.username}` : `@${item.username}` }))) }).catch(() => undefined) }, [user])
+
   const follow = async (person: PersonCard) => { if (!user) { onAction('Connectez-vous pour suivre des profils.'); return }; const isFollowing = followed.includes(person.id); try { const next = await toggleFollow(user.id, person.id, isFollowing); setFollowed(current => next ? [...current, person.id] : current.filter(id => id !== person.id)); onAction(next ? `Vous suivez maintenant ${person.name}.` : `Vous ne suivez plus ${person.name}.`) } catch { onAction('Impossible de modifier cet abonnement.') } }
   const message = async (person: PersonCard) => { if (!user) { onAction('Connectez-vous pour démarrer une conversation.'); return }; try { const conversation = await createDirectConversation(user.id, person.id, person.name); onMessage(conversation.id) } catch { onAction('Le profil doit exister dans Supabase avant de démarrer une conversation.') } }
   return <section className="feature-panel"><div className="feature-header"><div><span className="eyebrow">EXPLORER LE SIGNAL</span><h2>Trouvez votre prochaine connexion</h2><p>Découvrez des profils et des idées qui font avancer votre secteur.</p></div><span className="feature-count">{visiblePeople.length} profils</span></div><div className="people-grid">{visiblePeople.map(person => <article className="person-card" key={person.id}><div className="avatar avatar-lg avatar-soft">{person.avatar}</div><strong>{person.name}{person.id === 'kofi' && <span className="verified">✓</span>}</strong><span>{person.role}</span><small>{person.mutual}</small><div className="person-actions"><button className={followed.includes(person.id) ? 'follow-button following' : 'follow-button'} onClick={() => void follow(person)}>{followed.includes(person.id) ? '✓ Suivi' : '+ Suivre'}</button><button className="message-button" onClick={() => void message(person)}>Message</button></div></article>)}</div></section>
@@ -81,7 +84,15 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
   const [groups, setGroups] = useState<any[]>([]); const [publicGroups, setPublicGroups] = useState<PublicGroupRecord[]>([]); const [name, setName] = useState(''); const [description, setDescription] = useState(''); const [visibility, setVisibility] = useState<'private' | 'public'>('private'); const [open, setOpen] = useState(false); const [busy, setBusy] = useState(false); const [joiningPublic, setJoiningPublic] = useState<string | null>(null); const [groupsError, setGroupsError] = useState(''); const [publicsError, setPublicsError] = useState(''); const [reloadToken, setReloadToken] = useState(0); const [inviteGroup, setInviteGroup] = useState<any | null>(null); const [inviteUser, setInviteUser] = useState(''); const [people, setPeople] = useState<ProfileRecord[]>([]); const [groupFilter, setGroupFilter] = useState<'all' | 'private' | 'public'>('all'); const [search, setSearch] = useState('')
   /** Message réel de la base, jamais un texte générique qui masquerait la cause. */
   const messageFrom = (caught: unknown, fallback: string) => caught instanceof Error && caught.message ? caught.message : fallback
-  const reload = () => setReloadToken(value => value + 1)
+  const reload = useCallback(() => setReloadToken(value => value + 1), [])
+
+  // Un onglet réveillé après une longue pause doit se reconcilier avec la base : la
+  // connexion Realtime a pu etre coupee entre-temps, et aucun evenement n'est rattrape.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') reload() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [reload])
 
   // Mes groupes et les groupes publics sont lus séparément : un souci de règle d’accès
   // sur l’un ne doit pas laisser l’autre liste vide et muette.
@@ -112,13 +123,18 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
       .channel('groups-live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'groups' }, () => bump())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'groups' }, () => bump())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_members', filter: user ? `user_id=eq.${user.id}` : undefined }, () => bump())
+      // Pas de filtre sur user_id ici : le comptage de membres d'un groupe public change
+      // quand d'autres personnes adhèrent. C'est RLS qui borne la portée des événements reçus.
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'group_members' }, () => bump())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'group_members' }, () => bump())
       .subscribe()
     return () => {
       if (bumpTimer.current) window.clearTimeout(bumpTimer.current)
       void client.removeChannel(channel)
     }
-  }, [user])
+  // `reload` est memoise (useCallback sans dependance) : le citer honore la regle des
+  // dependances sans reabonner le canal a chaque rendu.
+  }, [user, reload])
   useEffect(() => { if (user) listDiscoverableProfiles(user.id).then(setPeople).catch(() => undefined) }, [user])
   const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!user) { onAction('Connectez-vous pour créer un groupe.'); return }; setBusy(true); try { const group = await createGroup(user.id, name, description, visibility); setGroups(current => [group, ...current]); setName(''); setDescription(''); setOpen(false); onAction(group.chat_note ? `Groupe créé. ${group.chat_note}` : visibility === 'public' ? `Groupe « ${name} » créé. Les groupes publics apparaissent dans la liste d'à côté.` : `Groupe « ${name} » créé, chat prêt.`) } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible de créer le groupe.') } finally { setBusy(false) } }
   const invite = async () => { if (!inviteGroup?.conversation_id || !inviteUser) return; try { const result = await addGroupMember(inviteGroup.id, inviteGroup.conversation_id, inviteUser); onAction(result.chatJoined ? 'Membre ajouté au groupe et à la conversation.' : result.note || 'Le membre a rejoint le groupe, pas la conversation.'); setInviteGroup(null); setInviteUser('') } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible d’ajouter ce membre.') } }
@@ -253,7 +269,9 @@ export function SettingsPanel({ user, theme, onThemeChange, onAction }: { user: 
       const prefs = (settings?.notification_preferences as Record<string, unknown> | null) ?? {}
       setEmailNotifications(prefs.email !== false)
       setCompactMode(Boolean(prefs.compact))
-      if (settings?.appearance === 'dark' || settings?.appearance === 'light') onThemeChange(settings.appearance)
+      // Un choix déjà pris sur cet appareil est plus récent que la ligne en base : sans
+      // cette garde, la bascule de la barre du haut se faisait annuler au rechargement.
+      if (!readStoredTheme() && (settings?.appearance === 'dark' || settings?.appearance === 'light')) onThemeChange(settings.appearance)
     }).catch(() => undefined).finally(() => setLoading(false))
   }, [user, onThemeChange])
   const save = async (next: { email?: boolean; compact?: boolean; appearance?: 'light' | 'dark' }) => {

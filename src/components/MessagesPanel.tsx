@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, threadCountLabel, topMessageReactions, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
 import { createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
@@ -182,6 +182,24 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
   }, [user])
 
+  const refreshMessageReactions = useCallback(async (items: MessageRecord[]) => {
+    if (!items.length || !user) return
+    try {
+      const rows = await listMessageReactions(items.map(item => item.id))
+      const counts: Record<string, Record<ReactionType, number>> = {}
+      const mine: Record<string, ReactionType | null> = {}
+      for (const item of items) counts[item.id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+      for (const row of rows) {
+        if (!counts[row.message_id]) counts[row.message_id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
+        counts[row.message_id][row.reaction_type] += 1
+        if (row.user_id === user.id) mine[row.message_id] = row.reaction_type
+      }
+      for (const item of items) if (!(item.id in mine)) mine[item.id] = null
+      setMessageReactions(counts)
+      setMyReactions(mine)
+    } catch { /* la lecture des reactions ne doit jamais vider le fil */ }
+  }, [user])
+
   useEffect(() => {
     if (!selected || !user || !supabase) return
     let cancelled = false
@@ -290,7 +308,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       if (typingTimeout.current) window.clearTimeout(typingTimeout.current)
       void client.removeChannel(channel)
     }
-  }, [selected, user])
+  // `refreshMessageReactions` est memoise sur [user] : le citer ne provoque pas de
+  // reabonnement, et garantit que l'effet voit la version courante en cas de changement.
+  }, [selected, user, refreshMessageReactions])
 
   const broadcastTyping = async (active: boolean) => {
     if (!selected || !user || !supabase) return
@@ -341,7 +361,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       setAttachment(null)
       // L'ordre de la liste est tenu par `conversations.updated_at`, que le trigger
       // `touch_conversation_on_message` (migration 009) fait avancer à chaque message.
-      setConversations(current => current.filter(item => item.id !== selected.id).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at)).concat([{ ...selected, updated_at: message.created_at }]))
+      setConversations(current => [{ ...selected, updated_at: message.created_at }, ...current.filter(item => item.id !== selected.id).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))])
       setPreviews(current => ({ ...current, [selected.id]: { preview: message.body.replace(/\s+/g, ' ').trim() || 'Pièce jointe', at: message.created_at, unread: current[selected.id]?.unread ?? 0, truncated: false } }))
     } catch (caught) {
       setDraft(body)
@@ -366,23 +386,6 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
   }
 
-  const refreshMessageReactions = async (items: MessageRecord[]) => {
-    if (!items.length || !user) return
-    try {
-      const rows = await listMessageReactions(items.map(item => item.id))
-      const counts: Record<string, Record<ReactionType, number>> = {}
-      const mine: Record<string, ReactionType | null> = {}
-      for (const item of items) counts[item.id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
-      for (const row of rows) {
-        if (!counts[row.message_id]) counts[row.message_id] = { like: 0, love: 0, haha: 0, wow: 0, sad: 0, angry: 0 }
-        counts[row.message_id][row.reaction_type] += 1
-        if (row.user_id === user.id) mine[row.message_id] = row.reaction_type
-      }
-      for (const item of items) if (!(item.id in mine)) mine[item.id] = null
-      setMessageReactions(counts)
-      setMyReactions(mine)
-    } catch { /* keep message rendering independent from reaction reads */ }
-  }
 
   const reactToMessage = async (messageId: string, reaction: ReactionType) => {
     if (!user) return

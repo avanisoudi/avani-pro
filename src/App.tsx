@@ -6,13 +6,15 @@ import './desktop.css'
 import './landing.css'
 import './reactions.css'
 import './feed.css'
+import './themes.css'
 import { AuthModal } from './components/AuthModal'
 import { ResetPasswordPanel } from './components/ResetPasswordPanel'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
 import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchPanel } from './components/AdvancedPanels'
 import { createPost, deletePost as deletePostRecord, getMyProfile, listFeedPosts, recordPostShare, setPostReaction, toggleSavedPost, updatePost as updatePostRecord, type ProfileRecord, type ReactionType } from './lib/api'
-import { createStory, listActiveStories, listDiscoverableProfiles, listFollowingIds, listMyGroups, toggleFollow, type StoryRecord } from './lib/socialApi'
+import { createStory, listActiveStories, listDiscoverableProfiles, listFollowingIds, listMyGroups, saveMySettings, toggleFollow, type StoryRecord } from './lib/socialApi'
+import { applyTheme, nextTheme, prefersDarkScheme, readStoredTheme, resolveInitialTheme, watchSystemTheme, type ThemeName } from './lib/theme'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { REACTION_KEYS, applyReaction, emptyReactionCounts, extractTags, toFeedPost } from './lib/feed'
 import type { Post } from './lib/feed'
@@ -20,7 +22,7 @@ import { PostCard } from './components/PostCard'
 import { PostComposer } from './components/PostComposer'
 import { mediaPostType, removePostMedia, resolvePostMediaPaths, uploadPostMedia } from './lib/postMedia'
 import type { ComposerMedia } from './lib/postMedia'
-import { NavButton, SvgIcon, VerifiedBadge } from './components/icons'
+import { MoonIcon, NavButton, SunIcon, SvgIcon, VerifiedBadge } from './components/icons'
 
 /** Le type Post et les helpers du fil vivent dans src/lib/feed.ts. */
 type NavKey = 'feed' | 'explore' | 'messages' | 'groups' | 'pages' | 'profile' | 'admin' | 'settings' | 'files' | 'saved' | 'notifications'
@@ -134,8 +136,29 @@ function App() {
   const [authOpen, setAuthOpen] = useState(false)
   const [initialConversationId, setInitialConversationId] = useState<string | undefined>()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => { const saved = typeof window !== 'undefined' ? window.localStorage.getItem('avani:theme') : null; return saved === 'dark' ? 'dark' : 'light' })
-  useEffect(() => { document.documentElement.dataset.theme = theme; window.localStorage.setItem('avani:theme', theme) }, [theme])
+  // Le thème par défaut n'est plus « clair » par décision unilatérale : on relit le choix
+  // enregistré, sinon la préférence du système.
+  const [theme, setTheme] = useState<ThemeName>(() => resolveInitialTheme(readStoredTheme(), prefersDarkScheme()))
+  useEffect(() => { applyTheme(theme) }, [theme])
+  useEffect(() => watchSystemTheme(setTheme), [])
+  /**
+   * Bascule de thème : le choix est écrit localement tout de suite, puis synchronisé sur
+   * le compte si une session existe. Un échec de synchronisation est annoncé — le thème
+   * reste appliqué sur cet appareil, il ne sera juste pas repris ailleurs — plutôt que
+   * d'être avalé en laissant croire que tout est enregistré.
+   */
+  const toggleTheme = async () => {
+    const next = nextTheme(theme)
+    applyTheme(next)
+    setTheme(next)
+    if (!sessionUser) { flash(next === 'dark' ? 'Thème sombre appliqué (sur cet appareil uniquement).' : 'Thème clair appliqué (sur cet appareil uniquement).'); return }
+    try {
+      await saveMySettings(sessionUser.id, { appearance: next })
+      flash(next === 'dark' ? 'Thème sombre appliqué et enregistré.' : 'Thème clair appliqué et enregistré.')
+    } catch (caught) {
+      flash(`${next === 'dark' ? 'Sombre' : 'Clair'} appliqué ici, mais non enregistré : ${caught instanceof Error ? caught.message : 'compte indisponible'}`)
+    }
+  }
   const navigateTo = (path: string, screen: NavKey) => { window.history.pushState({}, '', path); setPathname(path); setActive(screen) }
   useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); if (path.startsWith('/groups')) setActive('groups'); else if (path.startsWith('/pages')) setActive('pages'); else if (path.startsWith('/messages')) setActive('messages'); else if (path.startsWith('/notifications')) setActive('notifications'); else if (path.startsWith('/files')) setActive('files'); else if (path.startsWith('/saved')) setActive('saved'); else if (path.startsWith('/admin')) setActive('admin'); else if (path.startsWith('/settings') || path.startsWith('/u/')) setActive('profile'); else if (path.startsWith('/search')) setActive('explore'); else setActive('feed') }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
 
@@ -269,7 +292,7 @@ function App() {
 
   return (
     <div className={`app-shell theme-${theme}`}>
-      <header className="topbar av-navbar"><div className="topbar-brand"><button className="topbar-brand-button" aria-label="Accueil Avani Pro" onClick={() => navigateTo('/', 'feed')}><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span></button><label className="search"><SvgIcon name="search" /><input value={feedQuery} onChange={event => setFeedQuery(event.target.value)} placeholder="Rechercher sur Avani Pro…" aria-label="Recherche globale" /></label></div><nav className="topbar-nav topbar-nav-pro" aria-label="Accès rapide"><button className={active === 'feed' ? 'active' : ''} onClick={() => navigateTo('/', 'feed')} aria-label="Accueil" title="Accueil"><SvgIcon name="home" /><span>Accueil</span></button><button className={active === 'explore' ? 'active' : ''} onClick={() => navigateTo('/search', 'explore')} aria-label="Réseau" title="Réseau"><SvgIcon name="profile" /><span>Réseau</span></button><button className={active === 'pages' ? 'active' : ''} onClick={() => navigateTo('/pages', 'pages')} aria-label="Pages" title="Pages"><SvgIcon name="pages" /><span>Pages</span></button><button className={active === 'groups' ? 'active' : ''} onClick={() => navigateTo('/groups', 'groups')} aria-label="Groupes" title="Groupes"><SvgIcon name="groups" /><span>Groupes</span></button><button type="button" onClick={pickVideoForPost} aria-label="Vidéos" title="Publier une vidéo"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" /><path d="M10 9l5 3-5 3z" /></svg><span>Vidéos</span></button></nav><div className="topbar-status"><span className="pulse-dot" />En ligne</div><div className="top-actions"><button type="button" className="nav-bell" aria-label="Notifications" title="Notifications" onClick={() => navigateTo('/notifications', 'notifications')}><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z" /><path d="M10 19a2 2 0 0 0 4 0" /></svg><span className="nav-badge" aria-hidden="true" /></button><button className="profile-trigger" aria-label="Ouvrir mon profil" onClick={() => navigateTo('/settings', 'profile')}><span className="avatar avatar-sm avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</span><span className="profile-trigger-name">{displayName.split(' ')[0]}</span></button><button className="menu-trigger" aria-expanded={menuOpen} aria-label="Ouvrir le menu principal" onClick={() => setMenuOpen(value => !value)}>☰</button></div>{menuOpen && <div className="main-menu"><button onClick={() => { setMenuOpen(false); navigateTo('/settings', 'settings') }}>Réglages</button><button onClick={() => { setMenuOpen(false); navigateTo('/files', 'files') }}>Mes fichiers</button><button onClick={() => { setMenuOpen(false); navigateTo('/notifications', 'notifications') }}>Notifications</button><button className="menu-danger" onClick={() => { setMenuOpen(false); void signOut() }}>Se déconnecter</button></div>}</header>
+      <header className="topbar av-navbar"><div className="topbar-brand"><button className="topbar-brand-button" aria-label="Accueil Avani Pro" onClick={() => navigateTo('/', 'feed')}><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span></button><label className="search"><SvgIcon name="search" /><input value={feedQuery} onChange={event => setFeedQuery(event.target.value)} placeholder="Rechercher sur Avani Pro…" aria-label="Recherche globale" /></label></div><nav className="topbar-nav topbar-nav-pro" aria-label="Accès rapide"><button className={active === 'feed' ? 'active' : ''} onClick={() => navigateTo('/', 'feed')} aria-label="Accueil" title="Accueil"><SvgIcon name="home" /><span>Accueil</span></button><button className={active === 'explore' ? 'active' : ''} onClick={() => navigateTo('/search', 'explore')} aria-label="Réseau" title="Réseau"><SvgIcon name="profile" /><span>Réseau</span></button><button className={active === 'pages' ? 'active' : ''} onClick={() => navigateTo('/pages', 'pages')} aria-label="Pages" title="Pages"><SvgIcon name="pages" /><span>Pages</span></button><button className={active === 'groups' ? 'active' : ''} onClick={() => navigateTo('/groups', 'groups')} aria-label="Groupes" title="Groupes"><SvgIcon name="groups" /><span>Groupes</span></button><button type="button" onClick={pickVideoForPost} aria-label="Vidéos" title="Publier une vidéo"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" /><path d="M10 9l5 3-5 3z" /></svg><span>Vidéos</span></button></nav><div className="topbar-status"><span className="pulse-dot" />En ligne</div><div className="top-actions"><button type="button" className="theme-toggle" onClick={() => void toggleTheme()} aria-label={theme === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre'} title={theme === 'dark' ? 'Thème clair' : 'Thème sombre'} aria-pressed={theme === 'dark'}>{theme === 'dark' ? <SunIcon /> : <MoonIcon />}</button><button type="button" className="nav-bell" aria-label="Notifications" title="Notifications" onClick={() => navigateTo('/notifications', 'notifications')}><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z" /><path d="M10 19a2 2 0 0 0 4 0" /></svg><span className="nav-badge" aria-hidden="true" /></button><button className="profile-trigger" aria-label="Ouvrir mon profil" onClick={() => navigateTo('/settings', 'profile')}><span className="avatar avatar-sm avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</span><span className="profile-trigger-name">{displayName.split(' ')[0]}</span></button><button className="menu-trigger" aria-expanded={menuOpen} aria-label="Ouvrir le menu principal" onClick={() => setMenuOpen(value => !value)}>☰</button></div>{menuOpen && <div className="main-menu"><button onClick={() => { setMenuOpen(false); navigateTo('/settings', 'settings') }}>Réglages</button><button onClick={() => { setMenuOpen(false); navigateTo('/files', 'files') }}>Mes fichiers</button><button onClick={() => { setMenuOpen(false); navigateTo('/notifications', 'notifications') }}>Notifications</button><button className="menu-danger" onClick={() => { setMenuOpen(false); void signOut() }}>Se déconnecter</button></div>}</header>
       <aside className="sidebar sidebar-pro">
         <div className="brand"><span className="brand-mark"><img src="/assets/avani-mark.svg" alt="" /></span><span>AVANI<span className="brand-pro">PRO</span></span></div>
         <div className="profile-mini"><div className="avatar avatar-xl avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</div><div><strong>{displayName}{profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}</strong><span>{displayUsername}</span></div></div>

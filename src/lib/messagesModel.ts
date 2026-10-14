@@ -124,7 +124,12 @@ export function formatRowTime(value: string | null | undefined, now = new Date()
   const days = Math.floor((midnight.getTime() - new Date(at.getFullYear(), at.getMonth(), at.getDate()).getTime()) / 86400000)
   if (days <= 0) return at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   if (days === 1) return 'Hier'
-  if (days < 7) return at.toLocaleDateString('fr-FR', { weekday: 'long' })
+  // Messenger abrège le jour de la semaine sur trois lettres et le capitalise ; la liste
+  // de gauche est étroite, « mercredi » y tiendrait mal.
+  if (days < 7) {
+    const weekday = at.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '')
+    return (weekday.charAt(0).toUpperCase() + weekday.slice(1)).slice(0, 3)
+  }
   return at.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
