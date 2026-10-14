@@ -34,7 +34,38 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
   const save = async (event: React.FormEvent) => { event.preventDefault(); setBusy(true); setMessage(''); try { const saved = await updateMyProfile(user.id, { full_name: fullName.trim(), username: username.toLowerCase().trim(), bio: bio.trim() }); onProfile(saved); setMessage('Profil mis à jour avec succès.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible de mettre à jour le profil.') } finally { setBusy(false) } }
   const changePhoto = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; setPhotoBusy(true); setMessage(''); try { const saved = await uploadProfilePhoto(user.id, file); onProfile(saved); setMessage('Photo de profil mise à jour.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible d’envoyer la photo.') } finally { setPhotoBusy(false) } }
   const initials = (fullName || 'AV').split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase()
-  return <section className="feature-panel"><div className="feature-header"><div><span className="eyebrow">IDENTITÉ PROFESSIONNELLE</span><h2>Votre profil</h2><p>Présentez ce que vous construisez et les conversations qui vous intéressent.</p></div><label className="profile-photo-picker" title="Changer la photo de profil">{profile?.avatar_url ? <img src={profile.avatar_url} alt="Photo de profil" /> : <span>{initials}</span>}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={changePhoto} disabled={photoBusy} /><small>{photoBusy ? 'Envoi…' : 'Changer'}</small></label></div><div className="profile-quick-stats"><span><b>{fullName.trim() ? fullName.trim().split(/\s+/).length : 0}</b> mots identité</span><span><b>{bio.length}</b>/500 bio</span><span><b>{username ? '@' : '—'}</b> identifiant</span></div><form className="profile-form" onSubmit={save}><label>Nom complet<input value={fullName} onChange={event => setFullName(event.target.value)} required /></label><label>Username<input value={username} onChange={event => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} minLength={3} required /></label><label>Bio<textarea value={bio} onChange={event => setBio(event.target.value)} maxLength={500} rows={4} placeholder="Ce que vous construisez, votre expertise, vos centres d’intérêt…" /></label><div className="form-actions"><span className="form-status">{message}</span><button className="primary-button" disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer le profil ↗'}</button></div></form></section>
+  return <section className="feature-panel profile-page">
+    <div className="profile-cover">
+      <div className="profile-cover-orb profile-cover-orb-one" />
+      <div className="profile-cover-orb profile-cover-orb-two" />
+      <span className="profile-cover-brand">AVANI <b>PRO</b></span>
+      <span className="profile-cover-caption">VOTRE ESPACE · VOTRE HISTOIRE</span>
+    </div>
+    <div className="profile-identity">
+      <label className="profile-avatar-upload" title="Changer la photo de profil">
+        {profile?.avatar_url ? <img src={profile.avatar_url} alt="Photo de profil" /> : <span>{initials}</span>}
+        <i aria-hidden="true">＋</i>
+        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={changePhoto} disabled={photoBusy} />
+      </label>
+      <div className="profile-identity-copy">
+        <span className="eyebrow">PROFIL PERSONNEL</span>
+        <h2>{fullName.trim() || 'Votre nom'} {profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}</h2>
+        <p className="profile-handle">{username ? `@${username}` : '@votre-identifiant'}</p>
+        <p className="profile-bio-preview">{bio.trim() || 'Ajoutez une présentation pour aider votre réseau à découvrir qui vous êtes et ce que vous faites.'}</p>
+      </div>
+      <button type="button" className="profile-edit-jump" onClick={() => document.getElementById('profile-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>✎ Modifier le profil</button>
+    </div>
+    <div className="profile-section-divider" />
+    <div className="profile-workspace">
+      <div className="profile-workspace-heading"><div><span className="eyebrow">PERSONNALISATION</span><h3>Construisez votre identité</h3><p>Ces informations sont enregistrées sur votre compte Avani Pro.</p></div><span className={message.includes('succès') || message.includes('mise à jour') ? 'profile-save-state is-saved' : 'profile-save-state'}>{photoBusy ? 'Photo en cours…' : message || 'Modifications à enregistrer'}</span></div>
+      <form id="profile-edit-form" className="profile-form profile-form-modern" onSubmit={save}>
+        <label><span>Nom complet</span><input value={fullName} onChange={event => setFullName(event.target.value)} required placeholder="Votre nom et prénom" /></label>
+        <label><span>Nom d’utilisateur</span><div className="profile-input-prefix"><b>@</b><input value={username} onChange={event => setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} minLength={3} required placeholder="identifiant" /></div><small>3 caractères minimum · lettres, chiffres et _</small></label>
+        <label className="profile-bio-field"><span>Présentation</span><textarea value={bio} onChange={event => setBio(event.target.value)} maxLength={500} rows={4} placeholder="Votre expertise, vos projets, vos centres d’intérêt…" /><small>{bio.length}/500 caractères</small></label>
+        <div className="profile-form-footer"><span className="form-status" role="status">{message}</span><button className="primary-button" disabled={busy || photoBusy}>{busy ? 'Enregistrement…' : 'Enregistrer les modifications ↗'}</button></div>
+      </form>
+    </div>
+  </section>
 }
 
 export function ExplorePanel({ user, onAction, onMessage }: { user: User | null; onAction: (message: string) => void; onMessage: (conversationId: string) => void }) {
