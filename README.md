@@ -33,6 +33,10 @@ médias seuls ou les deux ensemble se publient. Les fichiers sont téléversés 
 signées, avec repli sur l'URL publique. Sans la colonne `media_paths`, la première image passe quand même
 par `posts.media_path`. Voir `supabase/migrations/008_post_media.sql` (à exécuter manuellement).
 
+Le bouton **Vidéos** de la barre supérieure n'est pas un bouton décoratif : il ramène sur le fil,
+ouvre le sélecteur de fichiers filtré sur les vidéos et laisse la publication se faire depuis le
+composeur (aucun message « bientôt disponible »).
+
 ## Variables d’environnement
 
 Créer `.env.local` à partir de `.env.example` avec `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY`. La clé publishable est la seule clé utilisée par React. Ne jamais exposer `SUPABASE_SECRET_KEY`, `service_role` ou `SUPABASE_JWKS_URL` côté client : les opérations admin doivent passer par des Edge Functions protégées.

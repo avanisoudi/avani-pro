@@ -23,6 +23,8 @@ type PostComposerProps = {
   /** Renvoie false si la publication a échoué : le brouillon et les aperçus sont conservés. */
   onPublish: (body: string, media: ComposerMedia[]) => Promise<boolean>
   onNotify: (message: string) => void
+  /** Demande d’ouverture du sélecteur depuis l’extérieur (bouton « Vidéos » de la barre supérieure). */
+  request?: { id: number; kind: 'all' | 'video' } | null
 }
 
 /**
@@ -31,12 +33,14 @@ type PostComposerProps = {
  * aucune image de démonstration) et le champ « Publier » s’active dès qu’il y a
  * un texte ou un média.
  */
-export function PostComposer({ displayName, initials, avatarUrl, busy, progress, onPublish, onNotify }: PostComposerProps) {
+export function PostComposer({ displayName, initials, avatarUrl, busy, progress, onPublish, onNotify, request }: PostComposerProps) {
   const [body, setBody] = useState('')
   const [media, setMedia] = useState<ComposerMedia[]>([])
   const [placeOpen, setPlaceOpen] = useState(false)
   const [place, setPlace] = useState('')
+  const [acceptKind, setAcceptKind] = useState<'all' | 'video'>('all')
   const fileInput = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const mediaRef = useRef<ComposerMedia[]>([])
 
   useEffect(() => {
@@ -48,7 +52,23 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
   const canPublish = Boolean(body.trim()) || media.length > 0
   const firstName = displayName.split(' ')[0] || 'vous'
 
-  const openPicker = () => fileInput.current?.click()
+  const openPicker = (kind: 'all' | 'video' = 'all') => {
+    const input = fileInput.current
+    if (!input) return
+    setAcceptKind(kind)
+    // Le filtre doit être appliqué avant l’ouverture du sélecteur, pas au rendu suivant.
+    input.accept = kind === 'video' ? 'video/*' : 'image/*,video/*'
+    formRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    input.click()
+  }
+
+  // Demande venue d’un autre écran : on attend que le composeur soit monté.
+  const handledRequest = useRef(0)
+  useEffect(() => {
+    if (!request || request.id === handledRequest.current) return
+    handledRequest.current = request.id
+    openPicker(request.kind)
+  }, [request])
 
   const onFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files ?? [])
@@ -87,7 +107,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
   }
 
   return (
-    <form className="fcomposer" onSubmit={submit}>
+    <form className="fcomposer" onSubmit={submit} ref={formRef}>
       <div className="fcomposer-top">
         <span className="fcomposer-avatar" aria-hidden="true">
           {avatarUrl ? <img src={avatarUrl} alt="" /> : initials || 'AV'}
@@ -125,7 +145,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
           ))}
           {media.length < MAX_POST_MEDIA_FILES ? (
             <li>
-              <button type="button" className="fcomposer-add" onClick={openPicker} disabled={busy} aria-label="Ajouter une autre photo ou vidéo">
+              <button type="button" className="fcomposer-add" onClick={() => openPicker()} disabled={busy} aria-label="Ajouter une autre photo ou vidéo">
                 +
               </button>
             </li>
@@ -135,7 +155,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
 
       <div className="fcomposer-footer">
         <div className="fcomposer-tools">
-          <button type="button" className="fcomposer-tool is-photo" onClick={openPicker} disabled={busy} aria-label="Ajouter une photo ou une vidéo">
+          <button type="button" className="fcomposer-tool is-photo" onClick={() => openPicker()} disabled={busy} aria-label="Ajouter une photo ou une vidéo">
             <PhotoIcon /> <span>Photo/vidéo{media.length ? ` (${media.length})` : ''}</span>
           </button>
           <button type="button" className="fcomposer-tool" onClick={() => setBody(value => (value ? `${value} 😊` : '😊 '))} disabled={busy} aria-label="Ajouter une humeur">
@@ -179,7 +199,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
           </button>
         </div>
       ) : null}
-      <input ref={fileInput} className="fcomposer-file" type="file" accept="image/*,video/*" multiple onChange={onFilesSelected} tabIndex={-1} aria-hidden="true" />
+      <input ref={fileInput} className="fcomposer-file" type="file" accept={acceptKind === 'video' ? 'video/*' : 'image/*,video/*'} multiple onChange={onFilesSelected} tabIndex={-1} aria-hidden="true" />
       {media.length > 0 ? (
         <p className="fcomposer-hint">
           {media.length}/{MAX_POST_MEDIA_FILES} média{media.length > 1 ? 's' : ''} · {formatMediaSize(totalBytes)} · formats JPEG, PNG, WebP, GIF, MP4, WebM
