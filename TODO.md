@@ -40,4 +40,5 @@
 - [x] Rendre le compteur de réactions exact et immédiat (total réconcilié, icônes superposées triées, réaction perso en tête).
 - [x] Ajouter les vérifications de logique du fil : `npm run test:feed`.
 - [x] Publier une photo ou une vidéo depuis le composeur (sélection de fichier, aperçu avant publication, Supabase Storage).
+- [x] Bouton « Vidéos » de la barre supérieure : ouvre le sélecteur de vidéos du composeur au lieu du message « Les vidéos arrivent bientôt ».
 - [ ] Exécuter `supabase/migrations/008_post_media.sql` dans Supabase pour activer les publications multi-médias (une seule image est enregistrée tant que la colonne `posts.media_paths` manque).
