@@ -1,0 +1,392 @@
+/* Fil d’actualité Avani Pro — adaptation desktop de la référence fournie.
+   La couche est chargée après les styles historiques; le mobile reste inchangé. */
+@media (min-width: 761px) {
+  :root {
+    --ref-bg: #f4f7fb;
+    --ref-line: #e2eaf3;
+    --ref-text: #172b4d;
+    --ref-muted: #6b7b98;
+    --ref-blue: #1877f2;
+    --ref-navy: #14245f;
+  }
+
+  html[data-theme="light"] body { background: var(--ref-bg) !important; }
+
+  .app-shell {
+    display: grid !important;
+    grid-template-columns: 254px minmax(0, 630px) 286px !important;
+    justify-content: center !important;
+    gap: 0 18px !important;
+    max-width: none !important;
+    min-height: 100vh !important;
+    padding: 64px 0 0 !important;
+    background: var(--ref-bg) !important;
+    color: var(--ref-text) !important;
+  }
+
+  .app-shell .topbar {
+    position: fixed !important;
+    inset: 0 0 auto !important;
+    z-index: 50 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 64px !important;
+    margin: 0 !important;
+    padding: 0 max(16px, calc((100vw - 1240px) / 2)) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(90deg, #111d56, #1d3791 55%, #111d56) !important;
+    box-shadow: 0 2px 8px rgba(12, 28, 75, .22) !important;
+  }
+
+  .app-shell .topbar-brand { flex: 0 0 auto; gap: 18px !important; }
+  .app-shell .topbar-brand-button { color: #fff !important; }
+  .app-shell .topbar-brand-button .brand-mark {
+    width: 36px !important;
+    height: 36px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .app-shell .topbar-brand-button .brand-pro { color: #fff !important; font-weight: 700 !important; }
+  .app-shell .topbar .search {
+    width: 274px !important;
+    height: 40px !important;
+    padding: 0 14px !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    border-radius: 22px !important;
+    background: rgba(255,255,255,.12) !important;
+    color: #fff !important;
+  }
+  .app-shell .topbar .search input { color: #fff !important; font-size: 13px !important; }
+  .app-shell .topbar .search input::placeholder { color: rgba(255,255,255,.78) !important; }
+  .app-shell .topbar-nav-pro { height: 64px !important; gap: 2px !important; }
+  .app-shell .topbar-nav-pro button {
+    width: 78px !important;
+    height: 64px !important;
+    padding: 0 5px !important;
+    border-radius: 0 !important;
+    color: rgba(255,255,255,.78) !important;
+    font-size: 12px !important;
+  }
+  .app-shell .topbar-nav-pro button .svg-icon { width: 23px !important; height: 23px !important; }
+  .app-shell .topbar-nav-pro button.active {
+    color: #fff !important;
+    background: transparent !important;
+  }
+  .app-shell .topbar-nav-pro button.active::after { background: #72b8ff !important; }
+  .app-shell .top-actions { gap: 10px !important; }
+  .app-shell .nav-bell { background: rgba(255,255,255,.12) !important; }
+  .app-shell .profile-trigger .avatar { border-color: rgba(255,255,255,.65) !important; }
+  .app-shell .menu-trigger { background: transparent !important; color: #fff !important; }
+
+  .app-shell .sidebar {
+    grid-column: 1 !important;
+    position: sticky !important;
+    top: 64px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100vh - 64px) !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    padding: 12px 8px 16px !important;
+    border: 0 !important;
+    background: #fff !important;
+    box-shadow: 1px 0 0 var(--ref-line);
+  }
+  .app-shell .sidebar .brand { display: none !important; }
+  .app-shell .profile-mini {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin: 4px 0 8px !important;
+    padding: 8px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+  }
+  .app-shell .profile-mini .avatar { width: 40px !important; height: 40px !important; border-radius: 50% !important; }
+  .app-shell .profile-mini strong { color: var(--ref-text) !important; font-size: 14px !important; }
+  .app-shell .profile-mini span:not(.verified) { color: var(--ref-muted) !important; font-size: 12px !important; }
+  .app-shell .nav-section-label { display: none !important; }
+  .app-shell .nav-stack-pro { display: grid !important; gap: 2px !important; padding: 0 !important; }
+  .app-shell .nav-stack-pro .nav-button {
+    min-height: 38px !important;
+    padding: 7px 10px !important;
+    border-radius: 8px !important;
+    color: #263d65 !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+  }
+  .app-shell .nav-stack-pro .nav-button .svg-icon { width: 20px !important; height: 20px !important; color: currentColor !important; }
+  .app-shell .nav-stack-pro .nav-button.active { background: #e6f1ff !important; color: var(--ref-blue) !important; font-weight: 700 !important; }
+  .app-shell .nav-stack-pro .nav-button:hover { background: #f1f5fa !important; }
+  .app-shell .sidebar-shortcuts { display: grid; gap: 3px; margin: 12px 2px 4px; }
+  .app-shell .sidebar-shortcuts h2 {
+    margin: 4px 8px 5px;
+    color: var(--ref-muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .app-shell .sidebar-shortcuts button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    padding: 5px 7px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ref-text);
+    text-align: left;
+    cursor: pointer;
+  }
+  .app-shell .sidebar-shortcuts button:hover { background: #f1f5fa; }
+  .app-shell .shortcut-mark {
+    display: grid;
+    place-items: center;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(135deg,#173679,#7652df);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .app-shell .sidebar-shortcuts strong { overflow: hidden; color: var(--ref-text); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .app-shell .premium-card {
+    display: grid !important;
+    gap: 6px !important;
+    margin: 12px 4px 0 !important;
+    padding: 13px !important;
+    border-radius: 11px !important;
+    background: linear-gradient(120deg,#2428a8,#6234dd 65%,#a23bd5) !important;
+    color: #fff !important;
+  }
+  .app-shell .premium-card strong { font-size: 14px !important; }
+  .app-shell .premium-card p { margin: 0 !important; font-size: 12px !important; line-height: 1.4 !important; }
+  .app-shell .premium-card button {
+    margin-top: 5px !important;
+    padding: 8px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    color: #3d32bc !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+  .app-shell .sidebar-bottom { margin-top: auto !important; padding-top: 10px !important; }
+  .app-shell .sidebar-bottom .nav-button { min-height: 34px !important; margin-bottom: 6px !important; font-size: 12px !important; }
+  .app-shell .security-note { padding: 8px 10px 0 !important; border-top: 1px solid var(--ref-line) !important; color: var(--ref-muted) !important; font-size: 11px !important; }
+
+  .app-shell .main-content {
+    grid-column: 2 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 24px 0 40px !important;
+  }
+  .app-shell .feed-rebuild { width: 100% !important; max-width: none !important; margin: 0 !important; }
+  .app-shell .feed-page-heading,
+  .app-shell .stories-heading { display: none !important; }
+  .app-shell .stories-section {
+    margin: 0 0 14px !important;
+    padding: 10px !important;
+    border: 1px solid var(--ref-line) !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 2px 8px rgba(23,43,77,.07) !important;
+  }
+  .app-shell .stories-row {
+    display: grid !important;
+    grid-template-columns: repeat(6,minmax(0,1fr)) !important;
+    gap: 8px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+  .app-shell .story-card {
+    flex: none !important;
+    width: 100% !important;
+    height: 154px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 5px rgba(23,43,77,.12) !important;
+  }
+  .app-shell .story-card strong { left: 9px !important; right: 9px !important; bottom: 9px !important; font-size: 12px !important; }
+  .app-shell .feed-controls { display: none !important; }
+
+  .app-shell .fcomposer {
+    margin: 0 0 14px !important;
+    padding: 11px 13px 8px !important;
+    border: 1px solid var(--ref-line) !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 2px 8px rgba(23,43,77,.06) !important;
+  }
+  .app-shell .fcomposer-top { align-items: center !important; gap: 9px !important; }
+  .app-shell .fcomposer-avatar { width: 40px !important; height: 40px !important; border-radius: 50% !important; }
+  .app-shell .fcomposer-field textarea {
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 10px 14px !important;
+    border: 0 !important;
+    border-radius: 22px !important;
+    background: #f0f3f7 !important;
+    color: #172b4d !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    resize: vertical;
+  }
+  .app-shell .fcomposer-field textarea::placeholder { color: #6b7b98 !important; }
+  .app-shell .fcomposer-footer { gap: 4px !important; margin-top: 8px !important; padding-top: 6px !important; border-color: #e7edf4 !important; }
+  .app-shell .fcomposer-tools { flex: 1 1 auto !important; justify-content: space-between !important; gap: 2px !important; }
+  .app-shell .fcomposer-tool { justify-content: center !important; gap: 6px !important; padding: 7px 6px !important; color: #52627f !important; font-size: 12px !important; white-space: nowrap !important; }
+  .app-shell .fcomposer-tool svg { width: 17px !important; height: 17px !important; }
+  .app-shell .fcomposer-tool.is-photo { color: #259b63 !important; }
+  .app-shell .fcomposer-tool.is-reel { color: #dc3e69 !important; }
+  .app-shell .fcomposer-tool.is-mood { color: #df9a38 !important; }
+  .app-shell .fcomposer-tool.is-place { color: #c63f8b !important; }
+  .app-shell .fcomposer-audience { display: none !important; }
+  .app-shell .fcomposer-submit { display: none !important; }
+  .app-shell .fcomposer:has(.fcomposer-field textarea:not(:placeholder-shown), .fcomposer-media) .fcomposer-submit { display: flex !important; }
+
+  .app-shell .feed-post-list { display: grid !important; gap: 12px !important; }
+  .app-shell .feed-post-list .fpost-card {
+    margin: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid var(--ref-line) !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 2px 8px rgba(23,43,77,.07) !important;
+  }
+  .app-shell .feed-post-list .fpost-head { align-items: center !important; padding: 12px 14px 0 !important; }
+  .app-shell .feed-post-list .fpost-avatar { width: 40px !important; height: 40px !important; }
+  .app-shell .feed-post-list .fpost-author strong { color: var(--ref-text) !important; font-size: 14px !important; }
+  .app-shell .feed-post-list .fpost-meta,
+  .app-shell .feed-post-list .fpost-handle { color: var(--ref-muted) !important; font-size: 11px !important; }
+  .app-shell .feed-post-list .fpost-tools .fpost-icon-btn:first-child { display: none !important; }
+  .app-shell .feed-post-list .fpost-text { padding: 8px 14px 11px !important; color: var(--ref-text) !important; font-size: 14px !important; line-height: 1.45 !important; }
+  .app-shell .feed-post-list .fpost-tags { padding: 0 14px 10px !important; }
+  .app-shell .feed-post-list .fpost-tags span { font-size: 13px !important; }
+  .app-shell .feed-post-list .fpost-media { overflow: hidden; border-radius: 8px; }
+  .app-shell .feed-post-list .fpost-media-1 img,
+  .app-shell .feed-post-list .fpost-media-1 video { max-height: 540px !important; }
+  .app-shell .feed-post-list .fpost-engagement { min-height: 36px !important; padding: 0 14px !important; color: var(--ref-muted) !important; font-size: 12px !important; }
+  .app-shell .feed-post-list .fpost-engagement-meta { gap: 10px !important; }
+  .app-shell .feed-post-list .fpost-engagement-meta button { font-size: 12px !important; }
+  .app-shell .feed-post-list .fpost-actions { padding: 4px 9px !important; }
+  .app-shell .feed-post-list .fpost-actions > button,
+  .app-shell .feed-post-list .fpost-actions .rx-button {
+    min-height: 36px !important;
+    border-radius: 7px !important;
+    color: #596983 !important;
+    font-size: 12px !important;
+  }
+  .app-shell .feed-post-list .fpost-actions > button:hover,
+  .app-shell .feed-post-list .fpost-actions .rx-button:hover { background: #f0f3f7 !important; }
+
+  .app-shell .right-rail {
+    grid-column: 3 !important;
+    position: sticky !important;
+    top: 64px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: calc(100vh - 64px) !important;
+    min-width: 0 !important;
+    padding: 16px 0 16px 2px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+  }
+  .app-shell .right-rail > .rail-card {
+    margin: 0 0 12px !important;
+    padding: 12px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--ref-line) !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 2px 8px rgba(23,43,77,.06) !important;
+  }
+  .app-shell .right-rail > .network-card { display: none !important; }
+  .app-shell .right-rail > .online-contacts { order: 0; }
+  .app-shell .right-rail > details:nth-of-type(2) { order: 1; }
+  .app-shell .right-rail > .sponsored-card { order: 2; }
+  .app-shell .right-rail > details:nth-of-type(3) { order: 3; }
+  .app-shell .right-rail > .footer-links { order: 4; }
+  .app-shell .card-heading { gap: 8px !important; margin-bottom: 8px !important; color: var(--ref-text) !important; }
+  .app-shell .card-heading span { color: var(--ref-text) !important; font-size: 14px !important; font-weight: 700 !important; }
+  .app-shell .card-heading button { color: var(--ref-blue) !important; font-size: 12px !important; }
+  .app-shell .rail-detail > summary { list-style: none; cursor: pointer; }
+  .app-shell .rail-detail > summary::-webkit-details-marker { display: none; }
+  .app-shell .contact-list { padding: 0 2px 4px !important; }
+  .app-shell .contact-row { gap: 8px !important; padding: 5px 2px !important; color: var(--ref-text) !important; }
+  .app-shell .contact-row .avatar { width: 34px !important; height: 34px !important; border-radius: 50% !important; }
+  .app-shell .contact-row strong { color: var(--ref-text) !important; font-size: 12px !important; font-weight: 600 !important; }
+  .app-shell .contact-row > span:last-child { color: #8190a8 !important; font-size: 11px !important; }
+  .app-shell .suggestion-list { gap: 0 !important; }
+  .app-shell .suggestion { gap: 8px !important; padding: 7px 0 !important; border-bottom: 1px solid #edf1f5 !important; }
+  .app-shell .suggestion:last-child { border-bottom: 0 !important; }
+  .app-shell .suggestion .avatar { width: 40px !important; height: 40px !important; border-radius: 50% !important; }
+  .app-shell .suggestion-copy strong { color: var(--ref-text) !important; font-size: 12px !important; }
+  .app-shell .suggestion-copy span,
+  .app-shell .suggestion-copy small { color: var(--ref-muted) !important; font-size: 10px !important; }
+  .app-shell .suggestion button { min-width: 60px !important; padding: 7px 8px !important; border: 0 !important; border-radius: 7px !important; background: var(--ref-blue) !important; color: #fff !important; font-size: 11px !important; }
+  .app-shell .sponsor-banner { margin: 0 0 2px !important; padding: 13px !important; border-radius: 10px !important; }
+  .app-shell .sponsor-banner button { justify-self: stretch !important; text-align: center !important; }
+  .app-shell .group-suggestion-icon { flex: 0 0 38px; width: 38px; height: 38px; border-radius: 9px; }
+  .app-shell .empty-copy { color: var(--ref-muted) !important; font-size: 12px !important; }
+  .app-shell .footer-links { padding: 4px 8px 12px !important; color: var(--ref-muted) !important; font-size: 10px !important; line-height: 1.8 !important; }
+
+  html[data-theme="dark"] .app-shell {
+    --ref-bg: #101522;
+    --ref-line: #2e3850;
+    --ref-text: #e7eaf3;
+    --ref-muted: #a0abc2;
+  }
+  html[data-theme="dark"] body { background: #101522 !important; }
+  html[data-theme="dark"] .app-shell .sidebar,
+  html[data-theme="dark"] .app-shell .right-rail > .rail-card,
+  html[data-theme="dark"] .app-shell .fcomposer,
+  html[data-theme="dark"] .app-shell .feed-post-list .fpost-card,
+  html[data-theme="dark"] .app-shell .stories-section { background: #181d2b !important; }
+  html[data-theme="dark"] .app-shell .nav-stack-pro .nav-button,
+  html[data-theme="dark"] .app-shell .contact-row,
+  html[data-theme="dark"] .app-shell .suggestion-copy strong { color: var(--ref-text) !important; }
+  html[data-theme="dark"] .app-shell .fcomposer-field textarea { background: #262d3d !important; color: var(--ref-text) !important; }
+  html[data-theme="dark"] .app-shell .feed-post-list .fpost-text { color: var(--ref-text) !important; }
+}
+
+@media (min-width: 1101px) and (max-width: 1230px) {
+  .app-shell { grid-template-columns: 230px minmax(0, 1fr) 280px !important; gap: 0 16px !important; padding-left: 12px !important; padding-right: 12px !important; }
+  .app-shell .topbar-nav-pro button { width: 72px !important; }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .app-shell { grid-template-columns: 220px minmax(0, 1fr) !important; justify-content: stretch !important; gap: 0 16px !important; padding: 64px 12px 0 !important; }
+  .app-shell .right-rail { display: none !important; }
+  .app-shell .stories-row { display: flex !important; overflow-x: auto !important; }
+  .app-shell .story-card { flex: 0 0 100px !important; width: 100px !important; }
+  .app-shell .topbar-nav-pro button { width: 62px !important; }
+  .app-shell .topbar .search { width: 190px !important; }
+}
+
+@media (min-width: 761px) {
+  .app-shell .topbar-nav-pro > button:nth-child(n + 6) { display: none !important; }
+  .app-shell .menu-trigger {
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #fff !important;
+    font-size: 0 !important;
+  }
+  .app-shell .menu-trigger::after { content: '⌄'; font-size: 18px; line-height: 1; }
+}

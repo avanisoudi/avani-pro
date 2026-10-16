@@ -158,13 +158,13 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
           <button type="button" className="fcomposer-tool is-photo" onClick={() => openPicker()} disabled={busy} aria-label="Ajouter une photo ou une vidéo">
             <PhotoIcon /> <span>Photo/vidéo{media.length ? ` (${media.length})` : ''}</span>
           </button>
-          <button type="button" className="fcomposer-tool" onClick={() => setBody(value => (value ? `${value} 😊` : '😊 '))} disabled={busy} aria-label="Ajouter une humeur">
-            <span aria-hidden="true">☺</span> <span>Humeur</span>
+          <button type="button" className="fcomposer-tool is-reel" onClick={() => openPicker('video')} disabled={busy} aria-label="Ajouter un Reel vidéo">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 9 5 3-5 3z" /></svg><span>Reel</span>
           </button>
-          <button type="button" className="fcomposer-tool" onClick={() => setBody(value => (value && !value.endsWith(' ') ? `${value} #` : `${value}#`))} disabled={busy} aria-label="Ajouter un hashtag">
-            <span aria-hidden="true">#</span> <span>Hashtag</span>
+          <button type="button" className="fcomposer-tool is-mood" onClick={() => setBody(value => (value ? `${value} 😊` : '😊 '))} disabled={busy} aria-label="Ajouter une humeur ou une activité">
+            <span aria-hidden="true">☺</span> <span>Humeur/activité</span>
           </button>
-          <button type="button" className="fcomposer-tool" onClick={() => setPlaceOpen(open => !open)} disabled={busy} aria-expanded={placeOpen} aria-label="Ajouter un lieu">
+          <button type="button" className="fcomposer-tool is-place" onClick={() => setPlaceOpen(open => !open)} disabled={busy} aria-expanded={placeOpen} aria-label="Ajouter un lieu">
             <span aria-hidden="true">⌖</span> <span>Lieu</span>
           </button>
           <span className="fcomposer-audience" title="Visibilité selon les règles d’accès de ton compte">
