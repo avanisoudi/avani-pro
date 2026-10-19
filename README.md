@@ -1,4 +1,4 @@
-# AVANI PRO — v1.2.0
+# AVANI PRO — v1.3.0
 
 Réseau social professionnel nouvelle génération — interface React + TypeScript + Vite, prête pour une connexion Supabase.
 
