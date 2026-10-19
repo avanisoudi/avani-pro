@@ -88,7 +88,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}/confirm`,
             data: { full_name: fullName, username, phone: phone.trim() },
           },
         })

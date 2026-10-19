@@ -9,6 +9,7 @@ import './feed.css'
 import './themes.css'
 import './feed-reference.css'
 import { AuthModal } from './components/AuthModal'
+import { ConfirmEmailPanel } from './components/ConfirmEmailPanel'
 import { ResetPasswordPanel } from './components/ResetPasswordPanel'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
@@ -320,6 +321,14 @@ function App() {
     const leaveResetPage = () => { window.history.replaceState({}, '', '/'); setPathname('/') }
     return <>
       <ResetPasswordPanel onDone={message => { leaveResetPage(); flash(message) }} onBack={leaveResetPage} />
+      {toast && <div className="toast"><span>✦</span>{toast}</div>}
+    </>
+  }
+
+  if (pathname.startsWith('/confirm')) {
+    const leaveConfirmPage = () => { window.history.replaceState({}, '', '/'); setPathname('/') }
+    return <>
+      <ConfirmEmailPanel onDone={message => { leaveConfirmPage(); flash(message) }} onBack={leaveConfirmPage} />
       {toast && <div className="toast"><span>✦</span>{toast}</div>}
     </>
   }
