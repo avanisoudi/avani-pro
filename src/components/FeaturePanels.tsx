@@ -39,13 +39,18 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
   const save = async (event: React.FormEvent) => { event.preventDefault(); setBusy(true); setMessage(''); try { const saved = await updateMyProfile(user.id, { full_name: fullName.trim(), username: username.toLowerCase().trim(), bio: bio.trim() }); onProfile(saved); setMessage('Profil mis à jour avec succès.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible de mettre à jour le profil.') } finally { setBusy(false) } }
   const changePhoto = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; setPhotoBusy(true); setMessage(''); try { const saved = await uploadProfilePhoto(user.id, file); onProfile(saved); setMessage('Photo de profil mise à jour.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible d’envoyer la photo.') } finally { setPhotoBusy(false) } }
   const signOut = async () => {
-    if (!supabase) return
+    if (accountBusy) return
+    if (!supabase) {
+      setAccountMessage('Le service de connexion est indisponible. Réessayez plus tard.')
+      return
+    }
+    if (!window.confirm('Voulez-vous vraiment vous déconnecter de votre compte Avani Pro ?')) return
     setAccountBusy(true)
     setAccountMessage('')
     try {
-      await supabase.auth.signOut()
-      setAccountMessage('Vous êtes déconnecté. À bientôt sur Avani Pro.')
-      window.setTimeout(() => { window.location.href = '/' }, 600)
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
+      if (error) throw error
+      window.location.replace('/')
     } catch (error) {
       setAccountMessage(error instanceof Error ? error.message : 'Impossible de se déconnecter pour le moment.')
     } finally {
@@ -86,7 +91,7 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
     </div>
     <div className="profile-section-divider" />
     <div className="profile-workspace">
-      <div className="profile-workspace-heading"><div><span className="eyebrow">COMPTE</span><h3>Sécurité et session</h3><p>Gérez votre session Avani Pro. La déconnexion ferme votre session sur cet appareil.</p></div><span className={accountMessage.includes('déconnecté') ? 'profile-save-state is-saved' : 'profile-save-state'}>{accountBusy ? 'Déconnexion…' : accountMessage || 'Session active'}</span></div>
+      <div className="profile-workspace-heading"><div><span className="eyebrow">COMPTE</span><h3>Déconnexion du compte</h3><p>Fermez votre session sur cet appareil. Votre profil et vos données restent conservés ; vos autres appareils restent connectés.</p></div><span className="profile-save-state">{accountBusy ? 'Déconnexion…' : 'Session active'}</span></div>
       <div className="profile-form profile-form-modern">
         <div className="profile-form-footer">
           <span className="form-status" role="status">{accountMessage}</span>
