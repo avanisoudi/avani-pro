@@ -33,9 +33,25 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
   const [busy, setBusy] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [accountBusy, setAccountBusy] = useState(false)
+  const [accountMessage, setAccountMessage] = useState('')
   if (!user) return <FeatureEmpty title="Votre identité professionnelle" text="Connectez-vous pour créer et modifier votre profil Avani Pro." action="Se connecter" />
   const save = async (event: React.FormEvent) => { event.preventDefault(); setBusy(true); setMessage(''); try { const saved = await updateMyProfile(user.id, { full_name: fullName.trim(), username: username.toLowerCase().trim(), bio: bio.trim() }); onProfile(saved); setMessage('Profil mis à jour avec succès.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible de mettre à jour le profil.') } finally { setBusy(false) } }
   const changePhoto = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; setPhotoBusy(true); setMessage(''); try { const saved = await uploadProfilePhoto(user.id, file); onProfile(saved); setMessage('Photo de profil mise à jour.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Impossible d’envoyer la photo.') } finally { setPhotoBusy(false) } }
+  const signOut = async () => {
+    if (!supabase) return
+    setAccountBusy(true)
+    setAccountMessage('')
+    try {
+      await supabase.auth.signOut()
+      setAccountMessage('Vous êtes déconnecté. À bientôt sur Avani Pro.')
+      window.setTimeout(() => { window.location.href = '/' }, 600)
+    } catch (error) {
+      setAccountMessage(error instanceof Error ? error.message : 'Impossible de se déconnecter pour le moment.')
+    } finally {
+      setAccountBusy(false)
+    }
+  }
   const initials = (fullName || 'AV').split(/\s+/).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase()
   return <section className="feature-panel profile-page">
     <div className="profile-cover">
@@ -67,6 +83,18 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
         <label className="profile-bio-field"><span>Présentation</span><textarea value={bio} onChange={event => setBio(event.target.value)} maxLength={500} rows={4} placeholder="Votre expertise, vos projets, vos centres d’intérêt…" /><small>{bio.length}/500 caractères</small></label>
         <div className="profile-form-footer"><span className="form-status" role="status">{message}</span><button className="primary-button" disabled={busy || photoBusy}>{busy ? 'Enregistrement…' : 'Enregistrer les modifications ↗'}</button></div>
       </form>
+    </div>
+    <div className="profile-section-divider" />
+    <div className="profile-workspace">
+      <div className="profile-workspace-heading"><div><span className="eyebrow">COMPTE</span><h3>Sécurité et session</h3><p>Gérez votre session Avani Pro. La déconnexion ferme votre session sur cet appareil.</p></div><span className={accountMessage.includes('déconnecté') ? 'profile-save-state is-saved' : 'profile-save-state'}>{accountBusy ? 'Déconnexion…' : accountMessage || 'Session active'}</span></div>
+      <div className="profile-form profile-form-modern">
+        <div className="profile-form-footer">
+          <span className="form-status" role="status">{accountMessage}</span>
+          <button type="button" className="ghost-button" disabled={accountBusy} onClick={() => void signOut()}>
+            {accountBusy ? 'Déconnexion…' : 'Se déconnecter ↗'}
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 }
