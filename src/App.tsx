@@ -228,7 +228,7 @@ function App() {
   const displayName = profile?.full_name || sessionUser?.user_metadata?.full_name || ''
   const displayUsername = profile?.username ? `@${profile.username}` : sessionUser?.email ? `@${sessionUser.email.split('@')[0]}` : ''
   const displayAvatar = displayName.split(/\s+/).filter(Boolean).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase()
-  const displayAvatarUrl = profile?.avatar_url ?? null
+  const displayAvatarUrl = profile?.avatar_url ?? sessionUser?.user_metadata?.avatar_url ?? sessionUser?.user_metadata?.picture ?? null
   const visiblePosts = useMemo(() => {
     const query = feedQuery.trim().toLowerCase()
     return posts

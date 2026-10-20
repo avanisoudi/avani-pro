@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Votre code de vérification — Avani Pro</title>
+  </head>
+  <body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#172b4d;-webkit-font-smoothing:antialiased;">
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f4f7fb;">
+      Votre code de vérification Avani Pro. Expire rapidement.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(20,36,95,.10);">
+
+            <tr>
+              <td style="padding:36px 40px 20px;background:linear-gradient(135deg,#0b1020 0%,#14245f 45%,#1d3791 100%);text-align:center;">
+                <img src="https://avani-pro.onrender.com/logo-icon.png" alt="Avani Pro" width="56" height="56" style="display:block;margin:0 auto 14px;border:0;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);" />
+                <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:800;letter-spacing:.5px;">AVANI<span style="color:#8b5cf6;">PRO</span></h1>
+                <p style="margin:6px 0 0;color:rgba(255,255,255,.78);font-size:13px;letter-spacing:.3px;">Le réseau professionnel où les idées trouvent leur communauté</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:44px 44px 20px;text-align:center;">
+                <h2 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#172b4d;line-height:1.3;">Votre code de vérification 🔢</h2>
+
+                <p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:#4a5a7a;">
+                  Bonjour{{ if .Email }} <strong style="color:#172b4d;">{{ .Email }}</strong>{{ end }},<br />
+                  Utilisez le code ci-dessous pour vérifier votre identité. Il expire rapidement.
+                </p>
+
+                <!-- Code OTP -->
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;">
+                  <tr>
+                    <td align="center" style="padding:20px 40px;background:#f4f7fb;border:2px dashed #1877f2;border-radius:12px;">
+                      <span style="font-size:34px;font-weight:800;letter-spacing:8px;color:#14245f;font-family:'Courier New',Courier,monospace;">{{ .Token }}</span>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0 0 10px;font-size:13px;line-height:1.6;color:#6b7b98;">
+                  Saisissez ce code dans la fenêtre de vérification de votre navigateur.
+                </p>
+
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;margin:22px 0 8px;">
+                  <tr>
+                    <td style="padding:14px 16px;">
+                      <p style="margin:0;font-size:12px;line-height:1.6;color:#7c4a1d;">
+                        <strong style="color:#9a3412;">Sécurité :</strong> ne partagez jamais ce code. L'équipe Avani Pro ne vous le demandera jamais. Ce code expire rapidement et ne peut être utilisé qu'une seule fois.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 44px 36px;">
+                <p style="margin:0 0 4px;font-size:14px;color:#4a5a7a;">Cordialement,</p>
+                <p style="margin:0;font-size:14px;font-weight:700;color:#172b4d;">L'équipe Avani Pro</p>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:22px 44px;background:#f4f7fb;border-top:1px solid #e2eaf3;text-align:center;">
+                <p style="margin:0 0 6px;font-size:12px;color:#8a97b0;">
+                  © 2026 Avani Pro — Tous droits réservés.
+                </p>
+                <p style="margin:0;font-size:11px;color:#a0aec0;">
+                  Vous recevez cet email car une vérification d'identité a été demandée. <a href="https://avani-pro.onrender.com" style="color:#8a97b0;text-decoration:underline;">avani-pro.onrender.com</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+```<|end|><|start|>startup<|channel|>analysis<|message|>Output the code in chat.<|end|><|start|>start_process<|channel|>analysis <|constrain|>xml<|message|><rfl:parameter name="command">
+echo done

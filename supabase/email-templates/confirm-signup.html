@@ -3,51 +3,87 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Confirmez votre adresse email — Avani Pro</title>
   </head>
-  <body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#172b4d;">
+  <body style="margin:0;padding:0;background:#f4f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#172b4d;-webkit-font-smoothing:antialiased;">
+    <!-- Preheader (texte d'aperçu dans la boîte de réception) -->
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f4f7fb;">
+      Activez votre compte Avani Pro en confirmant votre adresse email. Lien valable 24 heures.
+    </div>
+
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fb;padding:40px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(20,36,95,.08);">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(20,36,95,.10);">
+
+            <!-- En-tête avec logo -->
             <tr>
-              <td style="padding:32px 40px 16px;background:linear-gradient(135deg,#111d56,#1d3791 55%,#111d56);text-align:center;">
-                <div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.12);line-height:48px;font-weight:800;color:#ffffff;font-size:20px;letter-spacing:1px;">AV</div>
-                <h1 style="margin:16px 0 0;color:#ffffff;font-size:22px;font-weight:700;">Avani Pro</h1>
-                <p style="margin:4px 0 0;color:rgba(255,255,255,.75);font-size:13px;">Le réseau des esprits en mouvement</p>
+              <td style="padding:36px 40px 20px;background:linear-gradient(135deg,#0b1020 0%,#14245f 45%,#1d3791 100%);text-align:center;">
+                <img src="https://avani-pro.onrender.com/logo-icon.png" alt="Avani Pro" width="56" height="56" style="display:block;margin:0 auto 14px;border:0;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);" />
+                <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:800;letter-spacing:.5px;">AVANI<span style="color:#8b5cf6;">PRO</span></h1>
+                <p style="margin:6px 0 0;color:rgba(255,255,255,.78);font-size:13px;letter-spacing:.3px;">Le réseau professionnel où les idées trouvent leur communauté</p>
               </td>
             </tr>
+
+            <!-- Corps -->
             <tr>
-              <td style="padding:40px;">
-                <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;color:#172b4d;">Confirmez votre adresse email</h2>
-                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#4a5a7a;">
-                  Bonjour{{ if .Email }} {{ .Email }}{{ end }},
+              <td style="padding:44px 44px 20px;">
+                <h2 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#172b4d;line-height:1.3;">Confirmez votre adresse email</h2>
+
+                <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#4a5a7a;">
+                  Bonjour{{ if .Email }} <strong style="color:#172b4d;">{{ .Email }}</strong>{{ end }},
                 </p>
-                <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#4a5a7a;">
+                <p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:#4a5a7a;">
                   Merci de vous être inscrit sur Avani Pro. Pour activer votre compte et accéder à votre réseau professionnel, confirmez votre adresse email en cliquant sur le bouton ci-dessous.
                 </p>
-                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+
+                <!-- Bouton CTA -->
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;">
                   <tr>
-                    <td align="center" style="border-radius:10px;background:#1877f2;">
-                      <a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:10px;">Confirmer mon email</a>
+                    <td align="center" style="border-radius:12px;background:linear-gradient(135deg,#1877f2,#8b5cf6);box-shadow:0 6px 18px rgba(24,119,242,.35);">
+                      <a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener" style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;letter-spacing:.2px;">Confirmer mon email</a>
                     </td>
                   </tr>
                 </table>
-                <p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#6b7b98;">
+
+                <p style="margin:0 0 10px;font-size:13px;line-height:1.6;color:#6b7b98;">
                   Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :
                 </p>
-                <p style="margin:0 0 24px;font-size:12px;line-height:1.5;color:#1877f2;word-break:break-all;">
-                  <a href="{{ .ConfirmationURL }}" style="color:#1877f2;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+                <p style="margin:0 0 28px;font-size:12px;line-height:1.6;color:#1877f2;word-break:break-all;background:#f4f7fb;padding:12px 14px;border-radius:8px;border:1px solid #e2eaf3;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#1877f2;text-decoration:none;">{{ .ConfirmationURL }}</a>
                 </p>
-                <hr style="border:none;border-top:1px solid #e2eaf3;margin:24px 0;" />
-                <p style="margin:0;font-size:12px;line-height:1.6;color:#8a97b0;">
-                  Ce lien expire sous 24 heures. Si vous n'avez pas créé de compte Avani Pro, ignorez simplement cet email.
-                </p>
+
+                <!-- Encadré sécurité -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border:1px solid #dce6fb;border-radius:10px;margin:0 0 8px;">
+                  <tr>
+                    <td style="padding:14px 16px;">
+                      <p style="margin:0;font-size:12px;line-height:1.6;color:#4a5a7a;">
+                        <strong style="color:#172b4d;">Sécurité :</strong> ce lien expire sous 24 heures et ne peut être utilisé qu'une seule fois. Si vous n'avez pas créé de compte Avani Pro, ignorez simplement cet email — aucune action ne sera effectuée.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
+
+            <!-- Signature -->
             <tr>
-              <td style="padding:20px 40px;background:#f4f7fb;text-align:center;">
-                <p style="margin:0;font-size:12px;color:#8a97b0;">© 2026 Avani Pro — Le réseau professionnel où les idées trouvent leur communauté.</p>
+              <td style="padding:0 44px 36px;">
+                <p style="margin:0 0 4px;font-size:14px;color:#4a5a7a;">Cordialement,</p>
+                <p style="margin:0;font-size:14px;font-weight:700;color:#172b4d;">L'équipe Avani Pro</p>
+              </td>
+            </tr>
+
+            <!-- Pied de page -->
+            <tr>
+              <td style="padding:22px 44px;background:#f4f7fb;border-top:1px solid #e2eaf3;text-align:center;">
+                <p style="margin:0 0 6px;font-size:12px;color:#8a97b0;">
+                  © 2026 Avani Pro — Tous droits réservés.
+                </p>
+                <p style="margin:0;font-size:11px;color:#a0aec0;">
+                  Vous recevez cet email car une inscription a été initiée avec cette adresse. <a href="https://avani-pro.onrender.com" style="color:#8a97b0;text-decoration:underline;">avani-pro.onrender.com</a>
+                </p>
               </td>
             </tr>
           </table>
@@ -56,3 +92,5 @@
     </table>
   </body>
 </html>
+```<|end|><|start|>startup<|channel|>analysis<|message|>Let me also output the code in chat since user asked "envoi moi le code ici". I already did earlier. Now they want updated version with logo. Let me provide the updated HTML.<|end|><|start|>start_process<|channel|>analysis <|constrain|>xml<|message|><rfl:parameter name="command">
+echo "updated"
