@@ -1187,3 +1187,7 @@
 @media (min-width: 761px) {
   .mobile-tabbar{display:none!important}
 }
+
+
+/* Retire le point rouge décoratif des notifications dans l’en-tête. */
+.nav-bell .nav-badge { display: none !important; }
