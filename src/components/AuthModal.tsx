@@ -31,7 +31,11 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     try {
       const { error: oauthError } = await requireSupabase().auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin },
+        options: {
+          redirectTo: window.location.origin,
+          scopes: 'openid email profile',
+          queryParams: { access_type: 'offline', prompt: 'consent' },
+        },
       })
       if (oauthError) throw oauthError
     } catch (caught) {
@@ -88,7 +92,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}/confirm`,
             data: { full_name: fullName, username, phone: phone.trim() },
           },
         })

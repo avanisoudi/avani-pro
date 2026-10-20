@@ -84,8 +84,8 @@ create table public.admin_roles (
 
 create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, username, full_name, phone)
-  values (new.id, coalesce(nullif(lower(new.raw_user_meta_data->>'username'), ''), 'user_' || substr(replace(new.id::text, '-', ''), 1, 12)), coalesce(nullif(new.raw_user_meta_data->>'full_name', ''), 'Nouveau membre'), new.raw_user_meta_data->>'phone');
+  insert into public.profiles (id, username, full_name, phone, avatar_url)
+  values (new.id, coalesce(nullif(lower(new.raw_user_meta_data->>'username'), ''), 'user_' || substr(replace(new.id::text, '-', ''), 1, 12)), coalesce(nullif(new.raw_user_meta_data->>'full_name', ''), coalesce(new.raw_user_meta_data->>'name', 'Nouveau membre')), new.raw_user_meta_data->>'phone', coalesce(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture'));
   insert into public.notifications (user_id, type, payload) values (new.id, 'account_created', jsonb_build_object('message', '🎉 Bienvenue sur Avani Pro ! Votre compte a été créé avec succès.'));
   return new;
 exception when unique_violation then

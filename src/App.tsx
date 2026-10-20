@@ -1,3 +1,5 @@
+import { version } from '../package.json'
+import './version.css'
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { User } from '@supabase/supabase-js'
 import './App.css'
@@ -9,6 +11,7 @@ import './feed.css'
 import './themes.css'
 import './feed-reference.css'
 import { AuthModal } from './components/AuthModal'
+import { ConfirmEmailPanel } from './components/ConfirmEmailPanel'
 import { ResetPasswordPanel } from './components/ResetPasswordPanel'
 import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
 import { MessagesPanel } from './components/MessagesPanel'
@@ -56,7 +59,7 @@ function navForPath(path: string): NavKey {
 function PublicHome({ onAuth }: { onAuth: () => void }) {
   return <div className="lp">
     <header className="lp-nav">
-      <a className="lp-brand" href="/" aria-label="Avani Pro, accueil"><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span></a>
+      <a className="lp-brand" href="/" aria-label="Avani Pro, accueil"><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span><span className="app-version" aria-label={`Version ${version}`}>v{version}</span></a>
       <nav className="lp-links" aria-label="Sections"><a href="#vision">Pourquoi Avani Pro</a><a href="#features">Fonctionnalités</a></nav>
       <div className="lp-actions"><button type="button" className="lp-login" onClick={onAuth}>Se connecter</button><button type="button" className="lp-cta" onClick={onAuth}>Créer un compte</button></div>
     </header>
@@ -227,7 +230,7 @@ function App() {
   const displayName = profile?.full_name || sessionUser?.user_metadata?.full_name || ''
   const displayUsername = profile?.username ? `@${profile.username}` : sessionUser?.email ? `@${sessionUser.email.split('@')[0]}` : ''
   const displayAvatar = displayName.split(/\s+/).filter(Boolean).map((part: string) => part[0]).join('').slice(0, 2).toUpperCase()
-  const displayAvatarUrl = profile?.avatar_url ?? null
+  const displayAvatarUrl = profile?.avatar_url ?? sessionUser?.user_metadata?.avatar_url ?? sessionUser?.user_metadata?.picture ?? null
   const visiblePosts = useMemo(() => {
     const query = feedQuery.trim().toLowerCase()
     return posts
@@ -324,11 +327,19 @@ function App() {
     </>
   }
 
+  if (pathname.startsWith('/confirm')) {
+    const leaveConfirmPage = () => { window.history.replaceState({}, '', '/'); setPathname('/') }
+    return <>
+      <ConfirmEmailPanel onDone={message => { leaveConfirmPage(); flash(message) }} onBack={leaveConfirmPage} />
+      {toast && <div className="toast"><span>✦</span>{toast}</div>}
+    </>
+  }
+
   if (!sessionUser) return <><PublicHome onAuth={openAuth} />{authOpen && <AuthModal onClose={() => setAuthOpen(false)} onSuccess={flash} />}{toast && <div className="toast"><span>✦</span>{toast}</div>}</>
 
   return (
     <div className={`app-shell theme-${theme}`}>
-      <header className="topbar av-navbar"><div className="topbar-brand"><button className="topbar-brand-button" aria-label="Accueil Avani Pro" onClick={() => navigateTo('/', 'feed')}><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span></button><label className="search"><SvgIcon name="search" /><input value={feedQuery} onChange={event => setFeedQuery(event.target.value)} placeholder="Rechercher sur Avani Pro…" aria-label="Recherche globale" /></label></div><nav className="topbar-nav topbar-nav-pro" aria-label="Accès rapide"><button className={active === 'feed' ? 'active' : ''} onClick={() => navigateTo('/', 'feed')} aria-label="Accueil" title="Accueil"><SvgIcon name="home" /><span>Accueil</span></button><button className={active === 'explore' ? 'active' : ''} onClick={() => navigateTo('/search', 'explore')} aria-label="Réseau" title="Réseau"><SvgIcon name="profile" /><span>Réseau</span></button><button className={active === 'pages' ? 'active' : ''} onClick={() => navigateTo('/pages', 'pages')} aria-label="Pages" title="Pages"><SvgIcon name="pages" /><span>Pages</span></button><button className={active === 'groups' ? 'active' : ''} onClick={() => navigateTo('/groups', 'groups')} aria-label="Groupes" title="Groupes"><SvgIcon name="groups" /><span>Groupes</span></button>{open('videos') && <button className={active === 'videos' ? 'active' : ''} onClick={() => navigateTo('/videos', 'videos')} aria-label="Vidéos" title="Vidéos du réseau"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" /><path d="M10 9l5 3-5 3z" /></svg><span>Vidéos</span></button>}
+      <header className="topbar av-navbar"><div className="topbar-brand"><button className="topbar-brand-button" aria-label="Accueil Avani Pro" onClick={() => navigateTo('/', 'feed')}><span className="brand-mark"><img src="/logo-icon.png" alt="" /></span><span className="brand-word">AVANI<span className="brand-pro">PRO</span></span><span className="app-version" aria-label={`Version ${version}`}>v{version}</span></button><label className="search"><SvgIcon name="search" /><input value={feedQuery} onChange={event => setFeedQuery(event.target.value)} placeholder="Rechercher sur Avani Pro…" aria-label="Recherche globale" /></label></div><nav className="topbar-nav topbar-nav-pro" aria-label="Accès rapide"><button className={active === 'feed' ? 'active' : ''} onClick={() => navigateTo('/', 'feed')} aria-label="Accueil" title="Accueil"><SvgIcon name="home" /><span>Accueil</span></button><button className={active === 'explore' ? 'active' : ''} onClick={() => navigateTo('/search', 'explore')} aria-label="Réseau" title="Réseau"><SvgIcon name="profile" /><span>Réseau</span></button><button className={active === 'pages' ? 'active' : ''} onClick={() => navigateTo('/pages', 'pages')} aria-label="Pages" title="Pages"><SvgIcon name="pages" /><span>Pages</span></button><button className={active === 'groups' ? 'active' : ''} onClick={() => navigateTo('/groups', 'groups')} aria-label="Groupes" title="Groupes"><SvgIcon name="groups" /><span>Groupes</span></button>{open('videos') && <button className={active === 'videos' ? 'active' : ''} onClick={() => navigateTo('/videos', 'videos')} aria-label="Vidéos" title="Vidéos du réseau"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" /><path d="M10 9l5 3-5 3z" /></svg><span>Vidéos</span></button>}
             {open('reels') && <button className={active === 'reels' ? 'active' : ''} onClick={() => navigateTo('/reels', 'reels')} aria-label="Reels" title="Reels verticaux"><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="3" /><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" /></svg><span>Reels</span></button>}
             {open('stories') && <button className={active === 'stories' ? 'active' : ''} onClick={() => navigateTo('/stories', 'stories')} aria-label="Stories" title="Stories et archive"><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" strokeDasharray="4 3" /><circle cx="12" cy="12" r="3.4" /></svg><span>Stories</span></button>}
             <button type="button" onClick={pickVideoForPost} aria-label="Publier une vidéo" title="Publier une vidéo"><svg className="svg-icon av-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg></button></nav><div className="topbar-status"><span className="pulse-dot" />En ligne</div><div className="top-actions"><button type="button" className="nav-bell" aria-label="Notifications" title="Notifications" onClick={() => navigateTo('/notifications', 'notifications')}><svg className="svg-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9z" /><path d="M10 19a2 2 0 0 0 4 0" /></svg><span className="nav-badge" aria-hidden="true" /></button><button className="profile-trigger" aria-label="Ouvrir mon profil" onClick={() => navigateTo('/settings', 'profile')}><span className="avatar avatar-sm avatar-gradient">{displayAvatarUrl ? <img src={displayAvatarUrl} alt="Photo de profil" /> : displayAvatar}</span><span className="profile-trigger-name">{displayName.split(' ')[0]}</span></button><button className="menu-trigger" aria-expanded={menuOpen} aria-label="Ouvrir le menu principal" onClick={() => setMenuOpen(value => !value)}>☰</button></div>{menuOpen && <div className="main-menu"><button onClick={() => { setMenuOpen(false); navigateTo('/settings/compte', 'settings') }}>Réglages</button><button onClick={() => { setMenuOpen(false); navigateTo('/marketplace', 'marketplace') }}>Marketplace</button><button onClick={() => { setMenuOpen(false); navigateTo('/live', 'live') }}>Live</button><button onClick={() => { setMenuOpen(false); navigateTo('/files', 'files') }}>Mes fichiers</button><button onClick={() => { setMenuOpen(false); navigateTo('/notifications', 'notifications') }}>Notifications</button><button className="menu-danger" onClick={() => { setMenuOpen(false); void signOut() }}>Se déconnecter</button></div>}</header>
