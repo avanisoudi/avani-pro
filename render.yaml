@@ -6,5 +6,11 @@ services:
     staticPublishPath: ./dist
     routes:
       - type: rewrite
+        source: /confidentialite
+        destination: /confidentialite/index.html
+      - type: rewrite
+        source: /confidentialite/
+        destination: /confidentialite/index.html
+      - type: rewrite
         source: /*
         destination: /index.html
