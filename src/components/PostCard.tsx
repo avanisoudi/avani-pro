@@ -308,6 +308,7 @@ export function PostCard({ post, user, me, onReact, onShare, onSave, onCommentTo
 
 /** Médias d’une publication : 1 pleine largeur, 2 côte à côte, 3 en vedette + colonne, 4 en grille. */
 function PostMedia({ media, author }: { media: Array<{ type: 'image' | 'video'; url: string }>; author: string }) {
+  const [failed, setFailed] = useState<Record<string, boolean>>({})
   const shown = media.slice(0, 4)
   const overflow = media.length - shown.length
   const layout = overflow > 0 ? 4 : shown.length
@@ -315,10 +316,10 @@ function PostMedia({ media, author }: { media: Array<{ type: 'image' | 'video'; 
     <div className={`fpost-media fpost-media-${layout}${overflow > 0 ? ' has-more' : ''}`}>
       {shown.map((item, index) => (
         <figure className="fpost-media-tile" key={`${item.url}-${index}`}>
-          {item.type === 'video' ? (
-            <video src={item.url} controls preload="metadata" />
+          {failed[item.url] ? <div className="fpost-media-error" role="status"><p>Ce média ne peut pas être affiché. Rechargez la page ou ouvrez le fichier.</p><a href={item.url} target="_blank" rel="noreferrer">Ouvrir le fichier</a></div> : item.type === 'video' ? (
+            <video src={item.url} controls playsInline preload="metadata" onError={() => setFailed(current => ({ ...current, [item.url]: true }))}><a href={item.url}>Ouvrir la vidéo</a></video>
           ) : (
-            <img src={item.url} alt={`Média publié par ${author}`} loading="lazy" />
+            <a href={item.url} target="_blank" rel="noreferrer"><img src={item.url} alt={`Média publié par ${author}`} loading="lazy" onError={() => setFailed(current => ({ ...current, [item.url]: true }))} /></a>
           )}
           {index === shown.length - 1 && overflow > 0 ? (
             <span className="fpost-media-more">

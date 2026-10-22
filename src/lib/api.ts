@@ -26,7 +26,7 @@ export type MessageRecord = {
   sender?: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url'>
   reply_to?: Pick<MessageRecord, 'id' | 'body' | 'sender_id'> | null
 }
-export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; created_by?: string; last_read_at?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord | null }[] }
+export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; created_by?: string; avatar_path?: string | null; last_read_at?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord | null }[] }
 
 export const MESSAGE_ATTACHMENT_BUCKET = 'message-attachments'
 export const MAX_MESSAGE_ATTACHMENT_BYTES = 25 * 1024 * 1024
@@ -82,7 +82,7 @@ export async function getMyProfile(user: User) {
 }
 
 /** Colonnes de conversation garanties par les migrations 001 et 006 du dépôt. */
-const CONVERSATION_COLUMNS = 'id, title, is_group, updated_at, created_by'
+const CONVERSATION_COLUMNS = 'id, title, is_group, updated_at, created_by, avatar_path'
 
 /**
  * Rejoue une requête en retirant, une à une, les colonnes (ou relations) que la
@@ -569,4 +569,20 @@ export async function listConversationMembers(conversationId: string): Promise<P
   const { data, error } = await requireSupabase().from('conversation_members').select('user_id').eq('conversation_id', conversationId)
   if (error) throw error
   return listProfilesByIds((data ?? []).map(row => row.user_id))
+}
+
+/** Store the group picture privately, reusing conversation-member Storage access. */
+export async function updateChatAvatar(chatId: string, userId: string, file: File | null) {
+  const client = requireSupabase()
+  let path: string | null = null
+  if (file) {
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || !file.size || file.size > 5 * 1024 * 1024) throw new Error('Choisissez une image JPEG, PNG ou WebP de 5 Mo maximum.')
+    path = await uploadMessageAttachment(chatId, userId, file)
+  }
+  const { error } = await client.rpc('avani_set_chat_avatar', { p_chat: chatId, p_path: path })
+  if (error) {
+    if (path) await client.storage.from(MESSAGE_ATTACHMENT_BUCKET).remove([path])
+    throw new Error(error.message)
+  }
+  return path
 }

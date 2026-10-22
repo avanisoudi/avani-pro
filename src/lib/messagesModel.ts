@@ -152,3 +152,14 @@ export function reactionTotal(counts: Record<string, number> | undefined): numbe
   if (!counts) return 0
   return Object.values(counts).reduce((total, count) => total + (count || 0), 0)
 }
+
+/** Count people, not browser tabs, from the conversation's Realtime presence. */
+export function onlineConversationUserIds(state: Record<string, readonly { userId?: unknown }[]>): string[] {
+  const users = new Set<string>()
+  for (const sessions of Object.values(state)) {
+    for (const session of sessions) {
+      if (typeof session.userId === 'string' && session.userId.trim()) users.add(session.userId)
+    }
+  }
+  return [...users]
+}

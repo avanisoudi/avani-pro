@@ -41,39 +41,10 @@ export async function listDiscoverableProfiles(currentUserId: string) {
  * appliquée), le groupe est quand même créé et le message le dit explicitement.
  */
 export async function createGroup(ownerId: string, name: string, description: string, visibility: 'private' | 'public') {
-  const client = requireSupabase()
-  const groupName = name.trim()
-  if (groupName.length < 2) throw new Error('Un groupe porte un nom d’au moins 2 caractères.')
-  const { data: conversation, error: conversationError } = await client
-    .from('conversations')
-    .insert({ title: groupName, is_group: true, created_by: ownerId })
-    .select('id, title, is_group, updated_at')
-    .single()
-  if (conversationError) throw new Error(describeAccessError(conversationError, 'La création du chat de groupe') ?? conversationError.message)
-  const conversationId = (conversation as { id: string }).id
-  const { error: conversationMemberError } = await client.from('conversation_members').insert({ conversation_id: conversationId, user_id: ownerId })
-  if (conversationMemberError) {
-    await client.from('conversations').delete().eq('id', conversationId).eq('created_by', ownerId)
-    throw new Error(describeAccessError(conversationMemberError, 'L’ajout au chat de groupe') ?? conversationMemberError.message)
-  }
-  const payload: Record<string, unknown> = { owner_id: ownerId, name: groupName, description: description.trim() || null, visibility, conversation_id: conversationId }
-  const attempt = await client.from('groups').insert(payload).select('id, name, description, visibility, conversation_id, created_at').single()
-  if (attempt.error) {
-    // Base sans la colonne de liaison : le groupe est créé sans chat plutôt que de refuser la création.
-    if (isMissingColumnError(attempt.error, 'conversation_id')) {
-      delete payload.conversation_id
-      const fallback = await client.from('groups').insert(payload).select('id, name, description, visibility, created_at').single()
-      if (fallback.error) throw new Error(describeAccessError(fallback.error, 'La création du groupe') ?? fallback.error.message)
-      await client.from('conversation_members').delete().eq('conversation_id', conversationId).eq('user_id', ownerId)
-      await client.from('conversations').delete().eq('id', conversationId).eq('created_by', ownerId)
-      return { ...(fallback.data as Record<string, unknown>), conversation_id: null, chat_note: 'Groupe créé sans chat : la colonne groups.conversation_id (migration 006) manque à la base.' }
-    }
-    throw new Error(describeAccessError(attempt.error, 'La création du groupe') ?? attempt.error.message)
-  }
-  const group = attempt.data as Record<string, unknown>
-  const { error: memberError } = await client.from('group_members').insert({ group_id: group.id, user_id: ownerId, role: 'owner' })
-  if (memberError) throw new Error(describeAccessError(memberError, 'L’ajout du fondateur au groupe') ?? memberError.message)
-  return group
+  if (!ownerId) throw new Error('Connexion requise.')
+  const { data, error } = await requireSupabase().rpc('avani_create_community_group', { p_name: name.trim(), p_description: description.trim(), p_visibility: visibility })
+  if (error) throw new Error(error.code === 'PGRST202' ? 'La migration 015_community_groups_and_media.sql doit être appliquée pour créer les groupes.' : error.message)
+  return data as Record<string, unknown>
 }
 
 /** Mes groupes : la liaison de chat est optionnelle, la liste doit rester affichable. */

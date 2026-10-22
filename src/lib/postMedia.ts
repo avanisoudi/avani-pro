@@ -28,6 +28,10 @@ export type MediaKind = 'image' | 'video'
 export function mediaKind(file: File): MediaKind | null {
   if (file.type.startsWith('video/') || VIDEO_TYPES.includes(file.type)) return 'video'
   if (file.type.startsWith('image/') || IMAGE_TYPES.includes(file.type)) return 'image'
+  if (!file.type || file.type === 'application/octet-stream') {
+    if (/\.(mp4|webm|mov|m4v|ogv)$/i.test(file.name)) return 'video'
+    if (/\.(jpe?g|png|webp|gif|avif)$/i.test(file.name)) return 'image'
+  }
   return null
 }
 
@@ -114,10 +118,11 @@ export async function uploadPostMedia(userId: string, file: File): Promise<strin
   const kind = mediaKind(file)
   if (!kind) throw new Error('Choisis une photo (JPEG, PNG, WebP, GIF) ou une vidéo (MP4, WebM).')
   const limit = kind === 'video' ? MAX_POST_VIDEO_BYTES : MAX_POST_IMAGE_BYTES
+  if (file.size <= 0) throw new Error('Le fichier est vide.')
   if (file.size > limit) throw new Error(`« ${file.name} » dépasse ${formatMediaSize(limit)}.`)
   const path = buildMediaPath(userId, file)
   const client = requireSupabase()
-  const { error } = await client.storage.from(POST_MEDIA_BUCKET).upload(path, file, { upsert: false, contentType: file.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg'), cacheControl: '3600' })
+  const { error } = await client.storage.from(POST_MEDIA_BUCKET).upload(path, file, { upsert: false, contentType: file.type && file.type !== 'application/octet-stream' ? file.type : ({ mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v', ogv: 'video/ogg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif' } as Record<string, string>)[file.name.split('.').pop()?.toLowerCase() || ''] || 'image/jpeg', cacheControl: '3600' })
   if (error) throw new Error(describeMediaError(error))
   return path
 }

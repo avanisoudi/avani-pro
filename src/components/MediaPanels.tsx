@@ -157,7 +157,7 @@ export function VideosPanel({ user, onAction }: { user: User | null; onAction: (
       {status === 'ready' && clips.length === 0 && (
         <div className="media-state">
           <strong>Aucune vidéo {tag ? `avec ${tag}` : ''} pour l’instant.</strong>
-          <p>Le bouton « Vidéos » du composeur publie un fichier mp4, mov, webm ou ogv — il apparaît ici dès l’insertion en base.</p>
+          <p>Publiez une vidéo depuis le composeur du fil. Privilégiez MP4 (H.264) ou WebM pour une lecture compatible sur téléphone et ordinateur.</p>
         </div>
       )}
       {clips.length > 0 && (

@@ -1,3 +1,4 @@
+import { mentionAtCursor, insertMention } from '../../src/lib/mentions'
 /**
  * Vérifications du fil d’actualité (logique pure, sans DOM) : compteurs de réactions,
  * réconciliation avec le total publié, texte/médias et horaires relatifs.
@@ -5,7 +6,7 @@
  */
 import { applyReaction, formatCount, formatPostTime, isEditedPost, parsePostContent, reactionState, topReactions } from '../../src/lib/feed'
 import { MAX_POST_MEDIA_FILES, describeMediaError, isStoredMediaPath, mediaKind, mediaPostType, validateMediaSelection } from '../../src/lib/postMedia'
-import { conversationFromMembershipRow, conversationFromRow, conversationPreview, formatRowTime, messageFromRow, nextTolerantToken, publicGroupFromRow, reactionTotal, threadCountLabel, tokenName, topMessageReactions, unreadBadge } from '../../src/lib/messagesModel'
+import { onlineConversationUserIds, conversationFromMembershipRow, conversationFromRow, conversationPreview, formatRowTime, messageFromRow, nextTolerantToken, publicGroupFromRow, reactionTotal, threadCountLabel, tokenName, topMessageReactions, unreadBadge } from '../../src/lib/messagesModel'
 import { readFileSync } from 'node:fs'
 import { adoptCloudTheme, applyTheme, getTheme, nextTheme, readStoredTheme, resolveInitialTheme, setTheme, subscribeTheme, THEME_STORAGE_KEY } from '../../src/lib/theme'
 import { describeAccessError, isCheckConstraintError, isMissingColumnError, isMissingRelationError, isPermissionError } from '../../src/lib/postgres'
@@ -337,6 +338,39 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
   check('stats createur = ce qui est mesurable, rien destime', stats.live === 2 && stats.videos === 0 && stats.withCaption === 0 && stats.expired === 1, JSON.stringify(stats))
   check('les stories d’autrui ne gonflent pas mes statistiques', storyStats(mine, 'u2', new Date(now)).live === 0)
   check('initiales de bague, deux lettres maximum', storyRings(live.filter(item => isStoryLive(item, new Date(now))), 'u2')[0].initials === 'AR')
+}
+
+// Conversation presence counts people; reaction options are not permanently rendered.
+{
+  check('presence vide = aucune personne', onlineConversationUserIds({}).length === 0)
+  const sessions = { tabA: [{ userId: 'alice' }, { userId: 'alice' }], tabB: [{ userId: 'bob' }], tabC: [{ userId: 'alice' }] }
+  check('plusieurs onglets dune personne = une personne', onlineConversationUserIds(sessions).length === 2)
+  check('presence invalide ignoree', onlineConversationUserIds({ unknown: [{}, { userId: null }, { userId: '' }, { userId: '  ' }] }).length === 0)
+  check('depart presence retire la personne', onlineConversationUserIds({ tabB: sessions.tabB }).join(',') === 'bob')
+  const source = readFileSync('src/components/MessagesPanel.tsx', 'utf8')
+  check('entete ne compte plus les messages', !source.includes('threadCountLabel(') && source.includes('presentMembers'))
+  check('palette des reactions rendue sur demande seulement', source.includes('reactionPickerId === message.id && <div className="message-reactions"'))
+  check('pastilles reservees aux reactions existantes', source.includes('!message.deleted_at && total > 0'))
+  check('reactions accessibles au clavier et tactile', source.includes('aria-label="Réagir au message"') && source.includes('onPointerCancel={cancelReactionHold}') && source.includes("event.key === 'Escape'"))
+}
+
+// Mentions and media regression checks.
+{
+  const mention = mentionAtCursor('Bonjour @ali', 12)
+  check('mention detectee au curseur', mention?.query === 'ali' && mention.start === 8 && mention.end === 12)
+  check('mention sans filtre apres arobase', mentionAtCursor('@', 1)?.query === '')
+  check('adresse email non interpretee comme mention', mentionAtCursor('test@example', 12) === null)
+  check('mention terminee ne rouvre pas la liste', mentionAtCursor('@alice bonjour', 14) === null)
+  const inserted = insertMention('Salut @al !', 6, 9, 'alice')
+  check('insertion mention preserve la suite', inserted.text === 'Salut @alice  !' && inserted.cursor === 13)
+  check('video OGV reconnue dans le fil', parsePostContent('', ['https://cdn.test/clip.ogv?token=x']).media[0]?.type === 'video')
+  check('MP4 sans MIME reconnu', mediaKind({ name: 'clip.mp4', type: '' } as File) === 'video')
+  check('PNG sans MIME reconnu', mediaKind({ name: 'photo.png', type: '' } as File) === 'image')
+  check('fichier texte non deguise en video', mediaKind({ name: 'clip.mp4', type: 'text/plain' } as File) === null)
+  const social = readFileSync('src/lib/socialApi.ts', 'utf8')
+  check('creation groupe communautaire atomique par RPC', social.includes("rpc('avani_create_community_group'"))
+  check('rond rouge decoratif retire', !readFileSync('src/App.css', 'utf8').includes("content:'◉'"))
+  check('photo du groupe avec validation serveur', readFileSync('src/lib/api.ts', 'utf8').includes("rpc('avani_set_chat_avatar'"))
 }
 
 const failed = results.filter(result => !result.ok)
