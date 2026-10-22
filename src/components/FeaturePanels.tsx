@@ -75,7 +75,7 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
         <span className="eyebrow">PROFIL PERSONNEL</span>
         <h2>{fullName.trim() || 'Votre nom'} {profile?.verified_type && <VerifiedBadge type={profile.verified_type} />}</h2>
         <p className="profile-handle">{username ? `@${username}` : '@votre-identifiant'}</p>
-        <p className="profile-bio-preview">{bio.trim() || 'Ajoutez une présentation pour aider votre réseau à découvrir qui vous êtes et ce que vous faites.'}</p>
+        {bio.trim() && <p className="profile-bio-preview">{bio.trim()}</p>}
       </div>
       <button type="button" className="profile-edit-jump" onClick={() => document.getElementById('profile-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>✎ Modifier le profil</button>
     </div>

@@ -1,3 +1,4 @@
+import '../messaging.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, threadCountLabel, topMessageReactions, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
@@ -27,6 +28,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [previewError, setPreviewError] = useState('')
   const [joiningPublicGroup, setJoiningPublicGroup] = useState<string | null>(null)
   const [selected, setSelected] = useState<ConversationRecord | null>(null)
+  const selectedIdRef = useRef<string | null>(null)
+  useEffect(() => { selectedIdRef.current = selected?.id ?? null }, [selected?.id])
   const [messages, setMessages] = useState<MessageRecord[]>([])
   const [draft, setDraft] = useState('')
   const [attachment, setAttachment] = useState<File | null>(null)
@@ -34,7 +37,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [listFilter, setListFilter] = useState<'all' | 'public' | 'private'>('all')
+  const [listFilter, setListFilter] = useState<'all' | 'unread' | 'public' | 'private'>('all')
   const [typing, setTyping] = useState<TypingState>({})
   const [connection, setConnection] = useState<'connecting' | 'connected' | 'reconnecting' | 'offline'>('connecting')
   const [hasOlder, setHasOlder] = useState(true)
@@ -105,11 +108,12 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const visibleConversations = useMemo(
     () => conversations.filter(conversation => {
       const inPublicGroup = publicChatIds.has(conversation.id)
+      if (listFilter === 'unread' && !(previews[conversation.id]?.unread > 0)) return false
       if (listFilter === 'public' && !inPublicGroup) return false
       if (listFilter === 'private' && inPublicGroup) return false
       return (conversation.title || '').toLowerCase().includes(search.toLowerCase())
     }),
-    [conversations, search, listFilter, publicChatIds],
+    [conversations, search, listFilter, publicChatIds, previews],
   )
   const joinGroup = async (group: PublicGroupRecord) => {
     if (!user || joiningPublicGroup) return
@@ -143,7 +147,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         if (cancelled) return undefined
         const sortedItems = items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
         setConversations(sortedItems)
-        setSelected(current => current && sortedItems.some(item => item.id === current.id) ? current : (sortedItems.find(item => item.id === initialConversationId) ?? sortedItems[0] ?? null))
+        setSelected(current => current && sortedItems.some(item => item.id === current.id) ? current : (sortedItems.find(item => item.id === initialConversationId) ?? (window.matchMedia('(max-width: 680px)').matches ? null : sortedItems[0]) ?? null))
         // Les aperçus (dernier message, heure, non-lus) partent de la même liste :
         // une seule requête `messages` borde toute la colonne de gauche.
         return listConversationPreviews(user.id, sortedItems)
@@ -161,6 +165,15 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .catch(() => undefined)
     return () => { cancelled = true }
   }, [user, initialConversationId, reloadToken])
+
+  // Never carry a draft, reply or edit into a different conversation.
+  useEffect(() => {
+    setDraft('')
+    setAttachment(null)
+    setReplyTo(null)
+    setEditingId(null)
+    setEditingBody('')
+  }, [selected?.id])
 
   // Liste en direct : nouvelle conversation (invitation) ou nouveau message reçu
   // ailleurs — on rejoue la lecture de la boîte de réception, sans polling ni doublon.
@@ -356,15 +369,17 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       // pas l'embed profil, donc on la nomme avec le profil en cache.
       const me = senderCache.current.get(user.id)
       const message: MessageRecord = sent.sender || !me ? sent : { ...sent, sender: { id: me.id, username: me.username, full_name: me.full_name, avatar_url: me.avatar_url } }
-      setMessages(current => current.some(item => item.id === message.id) ? current : [...current, message])
-      setReplyTo(null)
-      setAttachment(null)
+      if (selectedIdRef.current === selected.id) {
+        setMessages(current => current.some(item => item.id === message.id) ? current : [...current, message])
+        setReplyTo(null)
+        setAttachment(null)
+      }
       // L'ordre de la liste est tenu par `conversations.updated_at`, que le trigger
       // `touch_conversation_on_message` (migration 009) fait avancer à chaque message.
       setConversations(current => [{ ...selected, updated_at: message.created_at }, ...current.filter(item => item.id !== selected.id).sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))])
       setPreviews(current => ({ ...current, [selected.id]: { preview: message.body.replace(/\s+/g, ' ').trim() || 'Pièce jointe', at: message.created_at, unread: current[selected.id]?.unread ?? 0, truncated: false } }))
     } catch (caught) {
-      setDraft(body)
+      if (selectedIdRef.current === selected.id) setDraft(body)
       onAction(caught instanceof Error ? caught.message : 'Message non envoyé.')
     } finally { setSending(false) }
   }
@@ -425,15 +440,15 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
   }
 
-  if (!user) return <section className="placeholder"><div className="placeholder-orb">◌</div><span className="eyebrow">MESSAGERIE</span><h2>Connectez-vous pour discuter.</h2><p>Vos conversations sont chargées depuis votre compte réel.</p></section>
+  if (!user) return <section className="placeholder"><div className="placeholder-orb">◌</div><span className="eyebrow">Discussions</span><h2>Connectez-vous pour discuter.</h2><p>Vos conversations sont chargées depuis votre compte réel.</p></section>
   if (loading) return <section className="placeholder"><div className="placeholder-orb">◌</div><h2>Chargement de vos conversations…</h2></section>
 
-  return <section className="messages-panel">
+  return <section className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''}`} aria-label="Messagerie Avani Pro">
     <div className="conversation-list">
       <div className="messages-heading">
-        <div><span className="eyebrow">MESSAGERIE</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => { setGroupMode(false); setNewConversationOpen(true) }}>＋ Discussion</button><button type="button" onClick={() => { setGroupMode(true); setNewConversationOpen(true) }}>＋ Groupe</button></div>
+        <div><span className="eyebrow">Discussions</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => { setGroupMode(false); setNewConversationOpen(true) }}>＋ Discussion</button><button type="button" onClick={() => { setGroupMode(true); setNewConversationOpen(true) }}>＋ Groupe</button></div>
       </div>
-      <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label><div className="message-filters"><button className={listFilter === 'all' ? 'active' : ''} type="button" onClick={() => setListFilter('all')}>Toutes</button><button className={listFilter === 'public' ? 'active' : ''} type="button" onClick={() => setListFilter('public')}>Groupes publics</button><button className={listFilter === 'private' ? 'active' : ''} type="button" onClick={() => setListFilter('private')}>Privées</button></div>
+      <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label><div className="message-filters"><button className={listFilter === 'all' ? 'active' : ''} type="button" onClick={() => setListFilter('all')}>Toutes</button><button className={listFilter === 'unread' ? 'active' : ''} type="button" onClick={() => setListFilter('unread')}>Non lues</button><button className={listFilter === 'public' ? 'active' : ''} type="button" onClick={() => setListFilter('public')}>Groupes publics</button><button className={listFilter === 'private' ? 'active' : ''} type="button" onClick={() => setListFilter('private')}>Privées</button></div>
       {previewError && <p className="messages-note">{previewError} <button type="button" onClick={() => setReloadToken(value => value + 1)}>Réessayer</button></p>}
       {!reactionsLive && <p className="messages-note">Réactions masquées&nbsp;: la table <code>message_reactions</code> est absente de la base. Exécute <code>supabase/migrations/009_messages_live.sql</code> pour les activer.</p>}
       {(error || listError) && <div className="messages-alert" role="alert">
@@ -457,7 +472,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           </div>
         })}
       </div>}
-      {conversations.length > 0 && visibleConversations.length === 0 && <p className="empty-copy">{listFilter === 'public' ? 'Aucune conversation de groupe public : rejoins un groupe ci-dessous ou attend une invitation.' : listFilter === 'private' ? 'Aucune discussion privée. ＋ Discussion pour en ouvrir une.' : 'Aucune conversation ne correspond à cette recherche.'}</p>}
+      {conversations.length > 0 && visibleConversations.length === 0 && <p className="empty-copy">{listFilter === 'unread' ? 'Aucune conversation non lue.' : listFilter === 'public' ? 'Aucune conversation de groupe public : rejoins un groupe ci-dessous ou attend une invitation.' : listFilter === 'private' ? 'Aucune discussion privée. ＋ Discussion pour en ouvrir une.' : 'Aucune conversation ne correspond à cette recherche.'}</p>}
       {conversations.length === 0 && publicGroups.length === 0 && <p className="empty-copy">{listError ? 'Aucune conversation chargée — vois la bannière ci-dessus.' : 'Aucune conversation pour le moment. Lance une discussion privée ou rejoins un groupe public.'}</p>}
       {visibleConversations.map(conversation => {
         const preview = previews[conversation.id]
@@ -478,7 +493,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
 
     <div className="message-thread">
       {selected ? <>
-        <div className="thread-head">
+        <div className="thread-head"><button type="button" className="thread-back" onClick={() => setSelected(null)} aria-label="Retour aux discussions">←</button>
           <div className="thread-title"><div className="avatar avatar-md avatar-soft">{(selected.title || 'AV').slice(0, 2).toUpperCase()}</div><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? 'Connecté en temps réel' : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'} · {threadCountLabel(messages.length, hasOlder)}</small></div></div><div className="thread-head-actions"><button type="button" onClick={() => onAction(selected.is_group ? 'Les membres du groupe sont accessibles depuis cet espace.' : 'Cette conversation est privée entre ses membres.')}>ⓘ</button></div>
         </div>
 
@@ -499,6 +514,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
                 <b>{total}</b>
               </div>}
               <div className={`message-bubble ${mine ? 'mine' : ''}`}>
+                {!mine && selected.is_group && message.sender?.full_name && <strong className="message-sender-name">{message.sender.full_name}</strong>}
                 {message.reply_to && <button type="button" className="message-reply-preview" onClick={() => document.getElementById(`message-${message.reply_to?.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>↳ {message.reply_to.body}</button>}
                 {editingId === message.id ? <div className="message-edit"><textarea value={editingBody} onChange={event => setEditingBody(event.target.value)} aria-label="Modifier le message" /><button type="button" onClick={() => void saveEdit()}>Enregistrer</button><button type="button" onClick={() => { setEditingId(null); setEditingBody('') }}>Annuler</button></div> : <>
                   {message.attachment_path && !message.deleted_at && <MessageAttachment message={message} />}<span>{message.deleted_at ? 'Ce message a été supprimé.' : message.body}</span>
@@ -530,7 +546,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
 
         <form className="message-compose" onSubmit={submit}>
           <div className="message-input-wrap"><input value={draft} onChange={event => handleDraftChange(event.target.value)} placeholder={selected.is_group ? 'Écrire au groupe…' : 'Écrire un message…'} aria-label="Votre message" disabled={connection === 'offline'} />{attachment && <span className="attachment-chip">{attachment.name}<button type="button" onClick={() => setAttachment(null)} aria-label="Retirer la pièce jointe">×</button></span>}</div>
-          <label className="attachment-button" title="Ajouter une pièce jointe">＋<input type="file" accept="image/*,video/*,application/pdf,text/plain" onChange={chooseAttachment} /></label><button className="primary-button" disabled={(!draft.trim() && !attachment) || connection === 'offline' || sending}>{sending ? 'Envoi…' : 'Envoyer ↗'}</button>
+          <label className="attachment-button" title="Ajouter une pièce jointe">＋<input aria-label="Ajouter une pièce jointe" type="file" accept="image/*,video/*,application/pdf,text/plain" onChange={chooseAttachment} /></label><button className="primary-button" aria-label="Envoyer le message" disabled={(!draft.trim() && !attachment) || connection === 'offline' || sending}>{sending ? '…' : '➤'}</button>
         </form>
       </> : <div className="empty-thread"><span>◌</span><p>Sélectionnez une conversation.</p></div>}
     </div>
