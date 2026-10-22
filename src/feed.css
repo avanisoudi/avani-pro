@@ -1176,3 +1176,9 @@
 .fpost-engagement + .fpost-actions {
   border-top: 0;
 }
+/* Preserve single-photo/portrait-video proportions on every viewport. */
+.app-shell .fpost-media-1 .fpost-media-tile{height:auto!important;min-height:0!important;max-height:none!important;background:#100d18}
+.app-shell .fpost-media-1 :is(img,video){display:block!important;width:100%!important;height:auto!important;min-height:0!important;max-height:75dvh!important;object-fit:contain!important;aspect-ratio:auto!important;margin:auto}
+.app-shell .fpost-media video{max-width:100%;object-fit:contain!important;background:#100d18}
+.app-shell .fpost-media-tile{min-width:0;overflow:hidden}
+.app-shell .fpost-media-error{padding:24px;text-align:center;color:var(--fp-text,#555);background:var(--fp-bubble,#eee);font-size:13px}.app-shell .fpost-media-error a{color:#7c3aed}

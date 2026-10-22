@@ -190,8 +190,8 @@ export function parsePostContent(body: string, attached: string[] = []): PostCon
   const push = (type: 'image' | 'video', url: string) => {
     if (!media.some(item => item.url === url)) media.push({ type, url })
   }
-  attached.forEach(url => push(/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? 'video' : 'image', url))
-  images.forEach(url => push(/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? 'video' : 'image', url))
+  attached.forEach(url => push(/\.(mp4|webm|mov|m4v|ogv|avi)(\?|#|$)/i.test(url) ? 'video' : 'image', url))
+  images.forEach(url => push(/\.(mp4|webm|mov|m4v|ogv|avi)(\?|#|$)/i.test(url) ? 'video' : 'image', url))
   videos.forEach(url => push('video', url))
   return { text: text.trim(), media, links: [...new Set(bareUrls)] }
 }

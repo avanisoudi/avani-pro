@@ -1,3 +1,4 @@
+import { useAppPresence } from './lib/onlinePresence'
 import { version } from '../package.json'
 import './version.css'
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
@@ -162,6 +163,7 @@ function App() {
   const [mediaProgress, setMediaProgress] = useState<{ done: number; total: number } | null>(null)
   const [composerRequest, setComposerRequest] = useState<{ id: number; kind: 'all' | 'video' } | null>(null)
   const [sessionUser, setSessionUser] = useState<User | null>(null)
+  useAppPresence(sessionUser?.id)
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
   const [initialConversationId, setInitialConversationId] = useState<string | undefined>()

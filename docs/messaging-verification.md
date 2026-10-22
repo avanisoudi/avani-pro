@@ -43,3 +43,17 @@ Les fichiers du dépôt n’appliquent pas automatiquement les migrations ou les
 - Recette SQL transactionnelle annulée : création groupe, renommage, ajout/retrait, transfert, départ, réutilisation d’un DM ; refus d’anonyme, non-membre et membre non responsable. Aucun groupe de test conservé.
 - Recette RLS sous rôle `authenticated`, également annulée : message envoyé par A lisible par B, non lisible par C ; refus d’envoi de C et d’édition du message de A par B ; invitation directe refusée à B et C.
 - Ces tests SQL ne simulent pas la livraison réseau Realtime ni un upload réel via Storage. Tests de navigateur entre deux comptes et appareils réels encore nécessaires.
+
+## Correctifs mentions, logos et médias — 22 octobre 2026
+
+- Migration 015 appliquée au projet : groupe communautaire créé atomiquement avec son chat et son propriétaire ; politique de lecture des membres non récursive ; `conversations.avatar_path` ; `posts.media_paths` ; lecture authentifiée du bucket privé `post-media`.
+- Mentions : saisie `@`, choix parmi les autres membres actuels du groupe, clavier et tactile, liens de profils et surbrillance pour le destinataire. Mentions conservées dans le texte par identifiant public ; pas de notification push spécifique ni d’identifiants structurés de mention.
+- Logo : informations du chat de groupe → photo, réservé à son créateur encore membre. JPEG/PNG/WebP, 5 MiB au maximum côté client ; chemin et autorisation contrôlés côté serveur. Stockage privé, affichage par URL signée. Les anciennes photos remplacées ne sont pas automatiquement supprimées.
+- Présence : une inscription Realtime pour l’application connectée ; compteur des personnes distinctes présentes et membres du groupe, jamais compteur des messages. Un état inconnu ne simule pas un nombre de personnes connectées.
+- Réactions : seules les réactions effectivement déposées apparaissent sous le message ; palette sur demande (bouton, menu contextuel ou appui prolongé).
+- Médias : MIME manquant reconnu par extension, refus des fichiers vides, enregistrement des chemins multiples, lecture native responsive avec `playsInline`, message visible si le fichier ne peut pas être lu. Pas de transcodage ; MP4 H.264/WebM recommandés.
+- Le rond rouge supprimé était le pseudo-élément décoratif `.top-actions:before`, sans action ; notifications et Stories restent disponibles.
+- Vérification locale : build TypeScript/Vite réussi, 138/138 tests de régression, lint sans erreur (32 avertissements), `git diff --check` propre ; smoke HTTP de la version compilée réussi.
+- Recette Supabase authentifiée, transaction annulée : création atomique du groupe privé, adhésions du propriétaire, lecture sans récursion RLS, refus de chemin photo invalide et de modification par non-propriétaire, groupe privé invisible au tiers ; insertion/relecture d’une publication vidéo avec deux chemins de médias conservés. Aucun groupe/publication de recette conservé.
+- Constat avant livraison : neuf publications en base, dont deux images avec chemin de média et aucune vidéo. Un upload antérieurement échoué ne peut pas être reconstitué.
+- Limites de vérification : pas de navigateur graphique disponible ici, pas d’upload/download réel par Storage API, pas de contrôle visuel téléphone/ordinateur ou de réception Realtime entre deux appareils. La recette SQL valide les métadonnées et autorisations, pas le transfert des octets ni les codecs. Ces validations restent nécessaires avant d’affirmer une vérification de bout en bout.
