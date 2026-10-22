@@ -67,7 +67,7 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
     </div>
     <div className="profile-identity">
       <label className="profile-avatar-upload" title="Changer la photo de profil">
-        {profile?.avatar_url ? <img src={profile.avatar_url} alt="Photo de profil" /> : <span>{initials}</span>}
+        <span className="profile-avatar-frame">{profile?.avatar_url ? <img src={profile.avatar_url} alt="Photo de profil" /> : <span>{initials}</span>}</span>
         <i aria-hidden="true">＋</i>
         <input type="file" accept="image/jpeg,image/png,image/webp" onChange={changePhoto} disabled={photoBusy} />
       </label>
