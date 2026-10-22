@@ -2,7 +2,7 @@ import '../messaging.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, threadCountLabel, topMessageReactions, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
-import { createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
+import { manageChat, listConversationMembers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
@@ -13,6 +13,8 @@ function MessageAttachment({ message }: { message: MessageRecord }) {
   useEffect(() => { let active = true; if (!message.attachment_path) return () => { active = false }; getMessageAttachmentUrl(message.attachment_path).then(value => { if (active) setUrl(value) }).catch(() => { if (active) setError(true) }); return () => { active = false } }, [message.attachment_path])
   if (error) return <span className="attachment-error">Pièce jointe indisponible</span>
   if (!url) return <span className="attachment-loading">Chargement de la pièce jointe…</span>
+  if (message.attachment_mime_type?.startsWith('video/')) return <video className="message-attachment-video" controls preload="metadata" src={url} aria-label={message.attachment_name || 'Vidéo jointe'} />
+  if (message.attachment_mime_type?.startsWith('audio/')) return <audio controls preload="metadata" src={url} aria-label={message.attachment_name || 'Audio joint'} />
   if (message.attachment_mime_type?.startsWith('image/')) return <a href={url} target="_blank" rel="noreferrer"><img className="message-attachment-image" src={url} alt={message.attachment_name || 'Pièce jointe'} /></a>
   return <a className="message-attachment-link" href={url} target="_blank" rel="noreferrer">↗ {message.attachment_name || 'Ouvrir la pièce jointe'}</a>
 }
@@ -35,6 +37,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [attachment, setAttachment] = useState<File | null>(null)
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
+  const inboxLoaded = useRef(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [listFilter, setListFilter] = useState<'all' | 'unread' | 'public' | 'private'>('all')
@@ -45,12 +48,32 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [replyTo, setReplyTo] = useState<MessageRecord | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
+  const [infoOpen, setInfoOpen] = useState(false)
+  const [members, setMembers] = useState<ProfileRecord[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [membersError, setMembersError] = useState('')
+  const [groupBusy, setGroupBusy] = useState(false)
+  const [groupError, setGroupError] = useState('')
+  const [groupNewName, setGroupNewName] = useState('')
+  const [inviteQuery, setInviteQuery] = useState('')
+  const [inviteResults, setInviteResults] = useState<ProfileRecord[]>([])
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [memberReload, setMemberReload] = useState(0)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [messageQuery, setMessageQuery] = useState('')
+  const [emojiOpen, setEmojiOpen] = useState(false)
+  const composerRef = useRef<HTMLTextAreaElement>(null)
   const [newConversationOpen, setNewConversationOpen] = useState(false)
   const [groupMode, setGroupMode] = useState(false)
   const [contactQuery, setContactQuery] = useState('')
   const [contacts, setContacts] = useState<ProfileRecord[]>([])
   const [selectedContacts, setSelectedContacts] = useState<string[]>([])
   const [groupTitle, setGroupTitle] = useState('')
+  const [contactsLoading, setContactsLoading] = useState(false)
+  const [contactsError, setContactsError] = useState('')
+  const [creationError, setCreationError] = useState('')
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const selectedContactProfiles = useRef(new Map<string, ProfileRecord>())
   const [creatingConversation, setCreatingConversation] = useState(false)
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<ReactionType, number>>>({})
   const [myReactions, setMyReactions] = useState<Record<string, ReactionType | null>>({})
@@ -59,23 +82,120 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   useEffect(() => {
     if (!newConversationOpen || !user) return
     let active = true
-    void searchMessageContacts(user.id, contactQuery).then(rows => { if (active) setContacts(rows) }).catch(() => { if (active) setContacts([]) })
-    return () => { active = false }
+    setContactsLoading(true)
+    setContactsError('')
+    const timer = window.setTimeout(() => {
+      void searchMessageContacts(user.id, contactQuery).then(rows => {
+        if (active) {
+          setContacts(rows)
+          for (const row of rows) selectedContactProfiles.current.set(row.id, row)
+        }
+      }).catch(() => {
+        if (active) { setContacts([]); setContactsError('Impossible de charger les personnes. Vérifiez votre connexion et réessayez.') }
+      }).finally(() => { if (active) setContactsLoading(false) })
+    }, 250)
+    return () => { active = false; window.clearTimeout(timer) }
   }, [newConversationOpen, contactQuery, user])
+
+  const openNewConversation = (group: boolean) => {
+    setGroupMode(group)
+    setSelectedContacts([])
+    setContactQuery('')
+    setGroupTitle('')
+    setCreationError('')
+    setContacts([])
+    setNewConversationOpen(true)
+  }
+
+  useEffect(() => {
+    if (!newConversationOpen) return
+    const previousFocus = document.activeElement as HTMLElement | null
+    const dialog = dialogRef.current
+    dialog?.querySelector<HTMLInputElement>('input')?.focus()
+    const handleKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !creatingConversation) setNewConversationOpen(false)
+      if (event.key !== 'Tab' || !dialog) return
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]'))
+      const first = controls[0], last = controls[controls.length - 1]
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+    }
+    document.addEventListener('keydown', handleKeys)
+    return () => { document.removeEventListener('keydown', handleKeys); previousFocus?.focus() }
+  }, [newConversationOpen, creatingConversation])
+
+  useEffect(() => {
+    if (!infoOpen || !selected) return
+    let active = true
+    setMembersLoading(true)
+    setMembersError('')
+    setMembers([])
+    void listConversationMembers(selected.id).then(rows => { if (active) setMembers(rows) })
+      .catch(() => { if (active) setMembersError('Impossible de charger les membres de cette conversation.') })
+      .finally(() => { if (active) setMembersLoading(false) })
+    return () => { active = false }
+  }, [infoOpen, selected?.id, memberReload])
+
+  useEffect(() => {
+    if (!user || !infoOpen || !selected || selected.created_by !== user.id || !inviteQuery.trim()) { setInviteResults([]); return }
+    let active = true
+    setInviteLoading(true)
+    const timer = window.setTimeout(() => {
+      void searchMessageContacts(user.id, inviteQuery).then(rows => { if (active) setInviteResults(rows.filter(row => !members.some(member => member.id === row.id))) })
+        .catch(() => { if (active) setGroupError('Recherche de membres indisponible.') })
+        .finally(() => { if (active) setInviteLoading(false) })
+    }, 250)
+    return () => { active = false; window.clearTimeout(timer) }
+  }, [inviteQuery, infoOpen, selected?.id, selected?.created_by, members, user?.id])
+
+  const groupAction = async (action: 'rename' | 'add' | 'remove' | 'transfer' | 'leave', target?: string) => {
+    if (!selected || groupBusy) return
+    if (['remove', 'transfer', 'leave'].includes(action) && !window.confirm(action === 'leave' ? 'Quitter ce groupe ? Vous perdrez l’accès à ses messages.' : action === 'transfer' ? 'Transférer la gestion du groupe à ce membre ? Vous ne pourrez plus administrer le groupe.' : 'Retirer cette personne du groupe ?')) return
+    const chat = selected
+    setGroupBusy(true)
+    setGroupError('')
+    try {
+      await manageChat(chat.id, action, target, action === 'rename' ? groupNewName : undefined)
+      if (action === 'leave') {
+        setSelected(null)
+        setConversations(current => current.filter(item => item.id !== chat.id))
+      } else {
+        setMemberReload(value => value + 1)
+        setInviteQuery('')
+        if (action === 'rename' || action === 'transfer') {
+          const updated = { ...chat, ...(action === 'rename' ? { title: groupNewName.trim() } : { created_by: target }) }
+          setSelected(current => current?.id === chat.id ? updated : current)
+          setConversations(current => current.map(item => item.id === chat.id ? updated : item))
+        }
+      }
+      onAction('Groupe mis à jour.')
+    } catch (caught) { setGroupError(caught instanceof Error ? caught.message : 'Modification du groupe impossible.') }
+    finally { setGroupBusy(false) }
+  }
+
+  const insertEmoji = (emoji: string) => {
+    const input = composerRef.current
+    const start = input?.selectionStart ?? draft.length
+    const end = input?.selectionEnd ?? start
+    handleDraftChange(draft.slice(0, start) + emoji + draft.slice(end))
+    setEmojiOpen(false)
+    window.requestAnimationFrame(() => { input?.focus(); input?.setSelectionRange(start + emoji.length, start + emoji.length) })
+  }
 
   const startConversation = async () => {
     if (!user || !selectedContacts.length || creatingConversation) return
     setCreatingConversation(true)
+    setCreationError('')
     try {
       const created = groupMode
         ? await createGroupConversation(user.id, groupTitle, selectedContacts)
-        : await createDirectConversation(user.id, selectedContacts[0], contacts.find(item => item.id === selectedContacts[0])?.full_name || '')
+        : await createDirectConversation(user.id, selectedContacts[0], selectedContactProfiles.current.get(selectedContacts[0])?.full_name || '')
       setConversations(current => [created, ...current.filter(item => item.id !== created.id)])
       setSelected(created)
       setNewConversationOpen(false)
       setSelectedContacts([]); setContactQuery(''); setGroupTitle('')
     } catch (caught) {
-      onAction(caught instanceof Error ? caught.message : 'Impossible de créer la conversation.')
+      setCreationError(caught instanceof Error ? caught.message : 'Impossible de créer la conversation.')
     } finally { setCreatingConversation(false) }
   }
 
@@ -139,7 +259,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   useEffect(() => {
     if (!user) return
     let cancelled = false
-    setLoading(true)
+    if (!inboxLoaded.current) setLoading(true)
     setError('')
     setListError('')
     listConversations(user.id)
@@ -147,7 +267,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         if (cancelled) return undefined
         const sortedItems = items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
         setConversations(sortedItems)
-        setSelected(current => current && sortedItems.some(item => item.id === current.id) ? current : (sortedItems.find(item => item.id === initialConversationId) ?? (window.matchMedia('(max-width: 680px)').matches ? null : sortedItems[0]) ?? null))
+        setSelected(current => current && sortedItems.some(item => item.id === current.id) ? (sortedItems.find(item => item.id === current.id) ?? current) : (sortedItems.find(item => item.id === initialConversationId) ?? (window.matchMedia('(max-width: 680px)').matches ? null : sortedItems[0]) ?? null))
         // Les aperçus (dernier message, heure, non-lus) partent de la même liste :
         // une seule requête `messages` borde toute la colonne de gauche.
         return listConversationPreviews(user.id, sortedItems)
@@ -155,7 +275,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           .catch(caught => { if (!cancelled) setPreviewError(caught instanceof Error ? caught.message : 'Aperçus de conversations indisponibles.') })
       })
       .catch(caught => { if (!cancelled) setListError(caught instanceof Error ? caught.message : 'Impossible de charger tes conversations.') })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .finally(() => { if (!cancelled) { inboxLoaded.current = true; setLoading(false) } })
     listPublicGroups()
       .then(items => { if (!cancelled) setPublicGroups(items) })
       .catch(() => { if (!cancelled) setPublicGroups([]) })
@@ -173,6 +293,13 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     setReplyTo(null)
     setEditingId(null)
     setEditingBody('')
+    setInfoOpen(false)
+    setGroupError('')
+    setGroupNewName('')
+    setInviteQuery('')
+    setSearchOpen(false)
+    setMessageQuery('')
+    setEmojiOpen(false)
   }, [selected?.id])
 
   // Liste en direct : nouvelle conversation (invitation) ou nouveau message reçu
@@ -188,6 +315,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .channel(`inbox:${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_members', filter: `user_id=eq.${user.id}` }, () => bump())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => bump())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, () => bump())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'conversation_members' }, () => bump())
       .subscribe()
     return () => {
       if (timer) window.clearTimeout(timer)
@@ -356,7 +485,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!selected || !user || (!draft.trim() && !attachment) || sending) return
+    if (!selected || !user || (!draft.trim() && !attachment) || sending || connection === 'offline') return
     const body = draft.trim()
     setSending(true)
     setDraft('')
@@ -446,7 +575,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   return <section className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''}`} aria-label="Messagerie Avani Pro">
     <div className="conversation-list">
       <div className="messages-heading">
-        <div><span className="eyebrow">Discussions</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => { setGroupMode(false); setNewConversationOpen(true) }}>＋ Discussion</button><button type="button" onClick={() => { setGroupMode(true); setNewConversationOpen(true) }}>＋ Groupe</button></div>
+        <div><span className="eyebrow">Discussions</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => openNewConversation(false)}>＋ Discussion</button><button type="button" onClick={() => openNewConversation(true)}>＋ Groupe</button></div>
       </div>
       <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label><div className="message-filters"><button className={listFilter === 'all' ? 'active' : ''} type="button" onClick={() => setListFilter('all')}>Toutes</button><button className={listFilter === 'unread' ? 'active' : ''} type="button" onClick={() => setListFilter('unread')}>Non lues</button><button className={listFilter === 'public' ? 'active' : ''} type="button" onClick={() => setListFilter('public')}>Groupes publics</button><button className={listFilter === 'private' ? 'active' : ''} type="button" onClick={() => setListFilter('private')}>Privées</button></div>
       {previewError && <p className="messages-note">{previewError} <button type="button" onClick={() => setReloadToken(value => value + 1)}>Réessayer</button></p>}
@@ -494,9 +623,33 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     <div className="message-thread">
       {selected ? <>
         <div className="thread-head"><button type="button" className="thread-back" onClick={() => setSelected(null)} aria-label="Retour aux discussions">←</button>
-          <div className="thread-title"><div className="avatar avatar-md avatar-soft">{(selected.title || 'AV').slice(0, 2).toUpperCase()}</div><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? 'Connecté en temps réel' : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'} · {threadCountLabel(messages.length, hasOlder)}</small></div></div><div className="thread-head-actions"><button type="button" onClick={() => onAction(selected.is_group ? 'Les membres du groupe sont accessibles depuis cet espace.' : 'Cette conversation est privée entre ses membres.')}>ⓘ</button></div>
+          <div className="thread-title"><div className="avatar avatar-md avatar-soft">{(selected.title || 'AV').slice(0, 2).toUpperCase()}</div><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? 'Connecté en temps réel' : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'} · {threadCountLabel(messages.length, hasOlder)}</small></div></div><div className="thread-head-actions"><button type="button" aria-label="Rechercher dans les messages chargés" aria-expanded={searchOpen} onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕</button><button type="button" aria-label="Informations et membres" aria-expanded={infoOpen} onClick={() => { setInfoOpen(value => !value); setSearchOpen(false) }}>ⓘ</button></div>
         </div>
 
+        {searchOpen && <section className="thread-utility" aria-label="Recherche de messages">
+          <label>Rechercher dans les messages chargés<input autoFocus type="search" value={messageQuery} onChange={event => setMessageQuery(event.target.value)} placeholder="Mot ou phrase…" /></label>
+          <p>La recherche porte sur les messages déjà chargés. Chargez les anciens messages pour étendre les résultats.</p>
+          {messageQuery.trim() && <div className="thread-search-results">{messages.filter(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))).map(message => <button type="button" key={message.id} onClick={() => { const node = document.getElementById(`message-${message.id}`); node?.scrollIntoView({ behavior: 'smooth', block: 'center' }); node?.focus({ preventScroll: true }) }}>{message.body}<small>{new Date(message.created_at).toLocaleString('fr-FR')}</small></button>)}{!messages.some(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))) && <p role="status">Aucun message correspondant parmi les messages chargés.</p>}</div>}
+        </section>}
+        {infoOpen && <section className="thread-utility" aria-label="Informations sur la conversation">
+          <strong>{selected.title || 'Conversation'} · {selected.is_group ? 'Groupe' : 'Discussion privée'}</strong>
+          {membersLoading && <p role="status">Chargement des membres…</p>}
+          {membersError && <p role="alert">{membersError} <button type="button" onClick={() => setMemberReload(value => value + 1)}>Réessayer</button></p>}
+          {!membersLoading && !membersError && <><p>{members.length} membre{members.length > 1 ? 's' : ''} visible{members.length > 1 ? 's' : ''}</p><ul className="thread-members">{members.map(member => <li key={member.id}><span className="avatar avatar-sm avatar-soft">{member.avatar_url ? <img src={member.avatar_url} alt="" /> : member.full_name.slice(0, 2).toUpperCase()}</span><span>{member.full_name}{member.id === user.id ? ' (vous)' : ''}<small>@{member.username}</small></span></li>)}</ul></>}
+          {selected.is_group && !publicChatIds.has(selected.id) && <div className="group-management">
+            {groupError && <p role="alert">{groupError}</p>}
+            {selected.created_by === user.id ? <>
+              <p>Vous êtes responsable de ce groupe. Transférez la gestion à un autre membre avant de le quitter.</p>
+              <form onSubmit={event => { event.preventDefault(); void groupAction('rename') }}><label>Nouveau nom<input maxLength={100} value={groupNewName} onChange={event => setGroupNewName(event.target.value)} placeholder={selected.title || 'Nom du groupe'} disabled={groupBusy} /></label><button type="submit" disabled={groupBusy || !groupNewName.trim()}>Renommer</button></form>
+              <label>Ajouter une personne<input value={inviteQuery} onChange={event => setInviteQuery(event.target.value)} placeholder="Nom ou identifiant" disabled={groupBusy} /></label>
+              {inviteLoading && inviteQuery.trim() && <p role="status">Recherche…</p>}
+              {!inviteLoading && inviteQuery.trim() && inviteResults.length === 0 && <p>Aucune nouvelle personne trouvée.</p>}
+              {inviteResults.map(person => <button key={person.id} type="button" disabled={groupBusy || inviteLoading} onClick={() => void groupAction('add', person.id)}>Ajouter {person.full_name}</button>)}
+              <ul>{members.filter(member => member.id !== user.id).map(member => <li key={member.id}><span>{member.full_name}</span><button type="button" disabled={groupBusy} onClick={() => void groupAction('remove', member.id)}>Retirer</button><button type="button" disabled={groupBusy} onClick={() => void groupAction('transfer', member.id)}>Transférer la gestion</button></li>)}</ul>
+            </> : <button type="button" disabled={groupBusy} onClick={() => void groupAction('leave')}>Quitter le groupe</button>}
+            {groupBusy && <p role="status">Mise à jour du groupe…</p>}
+          </div>}
+        </section>}
         <div className="message-scroll" aria-live="polite">
           {hasOlder && <button type="button" className="message-button" onClick={() => void loadOlder()} disabled={loadingOlder}>{loadingOlder ? 'Chargement…' : 'Charger les anciens messages'}</button>}
           {messages.length === 0 && <p className="empty-copy">Commencez la conversation.</p>}
@@ -508,7 +661,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
             // Emplacement façon Messenger : les compteurs de réactions chevauchent le
             // bord externe de la bulle (à droite pour mes messages), l'heure et la mention
             // « modifié » sortent de la bulle, et les outils n'apparaissent qu'au survol.
-            return <div className={`message-line ${mine ? 'mine' : ''}`} key={message.id} id={`message-${message.id}`}>
+            return <div className={`message-line ${mine ? 'mine' : ''}`} key={message.id} tabIndex={-1} id={`message-${message.id}`}>
               {total > 0 && <div className="message-reaction-pills" aria-label={`${total} réaction${total > 1 ? 's' : ''} sur ce message`}>
                 {pills.map(([type, count]) => <span className="message-reaction-pill" key={type}><em aria-hidden="true">{reactionEmoji[type]}</em>{count > 1 && <small>{count}</small>}</span>)}
                 <b>{total}</b>
@@ -544,17 +697,25 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
 
         {replyTo && <div className="reply-composer"><span>Réponse à : {replyTo.body}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Annuler la réponse">×</button></div>}
 
+        {emojiOpen && <div className="composer-emojis" role="group" aria-label="Choisir un émoji">{['😀','😊','😂','❤️','👍','🙏','🎉','🔥','💜','👋','✅','💡','🤝','🚀','👏','💬'].map(emoji => <button type="button" key={emoji} aria-label={`Insérer ${emoji}`} onClick={() => insertEmoji(emoji)}>{emoji}</button>)}<button type="button" onClick={() => setEmojiOpen(false)} aria-label="Fermer les émojis">×</button></div>}
         <form className="message-compose" onSubmit={submit}>
-          <div className="message-input-wrap"><input value={draft} onChange={event => handleDraftChange(event.target.value)} placeholder={selected.is_group ? 'Écrire au groupe…' : 'Écrire un message…'} aria-label="Votre message" disabled={connection === 'offline'} />{attachment && <span className="attachment-chip">{attachment.name}<button type="button" onClick={() => setAttachment(null)} aria-label="Retirer la pièce jointe">×</button></span>}</div>
-          <label className="attachment-button" title="Ajouter une pièce jointe">＋<input aria-label="Ajouter une pièce jointe" type="file" accept="image/*,video/*,application/pdf,text/plain" onChange={chooseAttachment} /></label><button className="primary-button" aria-label="Envoyer le message" disabled={(!draft.trim() && !attachment) || connection === 'offline' || sending}>{sending ? '…' : '➤'}</button>
+          <div className="message-input-wrap"><textarea ref={composerRef} rows={1} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} value={draft} onChange={event => handleDraftChange(event.target.value)} placeholder={selected.is_group ? 'Écrire au groupe…' : 'Écrire un message…'} aria-label="Votre message" disabled={connection === 'offline' || sending} />{attachment && <span className="attachment-chip">{attachment.name}<button type="button" onClick={() => setAttachment(null)} aria-label="Retirer la pièce jointe">×</button></span>}</div>
+          <button type="button" className="emoji-toggle" aria-label="Insérer un émoji" aria-expanded={emojiOpen} disabled={connection === 'offline' || sending} onClick={() => setEmojiOpen(value => !value)}>☺</button>
+          <label className="attachment-button" title="Ajouter une pièce jointe">＋<input aria-label="Ajouter une pièce jointe" type="file" disabled={sending || connection === 'offline'} accept="image/*,video/*,audio/*,application/pdf,text/plain" onChange={chooseAttachment} /></label><button className="primary-button" aria-label="Envoyer le message" disabled={(!draft.trim() && !attachment) || connection === 'offline' || sending}>{sending ? '…' : '➤'}</button>
         </form>
-      </> : <div className="empty-thread"><span>◌</span><p>Sélectionnez une conversation.</p></div>}
+      </> : <div className="empty-thread"><span>◌</span><h2>Vos échanges, votre réseau.</h2><p>Choisissez une discussion ou commencez un nouvel échange.</p><button type="button" className="primary-button" onClick={() => openNewConversation(false)}>Écrire à une personne</button><button type="button" className="empty-group-action" onClick={() => openNewConversation(true)}>Créer un groupe</button></div>}
     </div>
-    {newConversationOpen && <div className="message-dialog-backdrop" role="presentation"><div className="message-dialog" role="dialog" aria-modal="true" aria-label={groupMode ? 'Créer un groupe' : 'Nouvelle discussion'}>
-      <div className="message-dialog-head"><div><span className="eyebrow">{groupMode ? 'NOUVEAU GROUPE' : 'NOUVELLE DISCUSSION'}</span><strong>{groupMode ? 'Créer un groupe' : 'Écrire à une personne'}</strong></div><button type="button" onClick={() => setNewConversationOpen(false)} aria-label="Fermer">×</button></div>
-      {groupMode && <input className="message-dialog-input" value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Nom du groupe" aria-label="Nom du groupe" />}
-      <input className="message-dialog-input" value={contactQuery} onChange={event => setContactQuery(event.target.value)} placeholder="Rechercher une personne" aria-label="Rechercher une personne" autoFocus />
-      <div className="message-contact-list">{contacts.map(contact => { const selectedContact = selectedContacts.includes(contact.id); return <button type="button" key={contact.id} className={`message-contact-row ${selectedContact ? 'selected' : ''}`} onClick={() => setSelectedContacts(current => groupMode ? (selectedContact ? current.filter(id => id !== contact.id) : [...current, contact.id]) : [contact.id])}><div className="avatar avatar-sm avatar-soft">{contact.avatar_url ? <img src={contact.avatar_url} alt="" /> : (contact.full_name || '').split(/\s+/).map(part => part[0]).join('').slice(0,2).toUpperCase()}</div><div><strong>{contact.full_name || ''}</strong><small>@{contact.username || ''}</small></div><span>{selectedContact ? '✓' : '+'}</span></button> })}</div>
+    {newConversationOpen && <div className="message-dialog-backdrop" role="presentation"><div ref={dialogRef} className="message-dialog" role="dialog" aria-modal="true" aria-label={groupMode ? 'Créer un groupe' : 'Nouvelle discussion'}>
+      <div className="message-dialog-head"><div><span className="eyebrow">{groupMode ? 'NOUVEAU GROUPE' : 'NOUVELLE DISCUSSION'}</span><strong>{groupMode ? 'Créer un groupe' : 'Écrire à une personne'}</strong></div><button type="button" disabled={creatingConversation} onClick={() => setNewConversationOpen(false)} aria-label="Fermer">×</button></div>
+      {groupMode && <input className="message-dialog-input" maxLength={100} disabled={creatingConversation} value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Nom du groupe" aria-label="Nom du groupe" />}
+      <input className="message-dialog-input" value={contactQuery} onChange={event => setContactQuery(event.target.value)} placeholder="Rechercher par nom ou identifiant" aria-label="Rechercher une personne" disabled={creatingConversation} />
+      <p className="message-dialog-help">{groupMode ? 'Donnez un nom au groupe et choisissez au moins une personne. Vous serez automatiquement membre.' : 'Choisissez un membre Avani Pro pour ouvrir une discussion privée.'}</p>
+      {selectedContacts.length > 0 && <div className="selected-contact-chips" aria-label="Personnes sélectionnées">{selectedContacts.map(id => <button type="button" disabled={creatingConversation} key={id} onClick={() => setSelectedContacts(current => current.filter(value => value !== id))} aria-label={`Retirer ${selectedContactProfiles.current.get(id)?.full_name || 'cette personne'}`}>{selectedContactProfiles.current.get(id)?.full_name || 'Membre'} <span aria-hidden="true">×</span></button>)}</div>}
+      {contactsLoading && <p className="message-dialog-help" role="status">Recherche des personnes…</p>}
+      {contactsError && <p className="message-dialog-error" role="alert">{contactsError}<button type="button" onClick={() => setContactQuery(value => value + ' ')}>Réessayer</button></p>}
+      {!contactsLoading && !contactsError && contacts.length === 0 && <p className="message-dialog-help" role="status">Aucune personne trouvée. Essayez un autre nom ou identifiant.</p>}
+      {creationError && <p className="message-dialog-error" role="alert">{creationError}</p>}
+      <div className="message-contact-list" aria-busy={contactsLoading}>{contacts.map(contact => { const selectedContact = selectedContacts.includes(contact.id); return <button type="button" disabled={creatingConversation || contactsLoading} aria-pressed={selectedContact} key={contact.id} className={`message-contact-row ${selectedContact ? 'selected' : ''}`} onClick={() => setSelectedContacts(current => groupMode ? (selectedContact ? current.filter(id => id !== contact.id) : [...current, contact.id]) : [contact.id])}><div className="avatar avatar-sm avatar-soft">{contact.avatar_url ? <img src={contact.avatar_url} alt="" /> : (contact.full_name || '').split(/\s+/).map(part => part[0]).join('').slice(0,2).toUpperCase()}</div><div><strong>{contact.full_name || ''}</strong><small>@{contact.username || ''}</small></div><span>{selectedContact ? '✓' : '+'}</span></button> })}</div>
       <div className="message-dialog-footer"><span>{selectedContacts.length ? `${selectedContacts.length} sélectionné(s)` : ''}</span><button type="button" className="primary-button" disabled={!selectedContacts.length || creatingConversation || (groupMode && !groupTitle.trim())} onClick={() => void startConversation()}>{creatingConversation ? 'Création…' : groupMode ? 'Créer le groupe' : 'Commencer'}</button></div>
     </div></div>}
   </section>

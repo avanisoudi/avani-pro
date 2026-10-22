@@ -26,14 +26,14 @@ export type MessageRecord = {
   sender?: Pick<ProfileRecord, 'id' | 'username' | 'full_name' | 'avatar_url'>
   reply_to?: Pick<MessageRecord, 'id' | 'body' | 'sender_id'> | null
 }
-export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; last_read_at?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord | null }[] }
+export type ConversationRecord = { id: string; title: string | null; is_group: boolean; updated_at: string; created_by?: string; last_read_at?: string | null; conversation_members?: { user_id: string; profile: ProfileRecord | null }[] }
 
 export const MESSAGE_ATTACHMENT_BUCKET = 'message-attachments'
 export const MAX_MESSAGE_ATTACHMENT_BYTES = 25 * 1024 * 1024
 
 export async function uploadMessageAttachment(conversationId: string, userId: string, file: File) {
   if (file.size <= 0 || file.size > MAX_MESSAGE_ATTACHMENT_BYTES) throw new Error('La pièce jointe doit faire au maximum 25 Mo.')
-  if (!file.type || (!file.type.startsWith('image/') && !file.type.startsWith('video/') && file.type !== 'application/pdf' && !file.type.startsWith('text/'))) throw new Error('Type de fichier non pris en charge. Utilisez une image, une vidéo, un PDF ou un fichier texte.')
+  if (!file.type || (!file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.startsWith('audio/') && file.type !== 'application/pdf' && !file.type.startsWith('text/'))) throw new Error('Type de fichier non pris en charge. Utilisez une image, une vidéo, un audio, un PDF ou un fichier texte.')
   const safeName = file.name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-100) || 'attachment'
   const path = `${conversationId}/${userId}/${crypto.randomUUID()}-${safeName}`
   const { error } = await requireSupabase().storage.from(MESSAGE_ATTACHMENT_BUCKET).upload(path, file, { upsert: false, contentType: file.type })
@@ -82,7 +82,7 @@ export async function getMyProfile(user: User) {
 }
 
 /** Colonnes de conversation garanties par les migrations 001 et 006 du dépôt. */
-const CONVERSATION_COLUMNS = 'id, title, is_group, updated_at'
+const CONVERSATION_COLUMNS = 'id, title, is_group, updated_at, created_by'
 
 /**
  * Rejoue une requête en retirant, une à une, les colonnes (ou relations) que la
@@ -390,24 +390,12 @@ export async function listProfilesByIds(userIds: string[]) {
 
 export async function searchMessageContacts(userId: string, query: string) {
   const client = requireSupabase()
-  const term = query.trim()
+  const term = query.trim().replace(/[,%_().\\"']/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100)
   let request = client.from('profiles').select('id, username, full_name, avatar_url, bio, verified_type').neq('id', userId).order('full_name').limit(20)
   if (term) request = request.or(`full_name.ilike.%${term}%,username.ilike.%${term}%`)
   const { data, error } = await request
   if (error) throw error
   return (data ?? []) as ProfileRecord[]
-}
-
-async function requireProfilesExist(userIds: string[]) {
-  const ids = [...new Set(userIds.filter(Boolean))]
-  if (!ids.length) throw new Error('Aucun profil sélectionné.')
-  const client = requireSupabase()
-  const { data, error } = await client.from('profiles').select('id').in('id', ids)
-  if (error) throw error
-  const existing = new Set((data ?? []).map((row: { id: string }) => row.id))
-  const missing = ids.filter(id => !existing.has(id))
-  if (missing.length) throw new Error('Le profil sélectionné n’existe pas dans Avani Pro. Créez d’abord le profil dans Supabase.')
-  return existing
 }
 
 async function getConversation(client: ReturnType<typeof requireSupabase>, conversationId: string) {
@@ -418,56 +406,28 @@ async function getConversation(client: ReturnType<typeof requireSupabase>, conve
   return conversation as ConversationRecord
 }
 
-export async function createGroupConversation(userId: string, title: string, memberIds: string[]) {
-  const name = title.trim()
-  const uniqueMembers = [...new Set(memberIds.filter(id => id && id !== userId))]
-  if (!name) throw new Error('Le nom du groupe est requis.')
-  if (!uniqueMembers.length) throw new Error('Ajoutez au moins une personne au groupe.')
-  await requireProfilesExist([userId, ...uniqueMembers])
+async function createChat(title: string, group: boolean, memberIds: string[]) {
   const client = requireSupabase()
-  const conversationId = crypto.randomUUID()
+  const { data, error } = await client.rpc('avani_create_chat', { p_title: title.trim(), p_group: group, p_members: [...new Set(memberIds)] })
+  if (error) throw new Error(error.code === 'PGRST202' ? 'La migration 013_conversation_management.sql doit être appliquée pour créer les discussions.' : error.message)
+  return getConversation(client, data as string)
+}
 
-  const { error } = await client.from('conversations').insert({ id: conversationId, title: name, is_group: true, created_by: userId })
-  if (error) throw writeError(error, 'La création de la conversation de groupe')
-
-  const members = [userId, ...uniqueMembers].map(memberId => ({ conversation_id: conversationId, user_id: memberId }))
-  const { error: membersError } = await client.from('conversation_members').insert(members)
-  if (membersError) {
-    await client.from('conversations').delete().eq('id', conversationId).eq('created_by', userId)
-    throw writeError(membersError, 'L’ajout des membres à la conversation de groupe')
-  }
-  return getConversation(client, conversationId)
+export async function createGroupConversation(userId: string, title: string, memberIds: string[]) {
+  return createChat(title, true, memberIds.filter(id => id !== userId))
 }
 
 export async function createDirectConversation(userId: string, contactId: string, contactName: string) {
   if (!contactId || contactId === userId) throw new Error('Profil destinataire invalide.')
-  await requireProfilesExist([userId, contactId])
-  const client = requireSupabase()
+  return createChat(contactName, false, [contactId])
+}
 
-  const { data: myMemberships, error: myMembershipsError } = await client.from('conversation_members').select('conversation_id').eq('user_id', userId)
-  if (myMembershipsError) throw writeError(myMembershipsError, 'La recherche de vos conversations')
-  const myConversationIds = (myMemberships ?? []).map(row => row.conversation_id)
-  if (myConversationIds.length) {
-    const { data: shared, error: sharedError } = await client
-      .from('conversation_members')
-      .select(`conversation:conversations(${CONVERSATION_COLUMNS})`)
-      .eq('user_id', contactId)
-      .in('conversation_id', myConversationIds)
-    if (sharedError) throw writeError(sharedError, 'La recherche d’une conversation commune')
-    const existing = (shared ?? []).map((row: any) => Array.isArray(row.conversation) ? row.conversation[0] : row.conversation).find((conversation: ConversationRecord | null) => conversation && !conversation.is_group)
-    if (existing) return existing
-  }
+export async function manageChat(chatId: string, action: 'rename' | 'add' | 'remove' | 'transfer' | 'leave', target?: string, title?: string) {
+  const { error } = await requireSupabase().rpc('avani_manage_chat', { p_chat: chatId, p_action: action, p_target: target ?? null, p_title: title ?? null })
+  if (error) throw new Error(error.code === 'PGRST202' ? 'La migration 013_conversation_management.sql doit être appliquée pour gérer les groupes.' : error.message)
+}
 
-  const conversationId = crypto.randomUUID()
-  const { error } = await client.from('conversations').insert({ id: conversationId, title: contactName, is_group: false, created_by: userId })
-  if (error) throw writeError(error, 'La création de la conversation')
-  const { error: membersError } = await client.from('conversation_members').insert([{ conversation_id: conversationId, user_id: userId }, { conversation_id: conversationId, user_id: contactId }])
-  if (membersError) {
-    await client.from('conversations').delete().eq('id', conversationId).eq('created_by', userId)
-    throw writeError(membersError, 'L’ajout des membres à la conversation')
-  }
-  return getConversation(client, conversationId)
-}export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry'
+export type ReactionType = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry'
 type LikeRow = { post_id: string; user_id: string; reaction_type: ReactionType }
 export type ReactionCounts = Record<ReactionType, number>
 /** Chemins bruts déclarés par une ligne `posts`, dans l’ordre d’affichage. */
@@ -602,4 +562,11 @@ export async function updatePost(postId: string, authorId: string, body: string)
 export async function deletePost(postId: string, authorId: string) {
   const { error } = await requireSupabase().from('posts').delete().eq('id', postId).eq('author_id', authorId)
   if (error) throw error
+}
+
+/** Read actual members under the signed-in user's RLS policies. */
+export async function listConversationMembers(conversationId: string): Promise<ProfileRecord[]> {
+  const { data, error } = await requireSupabase().from('conversation_members').select('user_id').eq('conversation_id', conversationId)
+  if (error) throw error
+  return listProfilesByIds((data ?? []).map(row => row.user_id))
 }

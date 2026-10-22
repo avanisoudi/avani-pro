@@ -61,3 +61,45 @@ html[data-theme="dark"] .avani-messenger{--chat-bg:#1c172a;--chat-panel:#241e33;
 .avani-messenger .attachment-chip{max-width:100%;overflow-wrap:anywhere}
 .avani-messenger .messages-note,.avani-messenger .messages-alert{margin:10px;font-size:12px;overflow-wrap:anywhere}
 @media(max-width:680px){.avani-messenger .message-line{max-width:90%!important}}
+/* Wide workspace: outrank the feed's shared max-width/column constraints. */
+.app-shell.messaging-workspace{grid-template-columns:190px minmax(0,1fr)!important;width:100%!important;max-width:none!important;gap:0!important}
+.app-shell.messaging-workspace>.main-content{grid-column:2!important;width:100%!important;max-width:none!important;margin:0!important;padding:76px 12px 12px!important}
+.app-shell.messaging-workspace .avani-messenger{width:100%!important;max-width:none!important;height:calc(100dvh - 88px)!important;grid-template-columns:clamp(290px,27vw,390px) minmax(0,1fr)!important}
+.avani-messenger .message-new-actions{flex-wrap:wrap;justify-content:flex-end}
+.avani-messenger .message-input-wrap textarea{display:block;box-sizing:border-box;resize:vertical;min-height:46px;max-height:140px;width:100%;border:1px solid transparent;border-radius:18px;padding:12px 16px;background:var(--chat-bg);color:var(--chat-text);font:14px/1.5 system-ui;outline:none}
+.avani-messenger .message-dialog-backdrop{position:fixed;inset:0;z-index:150;display:grid;place-items:center;background:#100b2499;backdrop-filter:blur(5px);padding:20px}
+.avani-messenger .message-dialog{box-sizing:border-box;display:flex;flex-direction:column;width:min(520px,100%);max-height:calc(100dvh - 40px);padding:24px;gap:14px;overflow:auto;border:1px solid var(--chat-border);border-radius:20px;background:var(--chat-panel);color:var(--chat-text);box-shadow:0 24px 90px #12092d44}
+.avani-messenger .message-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.avani-messenger .message-dialog-head strong{display:block;font:700 21px/1.5 system-ui;color:var(--chat-text)}
+.avani-messenger .message-dialog-head .eyebrow{color:#8b5cf6}
+.avani-messenger .message-dialog-head>button{border:0;background:var(--chat-bg);color:var(--chat-text);width:36px;height:36px;border-radius:50%;font-size:24px}
+.avani-messenger .message-dialog-input{box-sizing:border-box;width:100%;padding:13px 15px;border:1px solid var(--chat-border);border-radius:12px;background:var(--chat-bg);color:var(--chat-text);font-size:14px}
+.avani-messenger .message-dialog-help{margin:0;color:var(--chat-muted);font-size:13px;line-height:1.6}
+.avani-messenger .message-dialog-error{margin:0;padding:12px;border-radius:10px;background:#fee2e2;color:#991b1b;font-size:13px}
+.avani-messenger .message-dialog-error button{margin-left:10px;border:0;background:transparent;color:inherit;text-decoration:underline}
+.avani-messenger .message-contact-list{min-height:60px;max-height:35dvh;overflow:auto;display:grid;gap:4px}
+.avani-messenger .message-contact-row{display:flex;align-items:center;gap:12px;border:1px solid transparent;border-radius:12px;padding:12px;background:transparent;color:var(--chat-text);text-align:left}
+.avani-messenger .message-contact-row.selected{background:var(--chat-bg);border-color:#8b5cf6}
+.avani-messenger .message-contact-row>div:nth-child(2){flex:1;min-width:0}
+.avani-messenger .message-contact-row strong,.avani-messenger .message-contact-row small{display:block;overflow-wrap:anywhere}
+.avani-messenger .message-contact-row small{color:var(--chat-muted);margin-top:3px}
+.avani-messenger .message-contact-row>span{color:#8b5cf6;font-size:20px}
+.avani-messenger .selected-contact-chips{display:flex;flex-wrap:wrap;gap:6px}
+.avani-messenger .selected-contact-chips button{border:0;border-radius:20px;padding:7px 11px;background:#ede3ff;color:#5b21b6;font-size:12px}
+.avani-messenger .message-dialog-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--chat-border);padding-top:16px;color:var(--chat-muted);font-size:12px}
+.avani-messenger .message-dialog-footer .primary-button,.avani-messenger .empty-thread .primary-button{background:#7c3aed;color:white;padding:12px 18px;border-radius:12px;font-size:13px}
+.avani-messenger .empty-thread{padding:24px;max-width:460px;line-height:1.6}
+.avani-messenger .empty-thread h2{color:var(--chat-text);font-size:24px}
+.avani-messenger .empty-group-action{display:block;margin:16px auto 0;border:0;background:transparent;color:#8b5cf6;font-size:14px}
+@media(max-width:1000px){.app-shell.messaging-workspace{grid-template-columns:minmax(0,1fr)!important}.app-shell.messaging-workspace>.main-content{grid-column:1!important}}
+@media(max-width:680px){.app-shell.messaging-workspace>.main-content{padding:70px 0 70px!important}.app-shell.messaging-workspace .avani-messenger{grid-template-columns:minmax(0,1fr)!important;height:calc(100dvh - 140px)!important}.avani-messenger .message-dialog-backdrop{padding:10px}.avani-messenger .message-dialog{padding:18px;max-height:calc(100dvh - 20px)}.avani-messenger .message-new-actions button{min-height:38px}.avani-messenger .message-contact-row{min-height:62px}}
+@media(min-width:761px){.app-shell.messaging-workspace{padding:64px 0 0!important;justify-content:stretch!important}.app-shell.messaging-workspace>.main-content{padding:12px!important}.app-shell.messaging-workspace>.sidebar{width:auto!important;min-width:0!important;padding-left:10px!important;padding-right:10px!important}}
+.avani-messenger .thread-head-actions{display:flex;gap:8px}.avani-messenger .thread-head-actions button{width:36px;height:36px;border-radius:50%;color:var(--chat-muted);font-size:24px}.avani-messenger .thread-head-actions button[aria-expanded="true"]{background:#ede3ff;color:#6d28d9}
+.avani-messenger .thread-utility{flex-shrink:0;max-height:35dvh;overflow:auto;padding:16px 22px;background:var(--chat-panel);color:var(--chat-text);border-bottom:1px solid var(--chat-border);font-size:13px}
+.avani-messenger .thread-utility label{display:grid;gap:8px;font-weight:600}.avani-messenger .thread-utility input{border:1px solid var(--chat-border);background:var(--chat-bg);color:var(--chat-text);padding:10px;border-radius:10px}.avani-messenger .thread-utility p{color:var(--chat-muted);line-height:1.5}
+.avani-messenger .thread-search-results{display:grid;gap:5px}.avani-messenger .thread-search-results button{padding:10px;text-align:left;background:var(--chat-bg);color:var(--chat-text);border:0;border-radius:8px;overflow-wrap:anywhere}.avani-messenger .thread-search-results small,.avani-messenger .thread-members small{display:block;color:var(--chat-muted);font-size:11px;margin-top:4px}
+.avani-messenger .thread-members{list-style:none;padding:0;display:grid;gap:12px}.avani-messenger .thread-members li{display:flex;align-items:center;gap:10px}
+.avani-messenger .composer-emojis{flex-shrink:0;display:flex;flex-wrap:wrap;gap:5px;padding:12px;background:var(--chat-panel);border-top:1px solid var(--chat-border)}.avani-messenger .composer-emojis button{border:0;border-radius:8px;padding:8px;background:var(--chat-bg);font-size:23px;color:var(--chat-text)}
+.avani-messenger .emoji-toggle{order:0;background:transparent;border:0;color:#8b5cf6;font-size:27px;padding:4px}.avani-messenger .message-attachment-video{display:block;max-width:100%;max-height:320px;border-radius:10px}.avani-messenger audio{max-width:100%}.avani-messenger .message-line:focus{outline:2px solid #8b5cf6;outline-offset:4px;border-radius:10px}
+@media(max-width:680px){.avani-messenger .thread-utility{padding:12px;max-height:30dvh}.avani-messenger .thread-head-actions{gap:0}.avani-messenger .thread-head-actions button{width:30px}.avani-messenger .message-compose{gap:5px!important}}
+.avani-messenger .group-management{border-top:1px solid var(--chat-border);padding-top:12px;margin-top:12px;display:grid;gap:10px}.avani-messenger .group-management button{padding:8px 12px;border:1px solid var(--chat-border);border-radius:8px;background:var(--chat-bg);color:var(--chat-text)}.avani-messenger .group-management ul{list-style:none;padding:0;display:grid;gap:8px}.avani-messenger .group-management li{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.avani-messenger .group-management li>span{flex:1;min-width:100px}.avani-messenger .group-management form{display:flex;align-items:end;gap:8px}.avani-messenger .group-management form label{flex:1;min-width:0}
