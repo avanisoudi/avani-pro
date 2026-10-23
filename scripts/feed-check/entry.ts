@@ -348,6 +348,7 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
   check('presence vide = aucune personne', onlineConversationUserIds({}).length === 0)
   const sessions = { tabA: [{ userId: 'alice' }, { userId: 'alice' }], tabB: [{ userId: 'bob' }], tabC: [{ userId: 'alice' }] }
   check('plusieurs onglets dune personne = une personne', onlineConversationUserIds(sessions).length === 2)
+  check('identifiants de presence espaces normalises avant deduplication', onlineConversationUserIds({ tabA: [{ userId: ' alice ' }], tabB: [{ userId: 'alice' }] }).join(',') === 'alice')
   check('presence invalide ignoree', onlineConversationUserIds({ unknown: [{}, { userId: null }, { userId: '' }, { userId: '  ' }] }).length === 0)
   check('depart presence retire la personne', onlineConversationUserIds({ tabB: sessions.tabB }).join(',') === 'bob')
   const source = readFileSync('src/components/MessagesPanel.tsx', 'utf8')
