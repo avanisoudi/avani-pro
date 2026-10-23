@@ -4,7 +4,7 @@
  * préférence `appearance` (table `user_settings`), appliquée par le panneau Réglages
  * uniquement au premier branchement : un choix pris sur l'appareil est plus récent.
  */
-export type ThemeName = 'light' | 'dark'
+export type ThemeName = 'light' | 'dark' | 'neon' | 'blue'
 export const THEME_STORAGE_KEY = '***'
 
 /** Valeur enregistrée, sinon `null` : ne jamais devancer un vrai choix de l'utilisateur. */
@@ -13,7 +13,7 @@ export function readStoredTheme(storage?: Pick<Storage, 'getItem'> | null): stri
   if (!store) return null
   try {
     const value = store.getItem(THEME_STORAGE_KEY)
-    return value === 'dark' || value === 'light' ? value : null
+    return value === 'dark' || value === 'light' || value === 'neon' || value === 'blue' ? value : null
   } catch {
     return null
   }
@@ -50,9 +50,11 @@ export function nextTheme(current: ThemeName): ThemeName {
  */
 export function applyTheme(theme: ThemeName, options: { persist?: boolean } = {}) {
   if (typeof document === 'undefined') return
-  document.documentElement.dataset.theme = theme
-  document.documentElement.style.colorScheme = theme
-  document.documentElement.classList.remove('theme-light', 'theme-dark')
+  const baseTheme = theme === 'light' ? 'light' : 'dark'
+  document.documentElement.dataset.theme = baseTheme
+  document.documentElement.dataset.avaniTheme = theme
+  document.documentElement.style.colorScheme = baseTheme
+  document.documentElement.classList.remove('theme-light', 'theme-dark', 'theme-neon', 'theme-blue')
   document.documentElement.classList.add(`theme-${theme}`)
   if (options.persist === false) return
   try {
@@ -128,7 +130,7 @@ export function initTheme(): ThemeName {
  */
 export function adoptCloudTheme(appearance: unknown): boolean {
   if (readStoredTheme()) return false
-  if (appearance !== 'dark' && appearance !== 'light') return false
+  if (appearance !== 'dark' && appearance !== 'light' && appearance !== 'neon' && appearance !== 'blue') return false
   setTheme(appearance)
   return true
 }
