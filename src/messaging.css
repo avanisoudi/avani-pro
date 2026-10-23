@@ -114,3 +114,95 @@ html[data-theme="dark"] .avani-messenger{--chat-bg:#1c172a;--chat-panel:#241e33;
 .avani-messenger .mention-suggestions{flex-shrink:0;max-height:210px;overflow:auto;background:var(--chat-panel);border-top:1px solid var(--chat-border);padding:8px;display:grid;gap:4px}
 .avani-messenger .mention-suggestions button{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border:0;border-radius:9px;background:transparent;color:var(--chat-text);text-align:left}.avani-messenger .mention-suggestions button[aria-selected="true"]{background:#ede3ff;color:#5b21b6}.avani-messenger .mention-suggestions small{color:var(--chat-muted)}
 .avani-messenger .message-mention{color:#7c3aed;font-weight:650;text-decoration:none}.avani-messenger .message-mention.mentions-me{background:#ede3ff;border-radius:4px;padding:1px 3px}.avani-messenger .group-photo-upload{margin:14px 0;display:grid;gap:8px}.avani-messenger .group-photo-upload input{max-width:100%}
+
+
+/* AVANI PRO — futuristic messaging polish: visual-only, existing chat logic preserved. */
+.avani-messenger{
+  --chat-accent:#6857ff;
+  --chat-accent-2:#13b8e8;
+  position:relative;
+  isolation:isolate;
+  border-color:color-mix(in srgb,var(--chat-accent) 20%,var(--chat-border))!important;
+  box-shadow:0 22px 70px rgba(49,37,99,.10),0 0 0 1px rgba(255,255,255,.55) inset!important;
+}
+.avani-messenger .messages-heading{
+  position:relative;
+  border-bottom:1px solid var(--chat-border);
+}
+.avani-messenger .messages-heading .eyebrow{
+  background:linear-gradient(100deg,#6848ee 0%,#167bdc 58%,#10a9c5 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent!important;
+  letter-spacing:-.8px!important;
+}
+.avani-messenger .message-new-actions button{
+  transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
+  border:1px solid #dfd4ff!important;
+}
+.avani-messenger .message-new-actions button:hover{
+  transform:translateY(-1px);background:#e5dcff!important;box-shadow:0 5px 16px #7955df20;
+}
+.avani-messenger .message-search{
+  border:1px solid transparent!important;transition:border-color .18s ease,box-shadow .18s ease;
+}
+.avani-messenger .message-search:focus-within{
+  border-color:#a99af8!important;box-shadow:0 0 0 3px #8b5cf61a;
+}
+.avani-messenger .conversation-row{
+  transition:background .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+.avani-messenger .conversation-row:hover{transform:translateX(2px)}
+.avani-messenger .conversation-row.selected{
+  background:linear-gradient(100deg,#f1ecff 0%,#f6f8ff 100%)!important;
+  box-shadow:inset 3px 0 #7658f6,0 4px 16px #5141a00b;
+}
+.avani-messenger .message-thread{
+  background-image:radial-gradient(#8b7cf51a 1px,transparent 1px),linear-gradient(145deg,#faf9ff,#f4f8ff)!important;
+  background-size:20px 20px,auto!important;
+}
+.avani-messenger .thread-head{
+  box-shadow:0 1px 0 rgba(41,31,75,.035);
+}
+.avani-messenger .thread-head .avatar{
+  box-shadow:0 0 0 3px #8b5cf61b;
+}
+.avani-messenger .message-bubble{
+  border:1px solid #e8e3f3;
+  animation:avani-message-enter .18s ease-out both;
+}
+.avani-messenger .message-bubble.mine{
+  background:linear-gradient(135deg,#e9e3ff,#e4f3ff)!important;
+  border-color:#d9d6ff!important;
+}
+.avani-messenger .message-compose{
+  box-shadow:0 -8px 24px rgba(42,33,76,.035);
+}
+.avani-messenger .message-input-wrap textarea:focus,
+.avani-messenger .message-input-wrap input:focus{
+  border-color:#b5a7ff!important;box-shadow:0 0 0 3px #8b5cf61a;
+}
+.avani-messenger .message-compose>.primary-button{
+  background:linear-gradient(135deg,#7658f6,#416ff0)!important;
+  box-shadow:0 6px 16px #6d55ed30!important;
+  transition:transform .18s ease,filter .18s ease;
+}
+.avani-messenger .message-compose>.primary-button:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.07)}
+.avani-messenger .message-compose>.primary-button:active:not(:disabled){transform:scale(.96)}
+.avani-messenger .unread-pill{background:linear-gradient(135deg,#7658f6,#3677ed)!important}
+.avani-messenger .message-dialog{
+  border-color:#dcd4f6;
+  box-shadow:0 30px 100px rgba(27,18,64,.26);
+}
+.avani-messenger .message-contact-row:hover{background:var(--chat-bg)}
+@keyframes avani-message-enter{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+html[data-theme="dark"] .avani-messenger .conversation-row.selected{
+  background:linear-gradient(100deg,#34264f,#29263f)!important;
+}
+html[data-theme="dark"] .avani-messenger .message-thread{
+  background-image:radial-gradient(#a78bfa13 1px,transparent 1px),linear-gradient(145deg,#1c172a,#171c2d)!important;
+}
+html[data-theme="dark"] .avani-messenger .message-bubble.mine{
+  background:linear-gradient(135deg,#3a2d61,#253c59)!important;border-color:#4a3e72!important;color:#f5f1ff!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .avani-messenger *, .avani-messenger *::before,.avani-messenger *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
