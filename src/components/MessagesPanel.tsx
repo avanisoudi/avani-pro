@@ -782,6 +782,21 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           <label className="group-photo-upload">Modifier la photo (JPEG, PNG, WebP · 5 Mo maximum)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={groupBusy} onChange={event => void changeGroupPhoto(event)} /></label>
           {groupError && <p className="message-profile-muted" role="alert">{groupError}</p>}
         </section>}
+        {selected.is_group && <section className="message-profile-section">
+          <h3>Gestion du groupe</h3>
+          {selected.created_by === user.id ? <>
+            <form className="group-management-form" onSubmit={event => { event.preventDefault(); void groupAction('rename') }}>
+              <label>Nom du groupe<input maxLength={100} value={groupNewName} onChange={event => setGroupNewName(event.target.value)} placeholder={selected.title || 'Nom du groupe'} disabled={groupBusy} /></label>
+              <button type="submit" disabled={groupBusy || !groupNewName.trim()}>Renommer</button>
+            </form>
+            <label>Ajouter un membre<input value={inviteQuery} onChange={event => setInviteQuery(event.target.value)} placeholder="Nom ou identifiant" disabled={groupBusy} /></label>
+            {inviteLoading && inviteQuery.trim() && <p className="message-profile-muted">Recherche…</p>}
+            {inviteResults.map(person => <button className="message-profile-manage-button" key={person.id} type="button" disabled={groupBusy || inviteLoading} onClick={() => void groupAction('add', person.id)}>Ajouter {person.full_name}</button>)}
+            {members.filter(member => member.id !== user.id).map(member => <div className="message-profile-manage-row" key={member.id}><span>{member.full_name}</span><button type="button" disabled={groupBusy} onClick={() => void groupAction('remove', member.id)}>Retirer</button><button type="button" disabled={groupBusy} onClick={() => void groupAction('transfer', member.id)}>Transférer la gestion</button></div>)}
+          </> : <button className="message-profile-manage-button" type="button" disabled={groupBusy} onClick={() => void groupAction('leave')}>Quitter le groupe</button>}
+          {groupBusy && <p className="message-profile-muted">Mise à jour du groupe…</p>}
+          {groupError && <p className="message-profile-muted" role="alert">{groupError}</p>}
+        </section>}
         <section className="message-profile-section">
           <h3>À propos</h3>
           <p>{selected.is_group ? `${members.length} membre${members.length === 1 ? '' : 's'} dans ce groupe` : 'Conversation privée sur AVANI PRO'}</p>
