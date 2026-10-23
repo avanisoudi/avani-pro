@@ -66,35 +66,35 @@ function PublicHome({ onAuth }: { onAuth: () => void }) {
     </header>
     <section className="lp-hero">
       <div className="lp-copy">
-        <span className="lp-eyebrow">LE RÉSEAU DES ESPRITS EN MOUVEMENT</span>
-        <h1>Les bonnes idées méritent <em>un vrai réseau.</em></h1>
-        <p>Avani Pro réunit professionnels, créateurs et communautés dans un espace conçu pour partager, échanger et transformer les conversations en projets concrets.</p>
+        <span className="lp-eyebrow">LE RÉSEAU PROFESSIONNEL POUR FAIRE AVANCER VOS IDÉES</span>
+        <h1>Vos idées méritent <em>les bonnes connexions.</em></h1>
+        <p>Avani Pro réunit professionnels, créateurs et entreprises pour partager des projets, rejoindre des communautés pertinentes et poursuivre les échanges au même endroit.</p>
         <div className="lp-hero-actions"><button type="button" className="lp-cta lp-cta-large" onClick={onAuth}>Rejoindre Avani Pro</button><a className="lp-link" href="#vision">Découvrir la plateforme ↓</a></div>
-        <p className="lp-proof">Un réseau construit autour de vos conversations <strong>et de vos projets</strong></p>
+        <p className="lp-proof">Publiez. Échangez. <strong>Faites avancer vos projets.</strong></p>
       </div>
-      <div className="lp-preview" aria-label="Aperçu du fil Avani Pro">
+      <div className="lp-preview" aria-label="Exemple de fil Avani Pro, démonstration visuelle">
         <article className="lp-post">
-          <div className="lp-post-head"><span className="lp-avatar">AV</span><div><strong>Votre publication</strong><small>À l’instant · Public</small></div></div>
-          <p>Partagez une idée avec votre réseau. Les interactions réelles apparaîtront ici.</p>
+          <div className="lp-post-head"><span className="lp-avatar">AV</span><div><strong>Exemple de publication</strong><small>Démonstration · Public</small></div></div>
+          <p>Partagez une idée, une actualité ou un projet avec votre réseau.</p>
           <div className="lp-post-tags"><span>#Motivation</span><span>#Projets</span></div>
-          <div className="lp-post-stats"><span>👍 ❤️ 2</span><span>3 commentaires · 1 partage</span></div>
+          <div className="lp-post-stats"><span>Réactions</span><span>Commentaires · partages</span></div>
           <div className="lp-post-actions"><span>J’aime</span><span>Commenter</span><span>Partager</span><span>Enregistrer</span></div>
         </article>
         <article className="lp-post lp-post-second">
-          <div className="lp-post-head"><span className="lp-avatar lp-avatar-alt">CM</span><div><strong>Votre communauté</strong><small>Groupe · Public</small></div></div>
-          <p>Les conversations prennent vie avec de vraies personnes.</p>
+          <div className="lp-post-head"><span className="lp-avatar lp-avatar-alt">CM</span><div><strong>Exemple de communauté</strong><small>Groupe · Démonstration</small></div></div>
+          <p>Rejoignez des personnes qui partagent vos intérêts professionnels.</p>
         </article>
       </div>
     </section>
     <section id="vision" className="lp-section">
       <span className="lp-eyebrow">PLUS QU’UN FIL D’ACTUALITÉ</span>
       <h2>Un espace qui donne de la portée à vos idées.</h2>
-      <p className="lp-lead">Pas de bruit inutile. Avani Pro est pensé pour les échanges qui comptent, les rencontres qui ouvrent des portes et les groupes qui font réellement avancer les projets.</p>
+      <p className="lp-lead">Publiez vos projets, découvrez des professionnels et retrouvez vos échanges dans un même réseau — du premier contact à la conversation qui fait avancer une idée.</p>
     </section>
     <section id="features" className="lp-features">
-      <article><span className="lp-num">01</span><h3>Votre signal</h3><p>Publiez vos réflexions, projets et apprentissages auprès d’un réseau qui vous comprend.</p></article>
-      <article><span className="lp-num">02</span><h3>Vos communautés</h3><p>Créez ou rejoignez des groupes privés pour discuter comme dans un espace de confiance.</p></article>
-      <article><span className="lp-num">03</span><h3>Vos conversations</h3><p>Échangez en direct, partagez des fichiers et gardez les idées importantes au même endroit.</p></article>
+      <article><span className="lp-num">01</span><h3>Partagez vos projets</h3><p>Publiez vos réflexions, actualités et apprentissages auprès de votre réseau professionnel.</p></article>
+      <article><span className="lp-num">02</span><h3>Trouvez votre communauté</h3><p>Rejoignez des groupes pour échanger avec des personnes qui partagent vos intérêts.</p></article>
+      <article><span className="lp-num">03</span><h3>Poursuivez la conversation</h3><p>Discutez en direct, partagez des fichiers et retrouvez vos échanges dans la messagerie.</p></article>
     </section>
     <section className="lp-section lp-details">
       <div>
@@ -102,9 +102,9 @@ function PublicHome({ onAuth }: { onAuth: () => void }) {
         <h2>Tout ce qu’il faut pour faire avancer vos projets.</h2>
       </div>
       <div className="lp-detail-list">
-        <article><strong>Un profil qui vous ressemble</strong><p>Présentez votre expertise, vos intérêts et vos réalisations à une communauté pertinente.</p></article>
-        <article><strong>Des échanges qui restent utiles</strong><p>Publiez, commentez, répondez et retrouvez vos conversations sans perdre le fil.</p></article>
-        <article><strong>Un espace fiable</strong><p>Votre compte et vos échanges sont protégés. Vous gardez le contrôle de ce que vous partagez.</p></article>
+        <article><strong>Un profil professionnel</strong><p>Présentez votre expérience, vos intérêts et les projets que vous souhaitez faire connaître.</p></article>
+        <article><strong>Un fil à votre image</strong><p>Suivez les personnes et les communautés qui rendent votre réseau plus pertinent.</p></article>
+        <article><strong>Vos choix de partage</strong><p>Choisissez l’audience de vos publications et gérez vos préférences depuis votre compte.</p></article>
       </div>
     </section>
     <section className="lp-band">
@@ -112,7 +112,7 @@ function PublicHome({ onAuth }: { onAuth: () => void }) {
       <p>Créez votre compte gratuitement et rejoignez les personnes qui construisent la suite.</p>
       <button type="button" className="lp-cta lp-cta-large" onClick={onAuth}>Créer mon compte gratuitement ↗</button>
     </section>
-    <footer className="lp-footer"><span>© 2026 Avani Pro</span><a href="/confidentialite/">Politique de confidentialité</a><span>Un réseau pensé pour avancer.</span></footer>
+    <footer className="lp-footer"><span>© 2026 Avani Pro</span><a href="/confidentialite/">Politique de confidentialité</a><a href="mailto:avanisoudi@gmail.com">Contacter Avani Pro</a><span>Un réseau pensé pour avancer.</span></footer>
   </div>
 }
 
@@ -202,6 +202,30 @@ function App() {
   )
   const navigateTo = (path: string, screen: NavKey) => { window.history.pushState({}, '', path); setPathname(path); setActive(screen) }
   useEffect(() => { const onPopState = () => { const path = window.location.pathname; setPathname(path); setActive(navForPath(path)) }; window.addEventListener('popstate', onPopState); return () => window.removeEventListener('popstate', onPopState) }, [])
+
+  useEffect(() => {
+    const publicLanding = pathname === '/' && !sessionUser
+    document.title = publicLanding ? 'Avani Pro — Réseau professionnel et communautés' : 'Avani Pro — Espace membre'
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    if (publicLanding) {
+      if (!canonical) {
+        canonical = document.createElement('link')
+        canonical.rel = 'canonical'
+        document.head.appendChild(canonical)
+      }
+      canonical.href = 'https://avani-pro.onrender.com/'
+    } else {
+      canonical?.remove()
+      let robots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]')
+      if (!robots) {
+        robots = document.createElement('meta')
+        robots.name = 'robots'
+        document.head.appendChild(robots)
+      }
+      robots.content = 'noindex, nofollow'
+    }
+    if (publicLanding) document.head.querySelector('meta[name="robots"]')?.remove()
+  }, [pathname, sessionUser])
 
   const flash = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 8000) }
   /**

@@ -3,7 +3,7 @@
 Les fichiers de ce dossier ne sont **jamais** exécutés par l'application ni par l'agent :
 ils sont à coller dans l'éditeur SQL de Supabase, dans l'ordre.
 
-`001` → `002` → `003` → `004` → `005` → `006` → `007` → `008` → `009` → `010` → `011` → `012`
+`001` → `002` → `003` → `004` → `005` → `006` → `007` → `008` → `009` → `010` → `011` → `012` → `013` → `014` → `015` → `016`
 
 Tous sont idempotents : `create table if not exists`, `add column if not exists`,
 `create index if not exists`, `drop policy if exists` puis `create policy`, inserts en
@@ -26,6 +26,12 @@ détruit aucune donnée et ne réactive aucun réglage coupé par l'administrati
 | `010_stories.sql` | `stories`, `story_views`, seau `story-media` | `src/lib/mediaFeed.ts`, `src/components/MediaPanels.tsx` |
 | `011_feature_flags.sql` | `feature_flags` graine de huit clés, lecture publique, écriture admin | `readFeatureFlags` / `setFeatureFlag` dans `src/lib/socialApi.ts` |
 | `012_user_settings_et_types.sql` | `user_settings`, six types de page, trois visibilités de groupe, cinq rôles de page, quatre rôles de groupe | panneau Réglages (`appearance`) et `groups`/`pages` |
+| `013_conversation_management.sql` | règles de gestion des membres et des conversations | messagerie et groupes persistants |
+| `014_private_chat_storage.sql` | bucket privé et policies pour les pièces jointes de conversations | `src/lib/api.ts` |
+| `015_community_groups_and_media.sql` | création atomique de groupes, avatar de conversation et lecture des médias de publication | groupes, conversations et fil |
+| `016_private_profile_phone.sql` | retire la lecture publique du champ `profiles.phone`; conserve les colonnes publiques et l’accès serveur `service_role` | profils et inscription |
+
+`016` ne supprime ni ne modifie les valeurs existantes. Exécutez-le dans l’éditeur SQL Supabase après vérification des rôles et permissions du projet réel. Après son application, testez la lecture des colonnes publiques depuis le client et confirmez qu’un accès `anon`/`authenticated` ne peut pas sélectionner `phone`.
 
 ## Tables lues par le client sans migration, avant le lot `010`–`012`
 

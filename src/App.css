@@ -1195,3 +1195,29 @@
 
 /* Retire le point rouge décoratif des notifications dans l’en-tête. */
 .nav-bell .nav-badge { display: none !important; }
+
+
+.auth-privacy-note {
+  margin: 14px 0 0;
+  color: #8490ac;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.auth-privacy-note a {
+  color: #22d3ee;
+  text-underline-offset: 3px;
+}
+
+.auth-modal {
+  max-height: calc(100vh - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@supports (height: 100dvh) {
+  .auth-modal {
+    max-height: calc(100dvh - 36px);
+  }
+}

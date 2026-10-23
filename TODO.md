@@ -6,7 +6,7 @@
 - [x] Ajouter des profils, suggestions, pages suivies, badge vérifié et compteurs sociaux.
 - [x] Ajouter centre de notifications et états de messages non lus.
 - [x] Préparer le routage déclaratif et la configuration Render.
-- [x] Brancher Supabase Auth : inscription (nom, username, email, téléphone, mot de passe), connexion, oubli de mot de passe et session persistante.
+- [x] Brancher Supabase Auth : inscription (nom, username, email, téléphone facultatif), connexion, oubli de mot de passe et session persistante.
 - [x] Ajouter une migration SQL avec profils, follows, posts, conversations, messages, notifications, rôles admin et RLS.
 - [x] Ajouter la messagerie Realtime avec historique, envoi de messages et abonnement aux nouveaux messages.
 - [x] Ajouter le schéma Storage sécurisé, pages, groupes, commentaires, likes, signalements et audit logs.
@@ -43,3 +43,12 @@
 - [x] Bouton « Vidéos » de la barre supérieure : ouvre le sélecteur de vidéos du composeur au lieu du message « Les vidéos arrivent bientôt ».
 - [ ] Exécuter `supabase/migrations/008_post_media.sql` dans Supabase pour activer les publications multi-médias (une seule image est enregistrée tant que la colonne `posts.media_paths` manque).
 - [x] Reproduire sur le fil connecté desktop la référence fournie : barre haute bleu nuit avec logo, recherche, navigation principale, notifications et profil; à gauche profil, entrées « Fil d’actualité », Amis, Pages, Groupes, Vidéos, Reels, Marketplace, Enregistrés et Fichiers, raccourcis tirés des groupes rejoints et carte Premium; au centre stories, composeur et publications; à droite contacts, suggestions, Premium et groupes. Conserver les données, routes, actions et préférences de thème existantes; préserver l’interface mobile dédiée et adapter les colonnes aux tablettes.
+
+## Améliorations professionnelles — octobre 2026
+- [x] Ajouter une migration idempotente qui retire aux rôles API publics le droit de lire `profiles.phone`, sans modifier ni supprimer de valeurs et en conservant les champs de profil utilisés par l’application.
+- [x] Rendre le téléphone facultatif lors de l’inscription et ajouter un lien vers la politique de confidentialité.
+- [x] Clarifier la proposition de valeur de l’accueil et signaler le fil d’exemple comme une démonstration, sans faux compteurs.
+- [x] Ajouter `robots.txt`, un sitemap limité aux pages publiques et des métadonnées de partage pour la politique de confidentialité.
+- [x] Ajouter les tests de régression et exécuter build, lint et tests du fil.
+- [ ] Appliquer `016_private_profile_phone.sql` au projet Supabase de production, puis vérifier les lectures publiques de profil et confirmer que `anon`/`authenticated` ne peuvent pas sélectionner `phone`.
+- [ ] Exécuter `npm run test:smoke` sur le site Render après publication.

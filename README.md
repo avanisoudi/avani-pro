@@ -79,7 +79,10 @@ seule une ligne `enabled = false` masque une entrée du haut. Sans la table, rie
 masque — et la note du missing file s'affiche.
 
 Migrations à exécuter (dans cet ordre, idempotentes) : `010_stories.sql`,
-`011_feature_flags.sql`, `012_user_settings_et_types.sql` — voir
+`011_feature_flags.sql`, `012_user_settings_et_types.sql`, `013_conversation_management.sql`,
+`014_private_chat_storage.sql`, `015_community_groups_and_media.sql` et
+`016_private_profile_phone.sql` — cette dernière protège le champ téléphone sans supprimer
+les valeurs existantes; voir
 `supabase/migrations/README.md` pour la table attendue par chaque requête du client.
 
 ## Thème clair et sombre : référence « Avani neon »

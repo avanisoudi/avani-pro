@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /messages
+Disallow: /settings
+Disallow: /notifications
+Disallow: /files
+Disallow: /saved
+Disallow: /groups
+Disallow: /pages
+Disallow: /search
+Disallow: /explore
+Disallow: /videos
+Disallow: /reels
+Disallow: /stories
+Disallow: /marketplace
+Disallow: /live
+Disallow: /u/
+Disallow: /profile/
+
+Sitemap: https://avani-pro.onrender.com/sitemap.xml

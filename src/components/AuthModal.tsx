@@ -50,8 +50,8 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     setError('')
 
     if (mode === 'signup') {
-      if (!firstName.trim() || !lastName.trim() || !phone.trim()) {
-        setError('Renseignez votre prénom, votre nom et votre téléphone.')
+      if (!firstName.trim() || !lastName.trim()) {
+        setError('Renseignez votre prénom et votre nom.')
         return
       }
       if (!isAcceptablePassword(password)) {
@@ -93,7 +93,7 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/confirm`,
-            data: { full_name: fullName, username, phone: phone.trim() },
+            data: { full_name: fullName, username, phone: phone.trim() || null },
           },
         })
         if (signUpError) throw signUpError
@@ -169,8 +169,8 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
           {mode === 'signup' && (
             <label>
-              Téléphone
-              <input value={phone} onChange={event => setPhone(event.target.value)} required placeholder="+1 555 123 4567" autoComplete="tel" />
+              <span>Téléphone <span className="optional">(facultatif)</span></span>
+              <input type="tel" value={phone} onChange={event => setPhone(event.target.value)} placeholder="Indicatif + numéro, si souhaité" autoComplete="tel" />
             </label>
           )}
 
@@ -225,6 +225,13 @@ export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                   : 'Envoyer le lien ↗'}
           </button>
         </form>
+
+        {mode === 'signup' && (
+          <p className="auth-privacy-note">
+            Pour savoir comment vos informations sont utilisées, consultez notre{' '}
+            <a href="/confidentialite/" target="_blank" rel="noreferrer">politique de confidentialité</a>.
+          </p>
+        )}
 
         {mode !== 'reset' && (
           <>
