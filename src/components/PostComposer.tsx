@@ -1,3 +1,4 @@
+import { readComposerDraft, saveComposerDraft, tabDraftStorage, moveComposerItem } from '../lib/composerDraft'
 import { uniqueSelectedFiles } from '../lib/deduplicate'
 import { useEffect, useRef, useState } from 'react'
 import { MAX_POST_MEDIA_FILES, createComposerMedia, formatMediaSize, releaseComposerMedia, validateMediaSelection } from '../lib/postMedia'
@@ -16,6 +17,7 @@ function PhotoIcon() {
 }
 
 type PostComposerProps = {
+  draftOwnerId: string
   displayName: string
   initials: string
   avatarUrl: string | null
@@ -34,8 +36,10 @@ type PostComposerProps = {
  * aucune image de démonstration) et le champ « Publier » s’active dès qu’il y a
  * un texte ou un média.
  */
-export function PostComposer({ displayName, initials, avatarUrl, busy, progress, onPublish, onNotify, request }: PostComposerProps) {
-  const [body, setBody] = useState('')
+export function PostComposer({ draftOwnerId, displayName, initials, avatarUrl, busy, progress, onPublish, onNotify, request }: PostComposerProps) {
+  const [body, setBody] = useState(() => readComposerDraft(tabDraftStorage(), draftOwnerId))
+  const [draftSaved, setDraftSaved] = useState(true)
+  const updateBody = (text: string) => { const next = text.slice(0, 5000); setBody(next); setDraftSaved(saveComposerDraft(tabDraftStorage(), draftOwnerId, next)) }
   const [media, setMedia] = useState<ComposerMedia[]>([])
   const [placeOpen, setPlaceOpen] = useState(false)
   const [place, setPlace] = useState('')
@@ -85,7 +89,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
 
   const addPlace = () => {
     const name = place.trim()
-    if (name) setBody(value => `${value}${value && !value.endsWith(' ') ? ' ' : ''}📍 ${name}`)
+    if (name) updateBody(`${body}${body && !body.endsWith(' ') ? ' ' : ''}📍 ${name}`)
     setPlace('')
     setPlaceOpen(false)
   }
@@ -109,7 +113,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
       if (!published) return
       releaseComposerMedia(media)
       setMedia([])
-      setBody('')
+      updateBody('')
     } finally {
       submitInFlight.current = false
     }
@@ -125,7 +129,8 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
           <span className="fcomposer-label">Partager avec votre réseau</span>
           <textarea
             value={body}
-            onChange={event => setBody(event.target.value)}
+            onChange={event => updateBody(event.target.value)}
+            onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); formRef.current?.requestSubmit() } }}
             maxLength={5000}
             placeholder={`Quoi de neuf, ${firstName} ?`}
             aria-label="Contenu de la publication"
@@ -144,6 +149,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
               ) : (
                 <img src={item.previewUrl} alt={`Aperçu ${index + 1} : ${item.file.name}`} />
               )}
+              <div className="fcomposer-media-order"><span>{index + 1}</span><button type="button" aria-label={`Déplacer le média ${index + 1} vers la gauche`} disabled={busy || index === 0} onClick={() => setMedia(items => moveComposerItem(items, index, index - 1))}>‹</button><button type="button" aria-label={`Déplacer le média ${index + 1} vers la droite`} disabled={busy || index === media.length - 1} onClick={() => setMedia(items => moveComposerItem(items, index, index + 1))}>›</button></div>
               <span className="fcomposer-media-meta">
                 {item.kind === 'video' ? 'Vidéo' : 'Photo'} · {formatMediaSize(item.file.size)}
               </span>
@@ -162,6 +168,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
         </ul>
       ) : null}
 
+      {(body || media.length > 0) && <div className="fcomposer-draft-tools"><span role="status">{draftSaved ? 'Texte récupérable dans cet onglet, jusqu’à 24 h. Fichiers à sélectionner à nouveau après rechargement.' : 'Stockage de l’onglet indisponible : ce brouillon ne sera pas récupérable.'}</span><button type="button" disabled={busy} onClick={() => { if (window.confirm('Vider le texte et retirer les médias du brouillon ?')) { releaseComposerMedia(media); setMedia([]); updateBody(''); setPlace(''); setPlaceOpen(false) } }}>Vider le brouillon</button></div>}
       <div className="fcomposer-footer">
         <div className="fcomposer-tools">
           <button type="button" className="fcomposer-tool is-photo" onClick={() => openPicker()} disabled={busy} aria-label="Ajouter une photo ou une vidéo">
@@ -170,7 +177,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
           <button type="button" className="fcomposer-tool is-reel" onClick={() => openPicker('video')} disabled={busy} aria-label="Ajouter un Reel vidéo">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 9 5 3-5 3z" /></svg><span>Reel</span>
           </button>
-          <button type="button" className="fcomposer-tool is-mood" onClick={() => setBody(value => (value ? `${value} 😊` : '😊 '))} disabled={busy} aria-label="Ajouter une humeur ou une activité">
+          <button type="button" className="fcomposer-tool is-mood" onClick={() => updateBody(body ? `${body} 😊` : '😊 ')} disabled={busy} aria-label="Ajouter une humeur ou une activité">
             <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M8 14q4 5 8 0M8 8v2m8-2v2" /></svg> <span>Humeur/activité</span>
           </button>
           <button type="button" className="fcomposer-tool is-place" onClick={() => setPlaceOpen(open => !open)} disabled={busy} aria-expanded={placeOpen} aria-label="Ajouter un lieu">
@@ -181,6 +188,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
           </span>
         </div>
         <div className="fcomposer-submit">
+          <span className="fcomposer-keyboard-hint">Ctrl/⌘ + Entrée</span>
           <span className={body.length > 4800 ? 'fcomposer-counter near-limit' : 'fcomposer-counter'}>{body.length}/5000</span>
           <button type="submit" className="fcomposer-publish" disabled={busy || !canPublish}>
             {busy ? (progress ? `Envoi ${progress.done}/${progress.total}…` : 'Publication…') : 'Publier'}
