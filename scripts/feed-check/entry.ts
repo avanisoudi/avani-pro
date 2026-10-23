@@ -1,3 +1,4 @@
+import { listingPayload, validateListingPhoto, formatListingPrice, type ListingInput } from '../../src/lib/marketplace'
 import { readComposerDraft, saveComposerDraft, moveComposerItem, DRAFT_LIFETIME_MS } from '../../src/lib/composerDraft'
 import { uniqueById, uniqueSelectedFiles } from '../../src/lib/deduplicate'
 import { albumPreview, albumIndex } from '../../src/lib/postAlbum'
@@ -431,6 +432,22 @@ check('album vide ne produit pas index invalide', albumIndex(0, 1, 0) === 0 && a
   const css = readFileSync('src/messaging.css', 'utf8')
   check('titre Discussions conserve son violet uni original', css.includes('.messages-heading .eyebrow{color:#7c3aed!important;') && !css.includes('background:linear-gradient(100deg,#6848ee'))
   check('sous titre Discussions conserve sa couleur neutre', css.includes('.messages-heading small{display:block;color:var(--chat-muted)!important;'))
+}
+
+{
+  const input: ListingInput = { title: '  Lampe de bureau  ', description: '  Test  ', price: '12,50', currency: 'EUR', condition: 'Bon état', category: 'Maison', location: '  Strasbourg  ' }
+  const result = listingPayload(input)
+  check('Marketplace normalise les champs et le prix decimal', result.title === 'Lampe de bureau' && result.location === 'Strasbourg' && result.price === 12.5)
+  check('Marketplace don a zero explicite', listingPayload({ ...input, price: '0' }).price === 0 && formatListingPrice(0, 'EUR') === 'Gratuit')
+  check('Marketplace prix ancien absent non invente', formatListingPrice(null, 'EUR') === 'Prix à convenir')
+  const rejects = (patch: Partial<ListingInput>) => { try { listingPayload({ ...input, ...patch }); return false } catch { return true } }
+  check('Marketplace refuse prix vide negatif NaN ou plus de deux decimales', ['', '-2', 'NaN', 'Infinity', '12.001', '1e5'].every(price => rejects({ price })))
+  check('Marketplace refuse titre ou lieu vide', rejects({ title: ' ' }) && rejects({ location: '' }))
+  check('Marketplace plafonne titre description et ville', rejects({ title: 'x'.repeat(161) }) && rejects({ description: 'x'.repeat(3001) }) && rejects({ location: 'x'.repeat(121) }))
+  check('Marketplace refuse categorie et devise inconnues', rejects({ category: 'inconnue' }) && rejects({ currency: 'XXX' }))
+  const photoRejects = (type: string, size: number) => { try { validateListingPhoto({ type, size } as File); return false } catch { return true } }
+  check('Marketplace refuse SVG vide ou photo trop lourde', photoRejects('image/svg+xml', 10) && photoRejects('image/jpeg', 0) && photoRejects('image/png', 5242881))
+  check('Marketplace accepte JPEG PNG WebP dans le quota', ['image/jpeg', 'image/png', 'image/webp'].every(type => !photoRejects(type, 100)))
 }
 
 const failed = results.filter(result => !result.ok)
