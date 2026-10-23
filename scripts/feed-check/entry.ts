@@ -354,6 +354,7 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
   const source = readFileSync('src/components/MessagesPanel.tsx', 'utf8')
   check('entete ne compte plus les messages', !source.includes('threadCountLabel(') && source.includes('presentMembers'))
   check('palette des reactions rendue sur demande seulement', source.includes('reactionPickerId === message.id && <div className="message-reactions"'))
+  check('pagination des messages utilise un curseur stable date + id', source.includes('{ created_at: messages[0].created_at, id: messages[0].id }'))
   check('pastilles reservees aux reactions existantes', source.includes('!message.deleted_at && total > 0'))
   check('reactions accessibles au clavier et tactile', source.includes('aria-label="Réagir au message"') && source.includes('onPointerCancel={cancelReactionHold}') && source.includes("event.key === 'Escape'"))
 }

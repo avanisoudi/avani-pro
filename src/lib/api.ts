@@ -245,7 +245,7 @@ const MESSAGE_OPTIONAL = [
 ]
 
 /** Historique d’une conversation, du plus ancien au plus récent. */
-export async function listMessages(conversationId: string, before?: string, limit = 50) {
+export async function listMessages(conversationId: string, before?: string | { created_at: string; id: string }, limit = 50) {
   const client = requireSupabase()
   const { rows } = await retryWithoutMissing<any>({
     optional: MESSAGE_OPTIONAL,
@@ -256,7 +256,8 @@ export async function listMessages(conversationId: string, before?: string, limi
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .limit(limit)
-      if (before) query = query.lt('created_at', before)
+      if (typeof before === 'string') query = query.lt('created_at', before)
+      else if (before) query = query.or(`created_at.lt.${before.created_at},and(created_at.eq.${before.created_at},id.lt.${before.id})`)
       return await query
     },
   })
