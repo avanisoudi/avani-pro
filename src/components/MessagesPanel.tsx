@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
 import { updateChatAvatar, manageChat, listConversationMembers, listConversationReadMarkers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
-import { getConversationUserSettings, updateConversationUserSettings, listStarredMessageIds, toggleMessageStar, listPinnedMessages, setMessagePinned, type ConversationUserSettings } from '../lib/messagingEnhancements'
+import { getConversationUserSettings, updateConversationUserSettings, listStarredMessageIds, toggleMessageStar, listPinnedMessages, setMessagePinned, listMyConversationSettings, type ConversationUserSettings } from '../lib/messagingEnhancements'
 
 type TypingState = Record<string, string>
 
@@ -63,7 +63,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const inboxLoaded = useRef(false)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [listFilter, setListFilter] = useState<'all' | 'unread' | 'public' | 'private'>('all')
+  const [listFilter, setListFilter] = useState<'all' | 'unread' | 'public' | 'private' | 'archived' | 'pinned'>('all')
   const [reactionPickerId, setReactionPickerId] = useState<string | null>(null)
   const reactionHoldTimer = useRef<number | null>(null)
   const [typing, setTyping] = useState<TypingState>({})
@@ -115,6 +115,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [conversationSettings, setConversationSettings] = useState<ConversationUserSettings | null>(null)
   const [settingsBusy, setSettingsBusy] = useState(false)
   const [settingsError, setSettingsError] = useState('')
+  const [inboxSettings, setInboxSettings] = useState<Record<string, ConversationUserSettings>>({})
   const [starredMessageIds, setStarredMessageIds] = useState<string[]>([])
   const [pinnedMessages, setPinnedMessages] = useState<Array<{ message_id: string; pinned_by: string }>>([])
   const [messageControlError, setMessageControlError] = useState('')
@@ -257,6 +258,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     try {
       const saved = await updateConversationUserSettings(selected.id, user.id, patch)
       setConversationSettings(saved)
+      setInboxSettings(current => ({ ...current, [saved.conversation_id]: saved }))
       onAction('Préférences de discussion enregistrées.')
     } catch (caught) {
       setSettingsError(caught instanceof Error ? caught.message : 'Impossible d’enregistrer les préférences. Vérifiez que la migration 018 est appliquée.')
@@ -397,15 +399,28 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   // Les conversations de groupes publics viennent de `groups` (via leur
   // conversation rattachée), pas d'un drapeau inventé côté client.
   const publicChatIds = useMemo(() => new Set(publicGroups.map(group => group.conversation_id).filter(Boolean) as string[]), [publicGroups])
+  useEffect(() => {
+    if (!user) { setInboxSettings({}); return }
+    let active = true
+    void listMyConversationSettings(user.id).then(rows => {
+      if (active) setInboxSettings(Object.fromEntries(rows.map(row => [row.conversation_id, row])))
+    }).catch(() => { /* Keep the base inbox usable before migration 018 is applied. */ })
+    return () => { active = false }
+  }, [user?.id, conversations.length, reloadToken])
+
   const visibleConversations = useMemo(
     () => conversations.filter(conversation => {
       const inPublicGroup = publicChatIds.has(conversation.id)
+      const prefs = inboxSettings[conversation.id]
+      if (listFilter === 'archived' && !prefs?.is_archived) return false
+      if (listFilter !== 'archived' && prefs?.is_archived) return false
+      if (listFilter === 'pinned' && !prefs?.is_pinned) return false
       if (listFilter === 'unread' && !(previews[conversation.id]?.unread > 0)) return false
       if (listFilter === 'public' && !inPublicGroup) return false
       if (listFilter === 'private' && inPublicGroup) return false
       return (conversation.title || '').toLowerCase().includes(search.toLowerCase())
-    }),
-    [conversations, search, listFilter, publicChatIds, previews],
+    }).sort((a, b) => Number(!!inboxSettings[b.id]?.is_pinned) - Number(!!inboxSettings[a.id]?.is_pinned)),
+    [conversations, search, listFilter, publicChatIds, previews, inboxSettings],
   )
   const joinGroup = async (group: PublicGroupRecord) => {
     if (!user || joiningPublicGroup) return
@@ -777,7 +792,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       <div className="messages-heading">
         <div><span className="eyebrow">Discussions</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => openNewConversation(false)}>＋ Discussion</button><button type="button" onClick={() => openNewConversation(true)}>＋ Groupe</button></div>
       </div>
-      <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label><div className="message-filters"><button className={listFilter === 'all' ? 'active' : ''} type="button" onClick={() => setListFilter('all')}>Toutes</button><button className={listFilter === 'unread' ? 'active' : ''} type="button" onClick={() => setListFilter('unread')}>Non lues</button><button className={listFilter === 'public' ? 'active' : ''} type="button" onClick={() => setListFilter('public')}>Groupes publics</button><button className={listFilter === 'private' ? 'active' : ''} type="button" onClick={() => setListFilter('private')}>Privées</button></div>
+      <label className="message-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher une conversation" aria-label="Rechercher une conversation" /></label><div className="message-filters"><button className={listFilter === 'all' ? 'active' : ''} type="button" onClick={() => setListFilter('all')}>Toutes</button><button className={listFilter === 'unread' ? 'active' : ''} type="button" onClick={() => setListFilter('unread')}>Non lues</button><button className={listFilter === 'public' ? 'active' : ''} type="button" onClick={() => setListFilter('public')}>Groupes publics</button><button className={listFilter === 'private' ? 'active' : ''} type="button" onClick={() => setListFilter('private')}>Privées</button><button className={listFilter === 'pinned' ? 'active' : ''} type="button" onClick={() => setListFilter('pinned')}>Épinglées</button><button className={listFilter === 'archived' ? 'active' : ''} type="button" onClick={() => setListFilter('archived')}>Archivées</button></div>
       {previewError && <p className="messages-note">{previewError} <button type="button" onClick={() => setReloadToken(value => value + 1)}>Réessayer</button></p>}
       {!reactionsLive && <p className="messages-note">Réactions masquées&nbsp;: la table <code>message_reactions</code> est absente de la base. Exécute <code>supabase/migrations/009_messages_live.sql</code> pour les activer.</p>}
       {(error || listError) && <div className="messages-alert" role="alert">
@@ -814,6 +829,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           </div>
           <div className="conversation-row-side">
             {preview?.at && <span className="conversation-row-time">{formatRowTime(preview.at)}</span>}
+            {inboxSettings[conversation.id]?.is_pinned && <span aria-label="Discussion épinglée" title="Discussion épinglée">📌</span>}
+            {inboxSettings[conversation.id]?.is_muted && <span aria-label="Notifications désactivées" title="Notifications désactivées">🔕</span>}
             {badge ? <span className="unread-pill" aria-label={`${preview?.unread ?? 0} messages non lus`}>{badge}</span> : null}
           </div>
         </button>
