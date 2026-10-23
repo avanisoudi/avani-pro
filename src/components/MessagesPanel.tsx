@@ -622,7 +622,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     if (!selected || !hasOlder || loadingOlder || messages.length === 0) return
     setLoadingOlder(true)
     try {
-      const older = await listMessages(selected.id, messages[0].created_at)
+      const older = await listMessages(selected.id, { created_at: messages[0].created_at, id: messages[0].id })
       setMessages(current => {
         const ids = new Set(current.map(item => item.id))
         return [...older.filter(item => !ids.has(item.id)), ...current]
