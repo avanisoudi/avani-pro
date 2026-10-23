@@ -25,3 +25,6 @@ dist-ssr
 
 # Sorties du test de logique du fil
 scripts/feed-check/out
+
+# Local browser captures
+.arena/

@@ -1,3 +1,6 @@
+import { createPortal } from 'react-dom'
+import { PostGallery } from './PostGallery'
+import { albumPreview } from '../lib/postAlbum'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { listReactionUsers } from '../lib/api'
@@ -215,7 +218,7 @@ export function PostCard({ post, user, me, onReact, onShare, onSave, onCommentTo
         <>
           {text ? (
             <div className={collapsed ? 'fpost-text is-collapsed' : 'fpost-text'}>
-              <p>{text}</p>
+              <p>{text.split(/(#[\p{L}\p{N}_]+)/gu).map((part, index) => part.startsWith('#') ? <span className="fpost-inline-tag" key={index}>{part}</span> : part)}</p>
               {long ? (
                 <button type="button" className="fpost-more-text" onClick={() => setExpanded(value => !value)}>
                   {expanded ? 'Voir moins' : 'Voir plus'}
@@ -225,13 +228,7 @@ export function PostCard({ post, user, me, onReact, onShare, onSave, onCommentTo
           ) : null}
           {post.role && !text ? <p className="fpost-subline">{post.role}</p> : null}
           {media.length ? <PostMedia media={media} author={post.name} /> : null}
-          {post.tags.length ? (
-            <p className="fpost-tags">
-              {post.tags.map(tag => (
-                <span key={tag}>{tag}</span>
-              ))}
-            </p>
-          ) : null}
+
         </>
       )}
 
@@ -306,30 +303,26 @@ export function PostCard({ post, user, me, onReact, onShare, onSave, onCommentTo
   )
 }
 
-/** Médias d’une publication : 1 pleine largeur, 2 côte à côte, 3 en vedette + colonne, 4 en grille. */
+/** Album : photo vedette et deux vignettes, tous les originaux restent accessibles. */
 function PostMedia({ media, author }: { media: Array<{ type: 'image' | 'video'; url: string }>; author: string }) {
   const [failed, setFailed] = useState<Record<string, boolean>>({})
-  const shown = media.slice(0, 4)
-  const overflow = media.length - shown.length
-  const layout = overflow > 0 ? 4 : shown.length
-  return (
-    <div className={`fpost-media fpost-media-${layout}${overflow > 0 ? ' has-more' : ''}`}>
-      {shown.map((item, index) => (
-        <figure className="fpost-media-tile" key={`${item.url}-${index}`}>
-          {failed[item.url] ? <div className="fpost-media-error" role="status"><p>Ce média ne peut pas être affiché. Rechargez la page ou ouvrez le fichier.</p><a href={item.url} target="_blank" rel="noreferrer">Ouvrir le fichier</a></div> : item.type === 'video' ? (
-            <video src={item.url} controls playsInline preload="metadata" onError={() => setFailed(current => ({ ...current, [item.url]: true }))}><a href={item.url}>Ouvrir la vidéo</a></video>
-          ) : (
-            <a href={item.url} target="_blank" rel="noreferrer"><img src={item.url} alt={`Média publié par ${author}`} loading="lazy" onError={() => setFailed(current => ({ ...current, [item.url]: true }))} /></a>
-          )}
-          {index === shown.length - 1 && overflow > 0 ? (
-            <span className="fpost-media-more">
-              +{overflow} photo{overflow > 1 ? 's' : ''}
-            </span>
-          ) : null}
-        </figure>
-      ))}
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const { visibleCount, overflow } = albumPreview(media.length)
+  const shown = media.slice(0, visibleCount)
+  return <>
+    <div className={`fpost-media fpost-media-${visibleCount}${overflow > 0 ? ' has-more' : ''}`}>
+      {shown.map((item, index) => <figure className="fpost-media-tile" key={`${item.url}-${index}`}>
+        {failed[item.url] ? <div className="fpost-media-error" role="status"><p>Ce média ne peut pas être affiché.</p><a href={item.url} target="_blank" rel="noreferrer">Ouvrir le fichier</a></div> : item.type === 'video' ? <>
+          <video src={item.url} controls playsInline preload="metadata" onError={() => setFailed(current => ({ ...current, [item.url]: true }))} />
+          <button type="button" className="fpost-video-album" onClick={() => setActiveIndex(index)} aria-label={`Ouvrir le média ${index + 1} sur ${media.length}`}>Voir dans l’album</button>
+        </> : <button type="button" className="fpost-photo-open" onClick={() => setActiveIndex(index)} aria-label={`Ouvrir le média ${index + 1} sur ${media.length}`}>
+          <img src={item.url} alt={`Photo ${index + 1} publiée par ${author}`} loading="lazy" onError={() => setFailed(current => ({ ...current, [item.url]: true }))} />
+        </button>}
+        {index === shown.length - 1 && overflow > 0 && <button type="button" className="fpost-media-more" onClick={() => setActiveIndex(index)} aria-label={`Voir les ${media.length} médias de la publication`}>+{overflow}</button>}
+      </figure>)}
     </div>
-  )
+    {activeIndex !== null && createPortal(<PostGallery media={media} author={author} initialIndex={activeIndex} onClose={() => setActiveIndex(null)} />, document.body)}
+  </>
 }
 
 /** Bouton J’aime avec barre de réactions au survol et appui long sur mobile. */

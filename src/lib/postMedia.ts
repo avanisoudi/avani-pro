@@ -15,7 +15,7 @@ import { requireSupabase } from './supabase'
  */
 
 export const POST_MEDIA_BUCKET = ((import.meta.env.VITE_POST_MEDIA_BUCKET as string | undefined) ?? '').trim() || 'post-media'
-export const MAX_POST_MEDIA_FILES = 4
+export const MAX_POST_MEDIA_FILES = 10
 export const MAX_POST_IMAGE_BYTES = 10 * 1024 * 1024
 export const MAX_POST_VIDEO_BYTES = 50 * 1024 * 1024
 export const MAX_POST_MEDIA_TOTAL_BYTES = 100 * 1024 * 1024

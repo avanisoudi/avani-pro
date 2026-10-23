@@ -51,8 +51,7 @@ export async function getMessageAttachmentUrl(path: string, expiresIn = 3600) {
  * Enregistre une publication. Les médias sont stockés sous forme de chemins d’objets
  * Storage (`media_paths text[]`, colonne ajoutée par la migration 008) ; le premier chemin
  * est aussi copié dans `media_path`, colonne historique de la migration 001.
- * Si `media_paths` n’existe pas encore dans la base, la publication est quand même
- * enregistrée avec sa première image plutôt que d’échouer.
+ * Si `media_paths` manque, on refuse la publication : ne jamais perdre les autres photos.
  */
 export async function createPost(authorId: string, body: string, postType = 'text', mediaPaths: string[] = []) {
   const client = requireSupabase()
@@ -66,11 +65,7 @@ export async function createPost(authorId: string, body: string, postType = 'tex
   const attempt = await client.from('posts').insert(payload).select('id, created_at, post_type, media_paths').single()
   if (!attempt.error) return attempt.data as { id: string; created_at: string; media_paths?: string[] | null }
   if (paths.length && isMissingColumnError(attempt.error, 'media_paths')) {
-    const withoutArray = { ...payload }
-    delete withoutArray.media_paths
-    const fallback = await client.from('posts').insert(withoutArray).select('id, created_at, post_type').single()
-    if (fallback.error) throw fallback.error
-    return { ...(fallback.data as { id: string; created_at: string }), media_paths: null }
+    throw new Error('Album non publié : la colonne media_paths manque dans Supabase. Appliquez la migration 015 avant de réessayer. Aucune photo ne sera abandonnée silencieusement.')
   }
   throw attempt.error
 }

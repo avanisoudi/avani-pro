@@ -1,3 +1,4 @@
+import { albumPreview, albumIndex } from '../../src/lib/postAlbum'
 import { mentionAtCursor, insertMention } from '../../src/lib/mentions'
 /**
  * Vérifications du fil d’actualité (logique pure, sans DOM) : compteurs de réactions,
@@ -372,6 +373,12 @@ check('tokenName isole le nom cité par PostgREST', tokenName('reply_to:messages
   check('rond rouge decoratif retire', !readFileSync('src/App.css', 'utf8').includes("content:'◉'"))
   check('photo du groupe avec validation serveur', readFileSync('src/lib/api.ts', 'utf8').includes("rpc('avani_set_chat_avatar'"))
 }
+
+check('album cinq photos : vedette et deux vignettes, plus deux', albumPreview(5).visibleCount === 3 && albumPreview(5).overflow === 2)
+check('album complet jusqu a dix medias', MAX_POST_MEDIA_FILES === 10 && albumPreview(10).overflow === 7)
+check('album simple et paire sans compteur superflu', albumPreview(1).visibleCount === 1 && albumPreview(2).overflow === 0)
+check('navigation album boucle aux extremites', albumIndex(4, 1, 5) === 0 && albumIndex(0, -1, 5) === 4)
+check('album vide ne produit pas index invalide', albumIndex(0, 1, 0) === 0 && albumPreview(0).visibleCount === 0)
 
 const failed = results.filter(result => !result.ok)
 console.log(`\n${results.length - failed.length}/${results.length} vérifications du fil réussies`)
