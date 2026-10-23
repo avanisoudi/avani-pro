@@ -1023,4 +1023,3 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   </section>
 }
 
-// Inbox preferences: archived and pinned filters are wired in the follow-up commit.
