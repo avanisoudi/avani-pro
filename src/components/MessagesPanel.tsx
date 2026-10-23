@@ -194,6 +194,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   useEffect(() => {
     if (!selected || !user || !infoOpen) return
     let active = true
+    setConversationSettings(null)
     setSettingsError('')
     void getConversationUserSettings(selected.id, user.id)
       .then(value => { if (active) setConversationSettings(value) })
@@ -723,7 +724,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   if (!user) return <section className="placeholder"><div className="placeholder-orb">◌</div><span className="eyebrow">Discussions</span><h2>Connectez-vous pour discuter.</h2><p>Vos conversations sont chargées depuis votre compte réel.</p></section>
   if (loading) return <section className="placeholder"><div className="placeholder-orb">◌</div><h2>Chargement de vos conversations…</h2></section>
 
-  return <section className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''} ${infoOpen ? 'show-conversation-info' : ''}`} aria-label="Messagerie Avani Pro">
+  return <section data-chat-wallpaper={conversationSettings?.wallpaper || 'default'} className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''} ${infoOpen ? 'show-conversation-info' : ''}`} aria-label="Messagerie Avani Pro">
     <div className="conversation-list">
       <div className="messages-heading">
         <div><span className="eyebrow">Discussions</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => openNewConversation(false)}>＋ Discussion</button><button type="button" onClick={() => openNewConversation(true)}>＋ Groupe</button></div>
