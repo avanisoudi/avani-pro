@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
 import { updateChatAvatar, manageChat, listConversationMembers, listConversationReadMarkers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
+import { getConversationUserSettings, updateConversationUserSettings, listStarredMessageIds, toggleMessageStar, listPinnedMessages, setMessagePinned, type ConversationUserSettings } from '../lib/messagingEnhancements'
 
 type TypingState = Record<string, string>
 
@@ -111,6 +112,12 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<ReactionType, number>>>({})
   const [myReactions, setMyReactions] = useState<Record<string, ReactionType | null>>({})
   const typingTimeout = useRef<number | null>(null)
+  const [conversationSettings, setConversationSettings] = useState<ConversationUserSettings | null>(null)
+  const [settingsBusy, setSettingsBusy] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
+  const [starredMessageIds, setStarredMessageIds] = useState<string[]>([])
+  const [pinnedMessages, setPinnedMessages] = useState<Array<{ message_id: string; pinned_by: string }>>([])
+  const [messageControlError, setMessageControlError] = useState('')
 
   useEffect(() => {
     if (!newConversationOpen || !user) return
@@ -186,6 +193,77 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }, 300)
     return () => { active = false; window.clearTimeout(timer) }
   }, [inviteQuery, infoOpen, selected?.id, selected?.is_group, selected?.created_by, members, membersLoading, membersError, user?.id])
+
+  useEffect(() => {
+    if (!selected || !user || !infoOpen) return
+    let active = true
+    setConversationSettings(null)
+    setSettingsError('')
+    void getConversationUserSettings(selected.id, user.id)
+      .then(value => { if (active) setConversationSettings(value) })
+      .catch(caught => { if (active) setSettingsError(caught instanceof Error ? caught.message : 'Impossible de charger les préférences de discussion.') })
+    return () => { active = false }
+  }, [selected?.id, user?.id, infoOpen])
+
+  useEffect(() => {
+    if (!selected?.id || !user) {
+      setStarredMessageIds([])
+      setPinnedMessages([])
+      return
+    }
+    let active = true
+    setMessageControlError('')
+    void Promise.all([
+      listStarredMessageIds(user.id, selected.id),
+      listPinnedMessages(selected.id),
+    ]).then(([stars, pins]) => {
+      if (active) { setStarredMessageIds(stars); setPinnedMessages(pins) }
+    }).catch(caught => {
+      if (active) setMessageControlError(caught instanceof Error ? caught.message : 'Impossible de charger les favoris et les messages épinglés.')
+    })
+    return () => { active = false }
+  }, [selected?.id, user?.id])
+
+  const toggleStarForMessage = async (message: MessageRecord) => {
+    if (!user) return
+    const wasStarred = starredMessageIds.includes(message.id)
+    setStarredMessageIds(current => wasStarred ? current.filter(id => id !== message.id) : [...current, message.id])
+    try {
+      await toggleMessageStar(message.id, user.id, !wasStarred)
+      onAction(wasStarred ? 'Message retiré des favoris.' : 'Message ajouté aux favoris.')
+    } catch (caught) {
+      setStarredMessageIds(current => wasStarred ? [...current, message.id] : current.filter(id => id !== message.id))
+      setMessageControlError(caught instanceof Error ? caught.message : 'Impossible de modifier les favoris. Vérifiez la migration 018.')
+    }
+  }
+
+  const togglePinForMessage = async (message: MessageRecord) => {
+    if (!user || !selected) return
+    const wasPinned = pinnedMessages.some(pin => pin.message_id === message.id)
+    setMessageControlError('')
+    try {
+      await setMessagePinned(message.id, selected.id, user.id, !wasPinned)
+      setPinnedMessages(current => wasPinned ? current.filter(pin => pin.message_id !== message.id) : [{ message_id: message.id, pinned_by: user.id }, ...current])
+      onAction(wasPinned ? 'Message désépinglé.' : 'Message épinglé pour les membres de cette discussion.')
+    } catch (caught) {
+      setMessageControlError(caught instanceof Error ? caught.message : 'Impossible d’épingler ce message. Vérifiez la migration 018.')
+    }
+  }
+
+  const saveConversationPreference = async (patch: Partial<Pick<ConversationUserSettings, 'is_archived' | 'is_muted' | 'is_pinned' | 'wallpaper' | 'disappearing_after_seconds'>>) => {
+    if (!selected || !user || settingsBusy) return
+    setSettingsBusy(true)
+    setSettingsError('')
+    try {
+      const saved = await updateConversationUserSettings(selected.id, user.id, patch)
+      setConversationSettings(saved)
+      onAction('Préférences de discussion enregistrées.')
+    } catch (caught) {
+      setSettingsError(caught instanceof Error ? caught.message : 'Impossible d’enregistrer les préférences. Vérifiez que la migration 018 est appliquée.')
+    } finally {
+      setSettingsBusy(false)
+    }
+  }
 
   // Settings remain usable on touch screens and with a keyboard, without escaping the dialog.
   useEffect(() => {
@@ -694,7 +772,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   if (!user) return <section className="placeholder"><div className="placeholder-orb">◌</div><span className="eyebrow">Discussions</span><h2>Connectez-vous pour discuter.</h2><p>Vos conversations sont chargées depuis votre compte réel.</p></section>
   if (loading) return <section className="placeholder"><div className="placeholder-orb">◌</div><h2>Chargement de vos conversations…</h2></section>
 
-  return <section className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''} ${infoOpen ? 'show-conversation-info' : ''}`} aria-label="Messagerie Avani Pro">
+  return <section data-chat-wallpaper={conversationSettings?.wallpaper || 'default'} className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''} ${infoOpen ? 'show-conversation-info' : ''}`} aria-label="Messagerie Avani Pro">
     <div className="conversation-list">
       <div className="messages-heading">
         <div><span className="eyebrow">Discussions</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => openNewConversation(false)}>＋ Discussion</button><button type="button" onClick={() => openNewConversation(true)}>＋ Groupe</button></div>
@@ -754,6 +832,15 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           {messageQuery.trim() && <div className="thread-search-results">{messages.filter(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))).map(message => <button type="button" key={message.id} onClick={() => { const node = document.getElementById(`message-${message.id}`); node?.scrollIntoView({ behavior: 'smooth', block: 'center' }); node?.focus({ preventScroll: true }) }}>{message.body}<small>{new Date(message.created_at).toLocaleString('fr-FR')}</small></button>)}{!messages.some(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))) && <p role="status">Aucun message correspondant parmi les messages chargés.</p>}</div>}
         </section>}
         <div className="message-scroll" aria-live="polite">
+          {messageControlError && <p className="message-control-error" role="alert">{messageControlError}</p>}
+          {pinnedMessages.length > 0 && (() => {
+            const pin = pinnedMessages[0]
+            const pinnedMessage = messages.find(item => item.id === pin.message_id)
+            return <button type="button" className="pinned-message-banner" onClick={() => document.getElementById(`message-${pin.message_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} aria-label="Aller au message épinglé">
+              <span aria-hidden="true">📌</span><span><strong>Message épinglé</strong><small>{pinnedMessage?.body || 'Voir le message épinglé dans la discussion'}</small></span>
+            </button>
+          })()}
+
           {hasOlder && <button type="button" className="message-button" onClick={() => void loadOlder()} disabled={loadingOlder}>{loadingOlder ? 'Chargement…' : 'Charger les anciens messages'}</button>}
           {messages.length === 0 && <p className="empty-copy">Commencez la conversation.</p>}
           {messages.map(message => {
@@ -777,7 +864,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
                 {pills.map(([type, count]) => <button type="button" data-reaction-control key={type} className={myReactions[message.id] === type ? 'is-mine' : ''} aria-label={`${type} : ${count} réaction${count > 1 ? 's' : ''}. Choisir ou retirer votre réaction`} onClick={() => setReactionPickerId(current => current === message.id ? null : message.id)}><span aria-hidden="true">{reactionEmoji[type]}</span><small>{count}</small></button>)}
               </div>}
               <div className="message-foot">
-                <span className="message-time">{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</span>
+                <span className="message-time">{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</span>{starredMessageIds.includes(message.id) && <span className="message-starred" aria-label="Message favori" title="Message favori">★</span>}
                 {mine && !message.deleted_at && <span className={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'message-read-status is-read' : 'message-read-status'} aria-label={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'} title={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'}>{readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? '✓✓' : '✓'}</span>}
                 {!message.deleted_at && <div className="message-tools">
                   {reactionsLive && <div className="reaction-control" data-reaction-control>
@@ -789,6 +876,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
                   </div>}
                   <details name="message-actions" className="message-action-menu" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }} onKeyDown={event => { if (event.key === 'Escape') event.currentTarget.open = false }}><summary aria-label="Actions du message">⌄</summary><div className="message-meta-actions">
                     <button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); setReplyTo(message) }}>Répondre</button>
+                    <button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void toggleStarForMessage(message) }}>{starredMessageIds.includes(message.id) ? 'Retirer des favoris ★' : 'Ajouter aux favoris ☆'}</button>
+                    <button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void togglePinForMessage(message) }}>{pinnedMessages.some(pin => pin.message_id === message.id) ? 'Désépingler' : 'Épingler dans la discussion'}</button>
                     {mine && <><button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); setEditingId(message.id); setEditingBody(message.body) }}>Modifier</button><button type="button" onClick={() => { if (window.confirm('Supprimer ce message pour tous les membres de cette discussion ?')) void removeMessage(message) }}>Supprimer</button></>}
                   </div></details>
                 </div>}
@@ -857,6 +946,28 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           {groupBusy && <p role="status" className="message-profile-muted">Mise à jour du groupe…</p>}
           {groupError && <p className="message-profile-muted" role="alert">{groupError}</p>}
         </section>}
+        <section className="message-profile-section">
+          <h3>Préférences de discussion</h3>
+          {settingsError && <p className="message-profile-muted" role="alert">{settingsError} <button type="button" onClick={() => { if (selected && user) void getConversationUserSettings(selected.id, user.id).then(setConversationSettings).catch(() => undefined) }}>Réessayer</button></p>}
+          {!conversationSettings && !settingsError && <p className="message-profile-muted">Chargement des préférences…</p>}
+          {conversationSettings && <>
+            <label className="message-setting-toggle"><input type="checkbox" checked={conversationSettings.is_muted} disabled={settingsBusy} onChange={event => void saveConversationPreference({ is_muted: event.target.checked })} /> Couper / réactiver les notifications de cette discussion</label>
+            <label className="message-setting-control">Messages éphémères
+              <select value={String(conversationSettings.disappearing_after_seconds)} disabled={settingsBusy} onChange={event => void saveConversationPreference({ disappearing_after_seconds: Number(event.target.value) })}>
+                <option value="0">Désactivés</option><option value="86400">24 heures</option><option value="604800">7 jours</option><option value="7776000">90 jours</option>
+              </select>
+            </label>
+            <label className="message-setting-control">Fond de discussion
+              <select value={conversationSettings.wallpaper || 'default'} disabled={settingsBusy} onChange={event => void saveConversationPreference({ wallpaper: event.target.value })}>
+                <option value="default">Avani Pro — par défaut</option><option value="violet">Violet nocturne</option><option value="blue">Bleu néon</option><option value="plain">Uni et discret</option>
+              </select>
+            </label>
+            <label className="message-setting-toggle"><input type="checkbox" checked={conversationSettings.is_pinned} disabled={settingsBusy} onChange={event => void saveConversationPreference({ is_pinned: event.target.checked })} /> Épingler cette discussion dans ma boîte de réception</label>
+            <label className="message-setting-toggle"><input type="checkbox" checked={conversationSettings.is_archived} disabled={settingsBusy} onChange={event => void saveConversationPreference({ is_archived: event.target.checked })} /> Archiver cette discussion</label>
+            <p className="message-profile-muted">Les préférences sont enregistrées sur votre compte. Les messages éphémères nécessitent l’activation du nettoyage côté serveur pour être supprimés automatiquement.</p>
+          </>}
+          {settingsBusy && <p className="message-profile-muted" role="status">Enregistrement…</p>}
+        </section>
         <section className="message-profile-section">
           <h3>À propos</h3>
           <p>{selected.is_group ? `${members.length} membre${members.length === 1 ? '' : 's'} dans ce groupe` : 'Conversation privée sur AVANI PRO'}</p>
