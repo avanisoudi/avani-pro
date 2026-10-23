@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
 import { updateChatAvatar, manageChat, listConversationMembers, listConversationReadMarkers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
+import { getConversationUserSettings, updateConversationUserSettings, type ConversationUserSettings } from '../lib/messagingEnhancements'
 
 type TypingState = Record<string, string>
 
@@ -111,6 +112,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<ReactionType, number>>>({})
   const [myReactions, setMyReactions] = useState<Record<string, ReactionType | null>>({})
   const typingTimeout = useRef<number | null>(null)
+  const [conversationSettings, setConversationSettings] = useState<ConversationUserSettings | null>(null)
+  const [settingsBusy, setSettingsBusy] = useState(false)
+  const [settingsError, setSettingsError] = useState('')
 
   useEffect(() => {
     if (!newConversationOpen || !user) return
@@ -186,6 +190,31 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }, 300)
     return () => { active = false; window.clearTimeout(timer) }
   }, [inviteQuery, infoOpen, selected?.id, selected?.is_group, selected?.created_by, members, membersLoading, membersError, user?.id])
+
+  useEffect(() => {
+    if (!selected || !user || !infoOpen) return
+    let active = true
+    setSettingsError('')
+    void getConversationUserSettings(selected.id, user.id)
+      .then(value => { if (active) setConversationSettings(value) })
+      .catch(caught => { if (active) setSettingsError(caught instanceof Error ? caught.message : 'Impossible de charger les préférences de discussion.') })
+    return () => { active = false }
+  }, [selected?.id, user?.id, infoOpen])
+
+  const saveConversationPreference = async (patch: Partial<Pick<ConversationUserSettings, 'is_archived' | 'is_muted' | 'is_pinned' | 'wallpaper' | 'disappearing_after_seconds'>>) => {
+    if (!selected || !user || settingsBusy) return
+    setSettingsBusy(true)
+    setSettingsError('')
+    try {
+      const saved = await updateConversationUserSettings(selected.id, user.id, patch)
+      setConversationSettings(saved)
+      onAction('Préférences de discussion enregistrées.')
+    } catch (caught) {
+      setSettingsError(caught instanceof Error ? caught.message : 'Impossible d’enregistrer les préférences. Vérifiez que la migration 018 est appliquée.')
+    } finally {
+      setSettingsBusy(false)
+    }
+  }
 
   // Settings remain usable on touch screens and with a keyboard, without escaping the dialog.
   useEffect(() => {
@@ -857,6 +886,28 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           {groupBusy && <p role="status" className="message-profile-muted">Mise à jour du groupe…</p>}
           {groupError && <p className="message-profile-muted" role="alert">{groupError}</p>}
         </section>}
+        <section className="message-profile-section">
+          <h3>Préférences de discussion</h3>
+          {settingsError && <p className="message-profile-muted" role="alert">{settingsError} <button type="button" onClick={() => { if (selected && user) void getConversationUserSettings(selected.id, user.id).then(setConversationSettings).catch(() => undefined) }}>Réessayer</button></p>}
+          {!conversationSettings && !settingsError && <p className="message-profile-muted">Chargement des préférences…</p>}
+          {conversationSettings && <>
+            <label className="message-setting-toggle"><input type="checkbox" checked={conversationSettings.is_muted} disabled={settingsBusy} onChange={event => void saveConversationPreference({ is_muted: event.target.checked })} /> Couper / réactiver les notifications de cette discussion</label>
+            <label className="message-setting-control">Messages éphémères
+              <select value={String(conversationSettings.disappearing_after_seconds)} disabled={settingsBusy} onChange={event => void saveConversationPreference({ disappearing_after_seconds: Number(event.target.value) })}>
+                <option value="0">Désactivés</option><option value="86400">24 heures</option><option value="604800">7 jours</option><option value="7776000">90 jours</option>
+              </select>
+            </label>
+            <label className="message-setting-control">Fond de discussion
+              <select value={conversationSettings.wallpaper || 'default'} disabled={settingsBusy} onChange={event => void saveConversationPreference({ wallpaper: event.target.value })}>
+                <option value="default">Avani Pro — par défaut</option><option value="violet">Violet nocturne</option><option value="blue">Bleu néon</option><option value="plain">Uni et discret</option>
+              </select>
+            </label>
+            <label className="message-setting-toggle"><input type="checkbox" checked={conversationSettings.is_pinned} disabled={settingsBusy} onChange={event => void saveConversationPreference({ is_pinned: event.target.checked })} /> Épingler cette discussion dans ma boîte de réception</label>
+            <label className="message-setting-toggle"><input type="checkbox" checked={conversationSettings.is_archived} disabled={settingsBusy} onChange={event => void saveConversationPreference({ is_archived: event.target.checked })} /> Archiver cette discussion</label>
+            <p className="message-profile-muted">Les préférences sont enregistrées sur votre compte. Les messages éphémères nécessitent l’activation du nettoyage côté serveur pour être supprimés automatiquement.</p>
+          </>}
+          {settingsBusy && <p className="message-profile-muted" role="status">Enregistrement…</p>}
+        </section>
         <section className="message-profile-section">
           <h3>À propos</h3>
           <p>{selected.is_group ? `${members.length} membre${members.length === 1 ? '' : 's'} dans ce groupe` : 'Conversation privée sur AVANI PRO'}</p>
