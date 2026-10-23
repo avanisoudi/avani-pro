@@ -291,7 +291,7 @@ const FLAG_KEYS: Array<{ key: string; label: string; help: string }> = [
   { key: 'stories', label: 'Stories', help: 'Fil du haut de page, publication 24 h et archive.' },
   { key: 'videos', label: 'Vidéos', help: 'Page /videos, alimentée par les publications vidéo du réseau.' },
   { key: 'reels', label: 'Reels', help: 'Flux vertical /reels, lecture automatique de la vidéo visible.' },
-  { key: 'marketplace', label: 'Marketplace', help: 'Aucune table de petites annonces en base : l’écran reste un état, pas un catalogue.' },
+  { key: 'marketplace', label: 'Marketplace', help: 'Petites annonces, photos, recherche et contact du vendeur.' },
   { key: 'live', label: 'Live', help: 'Aucune diffusion temps réel branchée : l’écran reste un état, pas un lecteur.' },
   { key: 'messages', label: 'Messages', help: 'Fils privés et de groupe, Realtime, pièces jointes.' },
   { key: 'groups', label: 'Groupes', help: 'Groupes publics et privés, chat de groupe.' },

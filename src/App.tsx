@@ -15,6 +15,8 @@ import './themes.css'
 import './feed-reference.css'
 import './professional.css'
 import './avani-neon.css'
+import './marketplace.css'
+import { MarketplacePanel } from './components/MarketplacePanel'
 import { AuthModal } from './components/AuthModal'
 import { ConfirmEmailPanel } from './components/ConfirmEmailPanel'
 import { ResetPasswordPanel } from './components/ResetPasswordPanel'
@@ -474,7 +476,7 @@ function App() {
         {active === 'reels' && (open('reels') ? <ReelsPanel user={sessionUser} onAction={flash} /> : closedPanel('Reels'))}
         {active === 'stories' && (open('stories') ? <StoriesPanel user={sessionUser} onAction={flash} onMessage={conversationId => { setInitialConversationId(conversationId); navigateTo(`/messages/${conversationId}`, 'messages') }} /> : closedPanel('Stories'))}
         {active === 'marketplace' && (open('marketplace')
-          ? <SoonPanel title="Marketplace non ouvert" text="Aucune petite annonce n’existe dans la base : ni table `listings`, ni vendeur à contacter. Cette page le déclare au lieu de singer un catalogue." note={flags.note} actionLabel="Retour au fil" onAction={() => navigateTo('/', 'feed')} />
+          ? <MarketplacePanel user={sessionUser} onMessage={conversationId => { setInitialConversationId(conversationId); navigateTo(`/messages/${conversationId}`, 'messages') }} />
           : closedPanel('Marketplace'))}
         {active === 'live' && (open('live')
           ? <SoonPanel title="Live non ouvert" text="Le direct demande un service de diffusion (signalisation + média). Rien de tout cela n’est branché : aucun compteur de spectateurs ne sera affiché pour faire nombre." note={flags.note} actionLabel="Retour au fil" onAction={() => navigateTo('/', 'feed')} />
