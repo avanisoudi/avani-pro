@@ -18,7 +18,9 @@ import './avani-neon.css'
 import { AuthModal } from './components/AuthModal'
 import { ConfirmEmailPanel } from './components/ConfirmEmailPanel'
 import { ResetPasswordPanel } from './components/ResetPasswordPanel'
-import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel, SettingsPanel } from './components/FeaturePanels'
+import { AdminPanel, ExplorePanel, GroupsPanel, PagesPanel, ProfilePanel } from './components/FeaturePanels'
+import { SettingsPage } from './components/SettingsPage'
+import './components/settings-page.css'
 import { MessagesPanel } from './components/MessagesPanel'
 import { FilesPanel, NotificationsPanel, PublicProfilePanel, SavedPanel, SearchPanel } from './components/AdvancedPanels'
 import { ReelsPanel, SoonPanel, StoriesPanel, VideosPanel } from './components/MediaPanels'
@@ -479,7 +481,7 @@ function App() {
         {active === 'live' && (open('live')
           ? <SoonPanel title="Live non ouvert" text="Le direct demande un service de diffusion (signalisation + média). Rien de tout cela n’est branché : aucun compteur de spectateurs ne sera affiché pour faire nombre." note={flags.note} actionLabel="Retour au fil" onAction={() => navigateTo('/', 'feed')} />
           : closedPanel('Live'))}
-        {active === 'settings' && <SettingsPanel user={sessionUser} onAction={flash} onFlagsChanged={loadFlags} />}
+        {active === 'settings' && <SettingsPage user={sessionUser} onAction={flash} />}
       </main>
 
       <aside className="right-rail"><section className="rail-card online-contacts"><div className="card-heading"><span>Contacts en ligne <i className="online-dot" /></span><button type="button" onClick={() => setActive('messages')}>Voir tout</button></div><div className="contact-list">{networkPeople.slice(0,7).map(person => <button type="button" className="contact-row" key={person.id} onClick={() => setActive('messages')}><span className="avatar avatar-sm avatar-soft">{person.avatar_url ? <img src={person.avatar_url} alt="" /> : person.full_name.slice(0,2).toUpperCase()}</span><strong>{person.full_name}</strong><i className="online-dot" /><span>•••</span></button>)}</div></section><details className="rail-card rail-detail friend-suggestions" open><summary className="card-heading"><span>Suggestions d’amis</span><button type="button" onClick={event => { event.preventDefault(); setActive('explore') }}>Voir tout ↗</button></summary><div className="suggestion-list">{networkPeople.filter(person => !followed.includes(person.id)).slice(0,4).map(person => <div className="suggestion" key={person.id}><div className="avatar avatar-md avatar-soft">{person.avatar_url ? <img src={person.avatar_url} alt="" /> : person.full_name.slice(0,2).toUpperCase()}</div><div className="suggestion-copy"><strong>{person.full_name}{person.verified_type && <VerifiedBadge type={person.verified_type} />}</strong><span>@{person.username}</span><small>{person.bio || ''}</small></div><button className={followed.includes(person.id) ? 'follow-button following' : 'follow-button'} onClick={async () => { if (!sessionUser) return; const isFollowing = followed.includes(person.id); try { const next = await toggleFollow(sessionUser.id, person.id, isFollowing); setFollowed(current => next ? [...current, person.id] : current.filter(id => id !== person.id)); flash(next ? 'Abonnement ajouté.' : 'Abonnement retiré.') } catch { flash('Impossible de modifier cet abonnement.') } }}>{followed.includes(person.id) ? 'Suivi' : 'Ajouter'}</button></div>)}</div></details><footer className="footer-links">À propos · Règles · <a href="/confidentialite/">Confidentialité</a> · Aide<br /><span>© 2026 Avani Pro, Inc.</span></footer></aside>
