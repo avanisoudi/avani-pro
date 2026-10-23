@@ -790,15 +790,7 @@
 
 /* AVANI PRO — Facebook-inspired desktop feed surfaces (keeps the existing app features). */
 @media (min-width:761px) {
-  .app-shell.theme-light {
-    grid-template-columns:252px minmax(500px, 680px) 300px!important;
-    justify-content:center!important;
-    gap:18px!important;
-    max-width:none!important;
-    background:#f0f2f5!important;
-    background-image:none!important;
-    color:#1c1e21!important;
-  }
+
   .theme-light .sidebar {
     position:sticky!important;top:0!important;height:100vh!important;min-height:100vh!important;
     overflow-y:auto!important;padding:20px 12px!important;
@@ -866,7 +858,6 @@
 
 /* Compact Facebook-like density: smaller type, tighter spacing, less decorative chrome. */
 @media (min-width:761px) {
-  .app-shell.theme-light {grid-template-columns:228px minmax(460px, 620px) 270px!important;gap:14px!important}
   .theme-light .sidebar {padding:14px 9px!important}
   .theme-light .brand {gap:7px!important;font-size:20px!important}
   .theme-light .brand-mark {width:32px!important;height:32px!important}

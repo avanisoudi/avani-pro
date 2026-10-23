@@ -1,3 +1,4 @@
+import { uniqueSelectedFiles } from '../lib/deduplicate'
 import { useEffect, useRef, useState } from 'react'
 import { MAX_POST_MEDIA_FILES, createComposerMedia, formatMediaSize, releaseComposerMedia, validateMediaSelection } from '../lib/postMedia'
 import type { ComposerMedia } from '../lib/postMedia'
@@ -39,6 +40,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
   const [placeOpen, setPlaceOpen] = useState(false)
   const [place, setPlace] = useState('')
   const [acceptKind, setAcceptKind] = useState<'all' | 'video'>('all')
+  const submitInFlight = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const mediaRef = useRef<ComposerMedia[]>([])
@@ -74,7 +76,9 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
     const selected = Array.from(event.target.files ?? [])
     event.target.value = ''
     if (!selected.length) return
-    const { accepted, rejected } = validateMediaSelection(selected, media.length, totalBytes)
+    const { files, skipped } = uniqueSelectedFiles(selected, media.map(item => item.file))
+    const { accepted, rejected } = validateMediaSelection(files, media.length, totalBytes)
+    if (skipped) rejected.unshift(`${skipped} fichier(s) déjà sélectionné(s), ignoré(s).`)
     if (rejected.length) onNotify(rejected.join(' '))
     if (accepted.length) setMedia(current => [...current, ...createComposerMedia(accepted)])
   }
@@ -94,16 +98,21 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (busy) return
+    if (busy || submitInFlight.current) return
     if (!canPublish) {
       onNotify('Écris quelque chose ou ajoute une photo avant de publier.')
       return
     }
-    const published = await onPublish(body, media)
-    if (!published) return
-    releaseComposerMedia(media)
-    setMedia([])
-    setBody('')
+    submitInFlight.current = true
+    try {
+      const published = await onPublish(body, media)
+      if (!published) return
+      releaseComposerMedia(media)
+      setMedia([])
+      setBody('')
+    } finally {
+      submitInFlight.current = false
+    }
   }
 
   return (
@@ -162,10 +171,10 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 9 5 3-5 3z" /></svg><span>Reel</span>
           </button>
           <button type="button" className="fcomposer-tool is-mood" onClick={() => setBody(value => (value ? `${value} 😊` : '😊 '))} disabled={busy} aria-label="Ajouter une humeur ou une activité">
-            <span aria-hidden="true">☺</span> <span>Humeur/activité</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M8 14q4 5 8 0M8 8v2m8-2v2" /></svg> <span>Humeur/activité</span>
           </button>
           <button type="button" className="fcomposer-tool is-place" onClick={() => setPlaceOpen(open => !open)} disabled={busy} aria-expanded={placeOpen} aria-label="Ajouter un lieu">
-            <span aria-hidden="true">⌖</span> <span>Lieu</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2a8 8 0 0 0-8 8c0 6 8 13 8 13s8-7 8-13a8 8 0 0 0-8-8Zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z" /></svg> <span>Lieux</span>
           </button>
           <span className="fcomposer-audience" title="Visibilité selon les règles d’accès de ton compte">
             <GlobeIcon /> <span>Public</span>
