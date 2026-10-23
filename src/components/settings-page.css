@@ -17,3 +17,35 @@
 @media(max-width:1180px){.sp-grid{grid-template-columns:215px minmax(0,1fr)}.sp-rail{display:none}.sp-layout{padding:16px}.sp-sidebar{top:12px}}
 @media(max-width:760px){.sp-layout{padding:10px 10px 24px}.sp-header{padding:18px;border-radius:16px}.sp-grid{display:flex;flex-direction:column;gap:10px}.sp-sidebar{display:none;position:static;max-height:none;width:100%;order:2}.sp-sidebar.is-open{display:block}.sp-mobile-category{display:block;width:100%}.sp-mobile-category button{display:flex;align-items:center;gap:10px;width:100%;padding:13px;border:1px solid var(--sp-line);border-radius:12px;background:#0b1225;color:#fff;font-weight:700;text-align:left}.sp-mobile-category button .svg-icon{width:18px;height:18px;fill:#fff}.sp-mobile-category button span{margin-left:auto;color:#e0e8fa;font-size:11px}.sp-content{width:100%;padding:14px;border-radius:15px;order:3}.sp-form-grid{grid-template-columns:1fr}.sp-field-wide{grid-column:auto}.sp-inline-form{display:block}.sp-theme-grid{gap:8px}.sp-card{padding:14px}.sp-footer{justify-content:stretch}.sp-footer>span{flex-basis:100%}.sp-footer button{flex:1}.sp-nav-item{min-height:42px}.sp-section-symbol{width:38px;height:38px;flex-basis:38px}}
 @media(prefers-reduced-motion:reduce){.sp-layout *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* AVANI LIGHT garde un vrai fond clair tout en conservant les libellés blancs uniquement sur les contrôles sombres. */
+html[data-avani-theme="light"] .sp-layout{color:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-header{background:radial-gradient(700px 220px at 10% 0%,rgba(79,124,255,.13),transparent 70%),linear-gradient(135deg,#fff,#eef3ff);border-color:#d6e0f4;box-shadow:0 16px 45px rgba(39,68,128,.08)}
+html[data-avani-theme="light"] .sp-layout .sp-header h1,html[data-avani-theme="light"] .sp-layout .sp-section-heading h2{color:#14213d}
+html[data-avani-theme="light"] .sp-layout .sp-header p,html[data-avani-theme="light"] .sp-layout .sp-section-heading p{color:#43516e}
+html[data-avani-theme="light"] .sp-layout .sp-sidebar,html[data-avani-theme="light"] .sp-layout .sp-content,html[data-avani-theme="light"] .sp-layout .sp-rail-card{background:#fff;border-color:#d8e1f2;box-shadow:0 12px 32px rgba(39,68,128,.07)}
+html[data-avani-theme="light"] .sp-layout .sp-sidebar-title{color:#61708e}
+html[data-avani-theme="light"] .sp-layout .sp-nav-item{color:#26334e}
+html[data-avani-theme="light"] .sp-layout .sp-nav-item b{color:#52617e}
+html[data-avani-theme="light"] .sp-layout .sp-nav-item.is-active{color:#fff;background:linear-gradient(100deg,#286de8,#7657df)}
+html[data-avani-theme="light"] .sp-layout .sp-card{background:linear-gradient(145deg,#f9fbff,#f0f5ff);border-color:#dbe4f5;color:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-card h3,html[data-avani-theme="light"] .sp-layout .sp-toggle strong,html[data-avani-theme="light"] .sp-layout .sp-info-row strong,html[data-avani-theme="light"] .sp-layout .sp-rail-card h3{color:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-card p,html[data-avani-theme="light"] .sp-layout .sp-card small,html[data-avani-theme="light"] .sp-layout .sp-muted,html[data-avani-theme="light"] .sp-layout .sp-footer>span,html[data-avani-theme="light"] .sp-layout .sp-rail-card p,html[data-avani-theme="light"] .sp-layout .sp-rail-line span{color:#485775!important}
+html[data-avani-theme="light"] .sp-layout .sp-field{color:#26334e}
+html[data-avani-theme="light"] .sp-layout .sp-field input,html[data-avani-theme="light"] .sp-layout .sp-field select,html[data-avani-theme="light"] .sp-layout .sp-field textarea{background:#fff;color:#17213b;border-color:#cbd7ec}
+html[data-avani-theme="light"] .sp-layout .sp-field select option{background:#fff;color:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-toggle{border-bottom-color:#e1e7f2}
+html[data-avani-theme="light"] .sp-layout .sp-theme-card{background:#fff;border-color:#d5def0;color:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-theme-card strong{color:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-theme-card small{color:#4c5a78}
+html[data-avani-theme="light"] .sp-layout .sp-info-row small{color:#4c5a78}
+html[data-avani-theme="light"] .sp-layout .sp-link-row{color:#244f9c;border-color:#e0e7f4}
+html[data-avani-theme="light"] .sp-layout .sp-mobile-category button{background:#fff;color:#17213b;border-color:#d8e1f2}
+html[data-avani-theme="light"] .sp-layout .sp-mobile-category button .svg-icon{fill:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-mobile-category button span{color:#43516e}
+html[data-avani-theme="light"] .sp-layout .sp-rail-line{border-bottom-color:#e1e7f2}
+html[data-avani-theme="light"] .sp-layout .sp-rail-line b{color:#17213b}
+html[data-avani-theme="light"] .sp-layout .sp-danger{background:#fff7f8;border-color:#f3c7ce}
+html[data-avani-theme="light"] .sp-layout .sp-danger h3{color:#a3213b}
+html[data-avani-theme="light"] .sp-layout .sp-danger a{color:#8c2135}
