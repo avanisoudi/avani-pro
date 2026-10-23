@@ -278,13 +278,75 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
   )
 }
 export function PagesPanel({ user, onAction }: { user: User | null; onAction: (message: string) => void }) {
-  const [pages, setPages] = useState<PageRecord[]>([]); const [name, setName] = useState(''); const [slug, setSlug] = useState(''); const [category, setCategory] = useState('company'); const [description, setDescription] = useState(''); const [open, setOpen] = useState(false); const [busy, setBusy] = useState(false); const [followed, setFollowed] = useState<string[]>([])
+  const [pages, setPages] = useState<PageRecord[]>([])
+  const [name, setName] = useState('')
+  const [slug, setSlug] = useState('')
+  const [category, setCategory] = useState('company')
+  const [description, setDescription] = useState('')
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [followed, setFollowed] = useState<string[]>([])
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState('all')
   useEffect(() => { if (user) listMyPages(user.id).then(setPages).catch(() => undefined) }, [user])
-  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!user) { onAction('Connectez-vous pour créer une page.'); return }; setBusy(true); try { const page = await createPage(user.id, { name, slug, category, description }); setPages(current => [page, ...current]); setName(''); setSlug(''); setDescription(''); setOpen(false); onAction('Page créée avec succès.') } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible de créer la page.') } finally { setBusy(false) } }
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!user) { onAction('Connectez-vous pour créer une page.'); return }
+    setBusy(true)
+    try {
+      const page = await createPage(user.id, { name: name.trim(), slug: slug.trim(), category, description: description.trim() })
+      setPages(current => [page, ...current])
+      setName(''); setSlug(''); setDescription(''); setCategory('company'); setOpen(false)
+      onAction('Votre page professionnelle a été créée.')
+    } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible de créer la page.') }
+    finally { setBusy(false) }
+  }
+  const visiblePages = pages.filter(page => {
+    const matchesQuery = `${page.name} ${page.slug} ${page.description ?? ''}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())
+    return matchesQuery && (filter === 'all' || page.category === filter)
+  })
+  const categoryLabel = (value: string) => ({ company: 'Entreprise', creator: 'Créateur', community: 'Communauté', brand: 'Marque' }[value] ?? 'Page professionnelle')
+  const copyPageLink = async (page: PageRecord) => {
+    const link = `${window.location.origin}/pages/${page.slug}`
+    try { await navigator.clipboard.writeText(link); onAction('Lien de la page copié.') }
+    catch { onAction(`Lien de la page : ${link}`) }
+  }
   if (!user) return <FeatureEmpty title="Vos pages professionnelles" text="Connectez-vous pour créer une page d’entreprise, de créateur, de communauté ou de marque." action="Se connecter" />
-  return <section className="feature-panel"><div className="feature-header"><div><span className="eyebrow">PAGES PROFESSIONNELLES</span><h2>Vos pages</h2><p>Construisez une présence officielle et publiez au nom de votre organisation.</p></div><button className="primary-button" onClick={() => setOpen(!open)}>＋ Créer une page</button></div>{open && <form className="inline-form" onSubmit={submit}><label>Nom de la page<input value={name} onChange={event => setName(event.target.value)} required placeholder="Avani Studio" /></label><label>Slug public<input value={slug} onChange={event => setSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} required placeholder="avani-studio" /></label><label>Catégorie<select value={category} onChange={event => setCategory(event.target.value)}><option value="company">Entreprise</option><option value="creator">Créateur</option><option value="community">Communauté</option><option value="brand">Marque</option></select></label><label>Description<textarea value={description} onChange={event => setDescription(event.target.value)} rows={2} /></label><button className="primary-button" disabled={busy}>{busy ? 'Création…' : 'Créer la page ↗'}</button></form>}<div className="group-list">{pages.length === 0 && <div className="empty-state">Aucune page créée. Lancez votre première présence officielle.</div>}{pages.map(page => <article className="group-card" key={page.id}><div className="group-icon">◆</div><div><strong>{page.name}{page.verified && <span className="verified">✓</span>}</strong><span>/{page.slug} · {page.description || 'Page Avani Pro'}</span><small>{page.category} · {page.followers_count} abonnés</small></div><button onClick={async () => { try { const next = await togglePageFollow(page.id, user.id, followed.includes(page.id)); setFollowed(current => next ? [...current, page.id] : current.filter(id => id !== page.id)); onAction(next ? `Vous suivez ${page.name}.` : `Vous ne suivez plus ${page.name}.`) } catch { onAction('Impossible de modifier cet abonnement.') } }}>{followed.includes(page.id) ? 'Suivi' : 'Suivre'} ↗</button></article>)}</div></section>
+  return <section className="feature-panel professional-pages-panel">
+    <div className="feature-header professional-pages-header">
+      <div><span className="eyebrow">PAGES PROFESSIONNELLES</span><h2>Vos pages</h2><p>Développez votre présence officielle, rassemblez votre communauté et publiez au nom de votre organisation.</p></div>
+      <button type="button" className="primary-button" onClick={() => setOpen(value => !value)}>{open ? '✕ Fermer' : '＋ Créer une page'}</button>
+    </div>
+    <div className="professional-pages-stats">
+      <div><span className="professional-pages-stat-icon">▣</span><div><strong>{pages.length}</strong><small>{pages.length > 1 ? 'Pages gérées' : 'Page gérée'}</small></div></div>
+      <div><span className="professional-pages-stat-icon">♧</span><div><strong>{pages.reduce((total, page) => total + (page.followers_count || 0), 0)}</strong><small>Abonnés au total</small></div></div>
+      <div><span className="professional-pages-stat-icon">✓</span><div><strong>{pages.filter(page => page.verified).length}</strong><small>Pages vérifiées</small></div></div>
+    </div>
+    {open && <form className="inline-form professional-page-form" onSubmit={submit}>
+      <div className="professional-form-intro"><span className="eyebrow">NOUVELLE PAGE</span><h3>Créez votre présence officielle</h3><p>Choisissez un nom clair et un identifiant facile à partager.</p></div>
+      <label>Nom de la page<input value={name} onChange={event => setName(event.target.value)} required maxLength={80} placeholder="Ex. Avani Studio" /></label>
+      <label>Identifiant public<div className="professional-slug-input"><span>/</span><input value={slug} onChange={event => setSlug(event.target.value.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-'))} required minLength={3} maxLength={50} pattern="[a-z0-9-]+" placeholder="avani-studio" /></div><small>3 caractères minimum · lettres minuscules, chiffres et tirets.</small></label>
+      <label>Catégorie<select value={category} onChange={event => setCategory(event.target.value)}><option value="company">Entreprise</option><option value="creator">Créateur ou créatrice</option><option value="community">Communauté</option><option value="brand">Marque</option></select></label>
+      <label className="professional-description-field">Présentation<textarea value={description} onChange={event => setDescription(event.target.value)} rows={3} maxLength={300} placeholder="Présentez votre activité en quelques mots…" /><small>{description.length}/300 caractères</small></label>
+      <div className="professional-form-actions"><button type="button" className="message-button" onClick={() => setOpen(false)}>Annuler</button><button type="submit" className="primary-button" disabled={busy || !name.trim() || slug.trim().length < 3}>{busy ? 'Création en cours…' : 'Créer ma page ↗'}</button></div>
+    </form>}
+    <div className="professional-pages-toolbar">
+      <div><h3>Pages que vous gérez</h3><p>Retrouvez vos pages et suivez leur audience.</p></div>
+      <label className="professional-pages-search"><span aria-hidden="true">⌕</span><input aria-label="Rechercher une page" value={query} onChange={event => setQuery(event.target.value)} placeholder="Rechercher une page…" /></label>
+    </div>
+    <div className="professional-page-filters" aria-label="Filtrer les pages">
+      {[['all', 'Toutes'], ['company', 'Entreprise'], ['creator', 'Créateur'], ['brand', 'Marque'], ['community', 'Communauté']].map(([value, label]) => <button type="button" key={value} className={filter === value ? 'is-active' : ''} onClick={() => setFilter(value)}>{label}{value === 'all' ? ` · ${pages.length}` : ''}</button>)}
+    </div>
+    <div className="professional-pages-list">
+      {visiblePages.length === 0 ? <div className="professional-pages-empty"><span className="professional-pages-empty-icon">▣</span><h3>{pages.length === 0 ? 'Votre présence commence ici' : 'Aucune page trouvée'}</h3><p>{pages.length === 0 ? 'Créez une page pour représenter votre entreprise, votre marque ou votre communauté sur Avani Pro.' : 'Essayez un autre terme de recherche ou changez le filtre.'}</p>{pages.length === 0 && <button type="button" className="primary-button" onClick={() => setOpen(true)}>＋ Créer ma première page</button>}</div> : visiblePages.map(page => <article className="professional-page-card" key={page.id}>
+        <div className="professional-page-avatar">{page.name.trim().charAt(0).toLocaleUpperCase() || '◆'}</div>
+        <div className="professional-page-info"><div className="professional-page-title"><strong>{page.name}</strong>{page.verified && <span className="verified" title="Page vérifiée" aria-label="Page vérifiée">✓</span>}</div><span className="professional-page-handle">/{page.slug}</span><p>{page.description || `Page officielle ${page.name} sur Avani Pro.`}</p><div className="professional-page-meta"><span>{categoryLabel(page.category)}</span><span>·</span><span>{page.followers_count || 0} abonnés</span></div></div>
+        <div className="professional-page-actions"><button type="button" className={followed.includes(page.id) ? 'follow-button following' : 'follow-button'} onClick={async () => { try { const next = await togglePageFollow(page.id, user.id, followed.includes(page.id)); setFollowed(current => next ? [...current, page.id] : current.filter(id => id !== page.id)); onAction(next ? `Vous suivez ${page.name}.` : `Vous ne suivez plus ${page.name}.`) } catch { onAction('Impossible de modifier cet abonnement.') } }}>{followed.includes(page.id) ? '✓ Suivi' : '+ Suivre'}</button><button type="button" className="professional-page-share" onClick={() => void copyPageLink(page)} aria-label={`Copier le lien de ${page.name}`} title="Copier le lien">↗</button></div>
+      </article>)}
+    </div>
+    <p className="professional-pages-footnote">Les pages professionnelles vous permettent de distinguer votre présence publique de votre profil personnel.</p>
+  </section>
 }
-
 export { AdminPanel } from './AdminConsole'
 
 const FLAG_KEYS: Array<{ key: string; label: string; help: string }> = [
