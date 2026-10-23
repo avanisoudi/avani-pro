@@ -996,3 +996,25 @@ html[data-theme="dark"] .avani-messenger .message-bubble.mine{
   min-width: 0 !important;
   overflow-wrap: anywhere !important;
 }
+
+
+/* AVANI PRO branded chat wallpaper, inspired by WhatsApp's subtle doodle pattern. */
+.app-shell.messaging-workspace .avani-messenger .message-thread {
+  --avani-wallpaper-ink: rgba(119, 91, 160, .12);
+}
+.app-shell.messaging-workspace .avani-messenger .message-scroll {
+  position: relative !important;
+  isolation: isolate;
+  background-color: var(--wa-bg, var(--chat-bg)) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='184' height='184' viewBox='0 0 184 184' fill='none'%3E%3Cg stroke='%23775ba0' stroke-opacity='.15' stroke-width='1.35' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 26h24a5 5 0 0 1 5 5v12a5 5 0 0 1-5 5H29l-7 6v-6h-5a5 5 0 0 1-5-5V31a5 5 0 0 1 5-5Z'/%3E%3Cpath d='M119 17l2.5 6.5L128 26l-6.5 2.5L119 35l-2.5-6.5L110 26l6.5-2.5Z'/%3E%3Cpath d='M82 67c-7-7-18 4-10 12l10 10 10-10c8-8-3-19-10-12Z'/%3E%3Cpath d='M141 70l5 5-5 5-5-5 5-5Z'/%3E%3Cpath d='M25 112c8-5 15 2 10 9-3 4-8 7-10 9-2-2-7-5-10-9-5-7 2-14 10-9Z'/%3E%3Cpath d='M111 111h27a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5h-13l-7 6v-6h-7a5 5 0 0 1-5-5v-10a5 5 0 0 1 5-5Z'/%3E%3Cpath d='M72 151l3 7 7 3-7 3-3 7-3-7-7-3 7-3Z'/%3E%3C/g%3E%3Cg fill='%23775ba0' fill-opacity='.18' font-family='Arial,sans-serif' font-size='10' font-weight='700'%3E%3Ctext x='135' y='158' text-anchor='middle'%3EAP%3C/text%3E%3Ctext x='49' y='76' text-anchor='middle' font-size='7' letter-spacing='1'%3EAVANI%3C/text%3E%3C/g%3E%3Ccircle cx='159' cy='108' r='3' stroke='%23775ba0' stroke-opacity='.16'/%3E%3Ccircle cx='57' cy='25' r='2' stroke='%23775ba0' stroke-opacity='.16'/%3E%3C/svg%3E") !important;
+  background-repeat: repeat !important;
+  background-size: 184px 184px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-scroll > * {
+  position: relative;
+  z-index: 1;
+}
+.app-shell.messaging-workspace .avani-messenger .message-scroll .message-button,
+.app-shell.messaging-workspace .avani-messenger .message-scroll .empty-copy {
+  backdrop-filter: blur(4px);
+}
