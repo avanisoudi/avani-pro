@@ -641,7 +641,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   if (!user) return <section className="placeholder"><div className="placeholder-orb">◌</div><span className="eyebrow">Discussions</span><h2>Connectez-vous pour discuter.</h2><p>Vos conversations sont chargées depuis votre compte réel.</p></section>
   if (loading) return <section className="placeholder"><div className="placeholder-orb">◌</div><h2>Chargement de vos conversations…</h2></section>
 
-  return <section className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''}`} aria-label="Messagerie Avani Pro">
+  return <section className={`messages-panel avani-messenger ${selected ? 'has-conversation' : ''} ${infoOpen ? 'show-conversation-info' : ''}`} aria-label="Messagerie Avani Pro">
     <div className="conversation-list">
       <div className="messages-heading">
         <div><span className="eyebrow">Discussions</span><small>Conversations de votre compte</small></div><div className="message-new-actions"><button type="button" onClick={() => openNewConversation(false)}>＋ Discussion</button><button type="button" onClick={() => openNewConversation(true)}>＋ Groupe</button></div>
@@ -699,27 +699,6 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           <label>Rechercher dans les messages chargés<input autoFocus type="search" value={messageQuery} onChange={event => setMessageQuery(event.target.value)} placeholder="Mot ou phrase…" /></label>
           <p>La recherche porte sur les messages déjà chargés. Chargez les anciens messages pour étendre les résultats.</p>
           {messageQuery.trim() && <div className="thread-search-results">{messages.filter(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))).map(message => <button type="button" key={message.id} onClick={() => { const node = document.getElementById(`message-${message.id}`); node?.scrollIntoView({ behavior: 'smooth', block: 'center' }); node?.focus({ preventScroll: true }) }}>{message.body}<small>{new Date(message.created_at).toLocaleString('fr-FR')}</small></button>)}{!messages.some(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))) && <p role="status">Aucun message correspondant parmi les messages chargés.</p>}</div>}
-        </section>}
-        {infoOpen && <section className="thread-utility" aria-label="Informations sur la conversation">
-          <strong>{selected.title || 'Conversation'} · {selected.is_group ? 'Groupe' : 'Discussion privée'}</strong>
-          {selected.is_group && selected.created_by === user.id && <label className="group-photo-upload">Photo du groupe (JPEG, PNG, WebP · 5 Mo maximum)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={groupBusy} onChange={event => void changeGroupPhoto(event)} /></label>}
-          {groupError && <p role="alert">{groupError}</p>}
-          {membersLoading && <p role="status">Chargement des membres…</p>}
-          {membersError && <p role="alert">{membersError} <button type="button" onClick={() => setMemberReload(value => value + 1)}>Réessayer</button></p>}
-          {!membersLoading && !membersError && <><p>{members.length} membre{members.length > 1 ? 's' : ''} visible{members.length > 1 ? 's' : ''}</p><ul className="thread-members">{members.map(member => <li key={member.id}><span className="avatar avatar-sm avatar-soft">{member.avatar_url ? <img src={member.avatar_url} alt="" /> : member.full_name.slice(0, 2).toUpperCase()}</span><span>{member.full_name}{member.id === user.id ? ' (vous)' : ''}<small>@{member.username}</small></span></li>)}</ul></>}
-          {selected.is_group && !publicChatIds.has(selected.id) && <div className="group-management">
-            {groupError && <p role="alert">{groupError}</p>}
-            {selected.created_by === user.id ? <>
-              <p>Vous êtes responsable de ce groupe. Transférez la gestion à un autre membre avant de le quitter.</p>
-              <form onSubmit={event => { event.preventDefault(); void groupAction('rename') }}><label>Nouveau nom<input maxLength={100} value={groupNewName} onChange={event => setGroupNewName(event.target.value)} placeholder={selected.title || 'Nom du groupe'} disabled={groupBusy} /></label><button type="submit" disabled={groupBusy || !groupNewName.trim()}>Renommer</button></form>
-              <label>Ajouter une personne<input value={inviteQuery} onChange={event => setInviteQuery(event.target.value)} placeholder="Nom ou identifiant" disabled={groupBusy} /></label>
-              {inviteLoading && inviteQuery.trim() && <p role="status">Recherche…</p>}
-              {!inviteLoading && inviteQuery.trim() && inviteResults.length === 0 && <p>Aucune nouvelle personne trouvée.</p>}
-              {inviteResults.map(person => <button key={person.id} type="button" disabled={groupBusy || inviteLoading} onClick={() => void groupAction('add', person.id)}>Ajouter {person.full_name}</button>)}
-              <ul>{members.filter(member => member.id !== user.id).map(member => <li key={member.id}><span>{member.full_name}</span><button type="button" disabled={groupBusy} onClick={() => void groupAction('remove', member.id)}>Retirer</button><button type="button" disabled={groupBusy} onClick={() => void groupAction('transfer', member.id)}>Transférer la gestion</button></li>)}</ul>
-            </> : <button type="button" disabled={groupBusy} onClick={() => void groupAction('leave')}>Quitter le groupe</button>}
-            {groupBusy && <p role="status">Mise à jour du groupe…</p>}
-          </div>}
         </section>}
         <div className="message-scroll" aria-live="polite">
           {hasOlder && <button type="button" className="message-button" onClick={() => void loadOlder()} disabled={loadingOlder}>{loadingOlder ? 'Chargement…' : 'Charger les anciens messages'}</button>}
@@ -798,6 +777,11 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           <p>{selected.is_group ? 'Groupe AVANI PRO' : connection === 'connected' ? 'En ligne ou récemment actif' : connection === 'offline' ? 'Hors connexion' : 'Statut de connexion'}</p>
           <div className="message-profile-actions"><button type="button" onClick={() => setInfoOpen(value => !value)} aria-expanded={infoOpen}>ⓘ Informations</button><button type="button" onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕ Rechercher</button></div>
         </div>
+        {selected.is_group && selected.created_by === user.id && <section className="message-profile-section">
+          <h3>Photo du groupe</h3>
+          <label className="group-photo-upload">Modifier la photo (JPEG, PNG, WebP · 5 Mo maximum)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={groupBusy} onChange={event => void changeGroupPhoto(event)} /></label>
+          {groupError && <p className="message-profile-muted" role="alert">{groupError}</p>}
+        </section>}
         <section className="message-profile-section">
           <h3>À propos</h3>
           <p>{selected.is_group ? `${members.length} membre${members.length === 1 ? '' : 's'} dans ce groupe` : 'Conversation privée sur AVANI PRO'}</p>
