@@ -89,3 +89,57 @@ html[data-avani-theme="light"] .sp-data-unavailable p{color:#604d35}
 @media(max-width:1180px){.sp-grid{grid-template-columns:215px minmax(0,1fr)}}
 @media(max-width:900px){.sp-data-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.sp-data-metric:last-child{grid-column:1/-1;min-height:120px}}
 @media(max-width:760px){.sp-data-summary{grid-template-columns:1fr}.sp-data-metric,.sp-data-metric:last-child{grid-column:auto;min-height:0;padding:15px}.sp-data-card-heading h3{font-size:16px}.sp-data-card .sp-info-row{align-items:flex-start;flex-direction:column;gap:8px}.sp-data-card .sp-info-row>b{max-width:100%;text-align:left}.sp-data-unavailable{padding:12px}}
+
+
+/* Réglages ouverts : l'espace de travail remplace les colonnes sociales latérales. */
+.app-shell:has(.sp-layout) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.app-shell:has(.sp-layout) > .sidebar,
+.app-shell:has(.sp-layout) > .sidebar-pro,
+.app-shell:has(.sp-layout) > .right-rail,
+.app-shell:has(.sp-layout) > .mobile-tabbar,
+.app-shell:has(.sp-layout) > .mobile-tabbar-pro {
+  display: none !important;
+}
+.app-shell:has(.sp-layout) > .main-content {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.app-shell:has(.sp-layout) .sp-layout {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: calc(100vh - 64px);
+  margin: 0 !important;
+  padding: 24px clamp(18px, 3vw, 48px) 40px !important;
+}
+.app-shell:has(.sp-layout) .sp-grid {
+  grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) !important;
+  gap: clamp(18px, 2vw, 30px) !important;
+}
+.app-shell:has(.sp-layout) .sp-rail {
+  display: none !important;
+}
+@media (min-width: 1500px) {
+  .app-shell:has(.sp-layout) .sp-grid {
+    grid-template-columns: minmax(250px, 320px) minmax(0, 1fr) !important;
+  }
+  .app-shell:has(.sp-layout) .sp-content {
+    padding: clamp(26px, 2.5vw, 40px) !important;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell:has(.sp-layout) .sp-layout {
+    min-height: calc(100dvh - 56px);
+    padding: 14px 12px 28px !important;
+  }
+  .app-shell:has(.sp-layout) .sp-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+}
