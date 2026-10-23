@@ -163,3 +163,16 @@ export function onlineConversationUserIds(state: Record<string, readonly { userI
   }
   return [...users]
 }
+
+export type ReadMarker = { user_id: string; last_read_at: string | null }
+export function messageWasRead(createdAt: string, markers: ReadMarker[], myId: string) {
+  const recipients = markers.filter(marker => marker.user_id !== myId)
+  return recipients.length > 0 && recipients.every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(createdAt))
+}
+export function mergeReadMarkers(previous: ReadMarker[], incoming: ReadMarker[]): ReadMarker[] {
+  const known = new Map(previous.map(row => [row.user_id, row.last_read_at]))
+  return incoming.map(row => {
+    const before = known.get(row.user_id)
+    return before && (!row.last_read_at || Date.parse(before) > Date.parse(row.last_read_at)) ? { ...row, last_read_at: before } : row
+  })
+}

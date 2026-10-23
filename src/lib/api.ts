@@ -176,9 +176,12 @@ export async function listConversationPreviews(userId: string, conversations: Ar
     else buckets.set(row.conversation_id, [row])
   }
   const truncated = loaded.length >= limit
+  const { data: unreadRows, error: unreadError } = await client.rpc('avani_unread_counts')
+  if (unreadError) throw new Error(unreadError.code === 'PGRST202' ? 'Appliquez la migration 021 pour charger les non-lus.' : unreadError.message)
+  const unreadCounts = new Map((unreadRows ?? []).map((row: { conversation_id: string; unread_count: number }) => [row.conversation_id, Number(row.unread_count)]))
   return Object.fromEntries(conversations.map(item => [
     item.id,
-    conversationPreview(buckets.get(item.id) ?? [], { lastReadAt: item.last_read_at ?? null, myId: userId, truncated }),
+    { ...conversationPreview(buckets.get(item.id) ?? [], { lastReadAt: item.last_read_at ?? null, myId: userId, truncated }), unread: unreadCounts.get(item.id) ?? 0, truncated: false },
   ])) as Record<string, ConversationPreview>
 }
 
@@ -299,11 +302,11 @@ export async function sendMessage(conversationId: string, senderId: string, body
 }
 
 /** Marque lu : droit accessoire, un refus de RLS ne doit pas casser la conversation. */
-export async function markConversationRead(conversationId: string, userId: string) {
-  const { error } = await requireSupabase().from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conversationId).eq('user_id', userId)
-  if (!error) return true
-  if (isPermissionError(error) || isMissingColumnError(error, 'last_read_at')) return false
-  throw writeError(error, 'Le marquage « lu »')
+export async function markConversationRead(conversationId: string, _userId: string, messageId: string): Promise<string> {
+  const { data, error } = await requireSupabase().rpc('avani_mark_chat_read', { p_chat: conversationId, p_message: messageId })
+  if (error) throw new Error(error.code === 'PGRST202' ? 'Appliquez la migration 021 pour enregistrer la lecture.' : error.message)
+  if (typeof data !== 'string' || !Number.isFinite(Date.parse(data))) throw new Error('La lecture n’a pas été confirmée par le serveur.')
+  return data
 }
 
 export async function updateMessage(messageId: string, senderId: string, body: string) {

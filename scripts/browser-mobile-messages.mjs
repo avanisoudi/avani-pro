@@ -18,6 +18,7 @@ await page.addInitScript(user => localStorage.setItem('sb-avani-test-auth-token'
 await page.route('https://avani-test.supabase.co/**', async route => {
   const req = route.request(), url = new URL(req.url()); let data = []
   if (url.pathname.includes('/auth/')) data = { user }
+  else if (url.pathname.endsWith('/rpc/avani_mark_chat_read')) data = messages.find(message => message.id === req.postDataJSON().p_message)?.created_at
   else if (url.pathname.endsWith('/profiles')) data = url.searchParams.get('id')?.startsWith('eq.') ? profile : [profile, other]
   else if (url.pathname.endsWith('/conversation_members')) {
     if (req.method() !== 'GET') data = null

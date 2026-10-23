@@ -111,7 +111,7 @@ try {
     assert.equal(savedPost.media_paths.length, 5)
     assert.equal(uploaded.length, 5)
     assert.equal(postWrites, 1, 'Rapid repeated submissions do not create duplicate posts')
-    assert.equal(await page.getByText('Avani Pro Premium', { exact: true }).count(), 1)
+    assert.equal(await page.getByText('Avani Pro Premium', { exact: true }).count(), 0, 'Premium promotion is reserved for administrators, not this ordinary fixture account')
     assert.deepEqual(savedPost.media_paths, uploaded.map(path => path.split('/post-media/')[1]), 'Selection order preserved in persisted paths')
     await page.reload()
     await page.getByText('Texte accompagnant mes cinq photos', { exact: true }).waitFor()

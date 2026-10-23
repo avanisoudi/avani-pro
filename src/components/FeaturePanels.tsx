@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { unifiedGroups } from '../lib/groupsModel'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { User } from '@supabase/supabase-js'
 import type { ProfileRecord } from '../lib/api'
 import { createDirectConversation, joinPublicGroup, listPublicGroups, type PublicGroupRecord } from '../lib/api'
@@ -14,16 +15,6 @@ type PersonCard = { id: string; name: string; role: string; avatar: string; mutu
 function goTo(path: string) {
   window.history.pushState({}, '', path)
   window.dispatchEvent(new PopStateEvent('popstate'))
-}
-
-async function copyInviteLink(notify: (message: string) => void) {
-  const link = `${window.location.origin}/groups`
-  try {
-    await navigator.clipboard.writeText(link)
-    notify('Lien de la page Groupes copié. Partagez-le avec votre communauté.')
-  } catch {
-    notify(`Copiez ce lien : ${link}`)
-  }
 }
 
 export function ProfilePanel({ user, profile, onProfile }: { user: User | null; profile: ProfileRecord | null; onProfile: (profile: ProfileRecord) => void }) {
@@ -116,6 +107,24 @@ export function ExplorePanel({ user, onAction, onMessage }: { user: User | null;
 
 export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | null; onAction: (message: string) => void; onOpenMessages: (conversationId?: string) => void }) {
   const [groups, setGroups] = useState<any[]>([]); const [publicGroups, setPublicGroups] = useState<PublicGroupRecord[]>([]); const [name, setName] = useState(''); const [description, setDescription] = useState(''); const [visibility, setVisibility] = useState<'private' | 'public'>('private'); const [open, setOpen] = useState(false); const [busy, setBusy] = useState(false); const [joiningPublic, setJoiningPublic] = useState<string | null>(null); const [groupsError, setGroupsError] = useState(''); const [publicsError, setPublicsError] = useState(''); const [reloadToken, setReloadToken] = useState(0); const [inviteGroup, setInviteGroup] = useState<any | null>(null); const [inviteUser, setInviteUser] = useState(''); const [people, setPeople] = useState<ProfileRecord[]>([]); const [groupFilter, setGroupFilter] = useState<'all' | 'private' | 'public'>('all'); const [search, setSearch] = useState('')
+  const [groupLoading, setGroupLoading] = useState(true)
+  const [countState, setCounts] = useState<{ scope: string; values: Record<string, number> }>({ scope: '', values: {} })
+  const [inviteBusy, setInviteBusy] = useState(false)
+  const inviteLock = useRef(false)
+  const createLock = useRef(false)
+  const groupIds = useMemo(() => [...new Set([...groups, ...publicGroups].map(group => group.id))].sort().join(','), [groups, publicGroups])
+  const countScope = `${user?.id}:${groupIds}:${reloadToken}`
+  const counts = countState.scope === countScope ? countState.values : {}
+  const cards = unifiedGroups(groups, publicGroups, user?.id ?? '', counts)
+  const filtered = cards.filter(group => (groupFilter === 'all' || group.visibility === groupFilter) && (!search.trim() || group.name.toLocaleLowerCase('fr').includes(search.trim().toLocaleLowerCase('fr'))))
+  useEffect(() => {
+    let active = true
+    if (!groupIds || !supabase) return
+    void supabase.rpc('avani_group_member_counts', { p_groups: groupIds.split(',') }).then(({ data, error }) => {
+      if (active && !error) setCounts({ scope: countScope, values: Object.fromEntries((data ?? []).map((row: { group_id: string; member_count: number }) => [row.group_id, Number(row.member_count)])) })
+    })
+    return () => { active = false }
+  }, [groupIds, countScope])
   /** Message réel de la base, jamais un texte générique qui masquerait la cause. */
   const messageFrom = (caught: unknown, fallback: string) => caught instanceof Error && caught.message ? caught.message : fallback
   const reload = useCallback(() => setReloadToken(value => value + 1), [])
@@ -135,12 +144,15 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
     let cancelled = false
     setGroupsError('')
     setPublicsError('')
+    setGroupLoading(true)
+    let pending = 2
+    const finished = () => { if (--pending === 0 && !cancelled) setGroupLoading(false) }
     listMyGroups(user.id)
       .then(rows => { if (!cancelled) setGroups(rows) })
-      .catch(caught => { if (!cancelled) setGroupsError(messageFrom(caught, 'Impossible de charger tes groupes.')) })
+      .catch(caught => { if (!cancelled) setGroupsError(messageFrom(caught, 'Impossible de charger tes groupes.')) }).finally(finished)
     listPublicGroups()
       .then(rows => { if (!cancelled) setPublicGroups(rows) })
-      .catch(caught => { if (!cancelled) setPublicsError(messageFrom(caught, 'Impossible de charger les groupes publics.')) })
+      .catch(caught => { if (!cancelled) setPublicsError(messageFrom(caught, 'Impossible de charger les groupes publics.')) }).finally(finished)
     return () => { cancelled = true }
   }, [user, reloadToken])
 
@@ -170,8 +182,8 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
   // dependances sans reabonner le canal a chaque rendu.
   }, [user, reload])
   useEffect(() => { if (user) listDiscoverableProfiles(user.id).then(setPeople).catch(() => undefined) }, [user])
-  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!user) { onAction('Connectez-vous pour créer un groupe.'); return }; setBusy(true); try { const group = await createGroup(user.id, name, description, visibility); setGroups(current => [group, ...current]); setName(''); setDescription(''); setOpen(false); onAction(group.chat_note ? `Groupe créé. ${group.chat_note}` : visibility === 'public' ? `Groupe « ${name} » créé. Les groupes publics apparaissent dans la liste d'à côté.` : `Groupe « ${name} » créé, chat prêt.`) } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible de créer le groupe.') } finally { setBusy(false) } }
-  const invite = async () => { if (!inviteGroup?.conversation_id || !inviteUser) return; try { const result = await addGroupMember(inviteGroup.id, inviteGroup.conversation_id, inviteUser); onAction(result.chatJoined ? 'Membre ajouté au groupe et à la conversation.' : result.note || 'Le membre a rejoint le groupe, pas la conversation.'); setInviteGroup(null); setInviteUser('') } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible d’ajouter ce membre.') } }
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!user) { onAction('Connectez-vous pour créer un groupe.'); return }; if (createLock.current) return; createLock.current = true; setBusy(true); try { const group = await createGroup(user.id, name, description, visibility); setGroups(current => [{ ...group, owner_id: user.id, role: 'owner' }, ...current]); reload(); setName(''); setDescription(''); setOpen(false); onAction(group.chat_note ? `Groupe créé. ${group.chat_note}` : visibility === 'public' ? `Groupe « ${name} » créé. Il est visible dans la liste des groupes.` : `Groupe « ${name} » créé, chat prêt.`) } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible de créer le groupe.') } finally { createLock.current = false; setBusy(false) } }
+  const invite = async () => { if (!inviteGroup?.conversation_id || !inviteUser || inviteLock.current || inviteGroup.owner_id !== user?.id) return; inviteLock.current = true; setInviteBusy(true); try { const result = await addGroupMember(inviteGroup.id, inviteGroup.conversation_id, inviteUser); onAction(result.chatJoined ? 'Membre ajouté au groupe et à la conversation.' : result.note || 'Le membre a rejoint le groupe, pas la conversation.'); setInviteGroup(null); setInviteUser(''); reload() } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible d’ajouter ce membre.') } finally { inviteLock.current = false; setInviteBusy(false) } }
   const handleJoinPublicGroup = async (group: PublicGroupRecord) => { if (!user) { onAction('Connectez-vous pour rejoindre un groupe.'); return }; setJoiningPublic(group.id); try { const result = await joinPublicGroup(user.id, group.id); setPublicGroups(current => current.map(item => item.id === result.group.id ? result.group : item)); reload(); onAction(result.note || `Tu es dans « ${result.group.name} ».`); if (result.conversation) onOpenMessages(result.conversation.id) } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible de rejoindre le groupe public.') } finally { setJoiningPublic(null) } }
   if (!user) return <FeatureEmpty title="Les communautés font le mouvement" text="Connectez-vous pour créer ou rejoindre des groupes professionnels." action="Se connecter" />
   return (
@@ -180,43 +192,15 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
         <div>
           <span className="eyebrow">COMMUNAUTÉS · MESSAGERIE</span>
           <h2>Vos groupes Avani Pro</h2>
-          <p>Rejoignez facilement des espaces publics ou privés, avec un chat dédié et un historique en temps réel.</p>
+          <p>Vos communautés et les groupes à découvrir, au même endroit.</p>
         </div>
-        <button className="primary-button" onClick={() => setOpen(!open)}>＋ Créer un groupe</button>
+        <button className="primary-button" onClick={() => setOpen(!open)}>+ Créer un groupe</button>
       </div>
 
-      {(groupsError || publicsError) && (
-        <article className="public-group-card" role="alert">
-          <div className="public-group-icon">!</div>
-          <div className="public-group-copy">
-            <span className="eyebrow">ACCÈS DONNÉES</span>
-            <h3>La liste des groupes est partielle.</h3>
-            <p>{groupsError || publicsError}</p>
-            <div className="public-group-meta"><span>Les groupes publics viennent de <code>groups</code> et <code>group_members</code></span><span>Un <code>UPDATE</code> de <code>conversations</code> et le <code>INSERT</code> dans <code>conversation_members</code> sont requis pour ouvrir le chat</span></div>
-          </div>
-          <button className="primary-button" onClick={reload}>Réessayer</button>
-        </article>
-      )}
-
-      {publicGroups.map(group => {
-        const joined = groups.some(item => item.id === group.id)
-        return <article className="public-group-card" key={group.id}>
-          <div className="public-group-icon">{group.name.slice(0, 1).toUpperCase() || 'G'}</div>
-          <div className="public-group-copy">
-            <span className="eyebrow">GROUPE PUBLIC</span>
-            <h3>{group.name}</h3>
-            <p>{group.description || 'Groupe ouvert à tous les membres Avani Pro.'}</p>
-            <div className="public-group-meta">
-              <span>{group.member_count === null ? 'Membres · comptage indisponible' : `${group.member_count} membre${group.member_count > 1 ? 's' : ''}`}</span>
-              <span>{group.conversation_id ? 'Chat de groupe rattaché' : 'Chat non rattaché (migration 006)'}</span>
-              {joined && <span>✓ Tu es membre</span>}
-            </div>
-          </div>
-          <button className="primary-button" disabled={joiningPublic === group.id} onClick={() => void (joined && group.conversation_id ? onOpenMessages(group.conversation_id) : handleJoinPublicGroup(group))}>
-            {joiningPublic === group.id ? '…' : joined ? 'Ouvrir le chat' : 'Rejoindre'}
-          </button>
-        </article>
-      })}
+      {(groupsError || publicsError) && <div className="group-load-error" role="alert">
+        <div><strong>Certains groupes n’ont pas pu être chargés.</strong><p>Les groupes disponibles restent accessibles.</p><details><summary>Détails de l’erreur</summary><p>{groupsError || publicsError}</p></details></div>
+        <button type="button" className="message-button" onClick={reload}>Réessayer</button>
+      </div>}
 
 
       {open && (
@@ -231,48 +215,36 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
       {inviteGroup && (
         <div className="invite-strip">
           <strong>Inviter dans {inviteGroup.name}</strong>
-          <select value={inviteUser} onChange={event => setInviteUser(event.target.value)}>
+          <select value={inviteUser} disabled={inviteBusy} onChange={event => setInviteUser(event.target.value)}>
             <option value="">Choisir un membre…</option>
             {people.map(person => <option value={person.id} key={person.id}>{person.full_name} · @{person.username}</option>)}
           </select>
-          <button className="primary-button" onClick={() => void invite()}>Ajouter</button>
-          <button className="message-button" onClick={() => setInviteGroup(null)}>Annuler</button>
+          <button className="primary-button" disabled={inviteBusy || !inviteUser} onClick={() => void invite()}>{inviteBusy ? 'Ajout…' : 'Ajouter'}</button>
+          <button className="message-button" disabled={inviteBusy} onClick={() => setInviteGroup(null)}>Annuler</button>
         </div>
       )}
 
       <div className="group-tools">
-        <div className="group-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher dans vos groupes" aria-label="Rechercher un groupe" /></div>
+        <div className="group-search"><span>⌕</span><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher un groupe" aria-label="Rechercher un groupe" /></div>
         <div className="group-filters">
-          <button type="button" className={groupFilter === 'all' ? 'active' : ''} onClick={() => setGroupFilter('all')}>Tous</button>
-          <button type="button" className={groupFilter === 'private' ? 'active' : ''} onClick={() => setGroupFilter('private')}>Privés</button>
-          <button type="button" className={groupFilter === 'public' ? 'active' : ''} onClick={() => setGroupFilter('public')}>Publics</button>
+          <button type="button" className={groupFilter === 'all' ? 'active' : ''} onClick={() => setGroupFilter('all')}>Tous ({cards.length})</button>
+          <button type="button" className={groupFilter === 'private' ? 'active' : ''} onClick={() => setGroupFilter('private')}>Privés ({cards.filter(group => group.visibility === 'private').length})</button>
+          <button type="button" className={groupFilter === 'public' ? 'active' : ''} onClick={() => setGroupFilter('public')}>Publics ({cards.filter(group => group.visibility === 'public').length})</button>
         </div>
       </div>
 
-      <div className="group-shortcuts">
-        <button type="button" onClick={() => goTo('/notifications')}>⌁ Notifications</button>
-        <button type="button" onClick={() => void copyInviteLink(onAction)}>↗ Lien d’invitation</button>
-        <button type="button" onClick={() => setOpen(true)}>＋ Nouveau groupe</button>
-      </div>
-
       <div className="group-list">
-        {groups.length === 0 && <div className="empty-state">Aucun groupe pour le moment. Créez votre première communauté.</div>}
-        {groups
-          .filter(group => (groupFilter === 'all' || group.visibility === groupFilter) && (!search.trim() || group.name.toLowerCase().includes(search.toLowerCase())))
-          .map(group => (
-            <article className="group-card whatsapp-group-card" key={group.id}>
-              <div className="group-icon"><img src="/group-chat-icon.svg" alt="" /></div>
-              <div>
-                <strong>{group.name}</strong>
-                <span>{group.description || 'Communauté Avani Pro'}</span>
-                <small>{group.visibility === 'public' ? 'Public' : 'Privé'} · Chat temps réel · Vous êtes propriétaire</small>
-              </div>
-              <div className="group-card-actions">
-                <button type="button" onClick={() => setInviteGroup(group)}>Inviter</button>
-                <button type="button" onClick={() => { onOpenMessages(group.conversation_id); onAction(`Chat de ${group.name} ouvert dans Messages.`) }}>Ouvrir le chat ↗</button>
-              </div>
-            </article>
-          ))}
+        {groupLoading && <p role="status">Chargement des groupes…</p>}
+        {!groupLoading && filtered.length === 0 && <div className="empty-state">{groupsError || publicsError ? 'Aucun groupe chargé. Réessayez.' : search || groupFilter !== 'all' ? 'Aucun groupe ne correspond aux filtres.' : 'Aucun groupe pour le moment.'}</div>}
+        {filtered.map(group => <article className="group-card compact-group-card" key={group.id}>
+          <div className="group-icon"><img src="/group-chat-icon.svg" alt="" /></div>
+          <div className="compact-group-copy"><h3>{group.name}</h3><p>{group.description || 'Communauté Avani Pro'}</p><small>{group.visibility === 'public' ? 'Public' : 'Privé'} · {group.member_count === null ? 'Nombre de membres indisponible' : `${group.member_count} membre${group.member_count === 1 ? '' : 's'}`} · {group.owner ? 'Responsable' : group.joined ? 'Membre' : 'À découvrir'}</small></div>
+          <div className="group-card-actions">
+            {group.owner && group.conversation_id && <button type="button" onClick={() => { setInviteUser(''); setInviteGroup(group) }}>Inviter</button>}
+            {group.joined ? <button type="button" disabled={!group.conversation_id} onClick={() => group.conversation_id && onOpenMessages(group.conversation_id)}>{group.conversation_id ? 'Ouvrir le chat' : 'Chat indisponible'}</button>
+              : <button type="button" disabled={joiningPublic === group.id} onClick={() => void handleJoinPublicGroup({ ...group, created_at: null })}>{joiningPublic === group.id ? 'Adhésion…' : 'Rejoindre'}</button>}
+          </div>
+        </article>)}
       </div>
     </section>
   )

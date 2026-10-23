@@ -1,11 +1,12 @@
+import { useConversationReading } from '../lib/useConversationReading'
 import { useMobileChatViewport } from '../lib/useMobileChatViewport'
 import { mentionAtCursor, insertMention } from '../lib/mentions'
 import { useOnlineMembers } from '../lib/onlinePresence'
 import '../messaging.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { formatRowTime, reactionTotal, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
-import { updateChatAvatar, manageChat, listConversationMembers, listConversationReadMarkers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
+import { formatRowTime, reactionTotal, unreadBadge, messageWasRead, mergeReadMarkers, type ConversationPreview } from '../lib/messagesModel'
+import { updateChatAvatar, manageChat, listConversationMembers, listConversationReadMarkers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
@@ -49,6 +50,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [reloadToken, setReloadToken] = useState(0)
   const [reactionsLive, setReactionsLive] = useState(true)
   const senderCache = useRef(new Map<string, ProfileRecord>())
+  const ownReadMarkers = useRef(new Map<string, string>())
+  const readEpoch = useRef(0)
   const [previews, setPreviews] = useState<Record<string, ConversationPreview>>({})
   const [previewError, setPreviewError] = useState('')
   const [joiningPublicGroup, setJoiningPublicGroup] = useState<string | null>(null)
@@ -75,6 +78,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [editingBody, setEditingBody] = useState('')
   useMobileChatViewport(selected?.id)
   const [infoOpen, setInfoOpen] = useState(false)
+  const [readError, setReadError] = useState('')
   const [members, setMembers] = useState<ProfileRecord[]>([])
   const [readMarkers, setReadMarkers] = useState<Array<{ user_id: string; last_read_at: string | null }>>([])
   const presentMembers = useOnlineMembers(members.map(member => member.id))
@@ -113,6 +117,19 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [messageReactions, setMessageReactions] = useState<Record<string, Record<ReactionType, number>>>({})
   const [myReactions, setMyReactions] = useState<Record<string, ReactionType | null>>({})
   const typingTimeout = useRef<number | null>(null)
+  const { scrollRef: messageScrollRef, retryRead } = useConversationReading(selected?.id, user?.id, messages, infoOpen || loading || newConversationOpen,
+    (id, marker) => {
+      setReadError('')
+      ownReadMarkers.current.set(id, marker)
+      readEpoch.current += 1
+      setReloadToken(value => value + 1)
+      setPreviews(current => {
+        const preview = current[id]
+        return !preview || (preview.at && Date.parse(preview.at) > Date.parse(marker)) ? current : { ...current, [id]: { ...preview, unread: 0, truncated: false } }
+      })
+      setConversations(current => current.map(chat => chat.id === id ? { ...chat, last_read_at: marker } : chat))
+    }, message => setReadError(message))
+
 
   useEffect(() => {
     if (!newConversationOpen || !user) return
@@ -355,6 +372,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   useEffect(() => {
     if (!user) return
     let cancelled = false
+    const epoch = readEpoch.current
     if (!inboxLoaded.current) setLoading(true)
     setError('')
     setListError('')
@@ -363,11 +381,11 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         if (cancelled) return undefined
         const sortedItems = items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
         setConversations(sortedItems)
-        setSelected(current => current && sortedItems.some(item => item.id === current.id) ? (sortedItems.find(item => item.id === current.id) ?? current) : (sortedItems.find(item => item.id === initialConversationId) ?? (window.matchMedia('(max-width: 680px)').matches ? null : sortedItems[0]) ?? null))
+        setSelected(current => current && sortedItems.some(item => item.id === current.id) ? (sortedItems.find(item => item.id === current.id) ?? current) : (sortedItems.find(item => item.id === initialConversationId) ?? null))
         // Les aperçus (dernier message, heure, non-lus) partent de la même liste :
         // une seule requête `messages` borde toute la colonne de gauche.
         return listConversationPreviews(user.id, sortedItems)
-          .then(rows => { if (!cancelled) { setPreviews(rows); setPreviewError('') } })
+          .then(rows => { if (!cancelled && epoch === readEpoch.current) { setPreviews(Object.fromEntries(Object.entries(rows).map(([id, preview]) => { const marker = ownReadMarkers.current.get(id); return [id, marker && preview.at && Date.parse(marker) >= Date.parse(preview.at) ? { ...preview, unread: 0 } : preview] }))); setPreviewError('') } })
           .catch(caught => { if (!cancelled) setPreviewError(caught instanceof Error ? caught.message : 'Aperçus de conversations indisponibles.') })
       })
       .catch(caught => { if (!cancelled) setListError(caught instanceof Error ? caught.message : 'Impossible de charger tes conversations.') })
@@ -390,6 +408,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     setEditingId(null)
     setEditingBody('')
     setInfoOpen(false)
+    setReadError('')
     setGroupError('')
     setGroupNewName('')
     setInviteQuery('')
@@ -409,15 +428,22 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       if (timer) window.clearTimeout(timer)
       timer = window.setTimeout(() => { timer = null; setReloadToken(value => value + 1) }, 900)
     }
+    const onVisible = () => { if (document.visibilityState === 'visible') bump() }
+    window.addEventListener('online', bump)
+    window.addEventListener('focus', bump)
+    document.addEventListener('visibilitychange', onVisible)
     const channel = supabase
       .channel(`inbox:${user.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_members', filter: `user_id=eq.${user.id}` }, () => bump())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_members', filter: `user_id=eq.${user.id}` }, () => bump())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => bump())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, () => bump())
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'conversation_members' }, () => bump())
       .subscribe()
     return () => {
       if (timer) window.clearTimeout(timer)
+      window.removeEventListener('online', bump)
+      window.removeEventListener('focus', bump)
+      document.removeEventListener('visibilitychange', onVisible)
       void supabase?.removeChannel(channel)
     }
   }, [user])
@@ -440,8 +466,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     } catch { /* la lecture des reactions ne doit jamais vider le fil */ }
   }, [user])
 
+  const selectedConversationId = selected?.id
   useEffect(() => {
-    if (!selected || !user || !supabase) return
+    if (!selectedConversationId || !user || !supabase) return
     let cancelled = false
     setMessages([])
     setReadMarkers([])
@@ -450,11 +477,11 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     setHasOlder(true)
     setMessageReactions({})
     setMyReactions({})
-    listMessages(selected.id)
+    listMessages(selectedConversationId)
       .then(items => {
         if (!cancelled) {
           rememberSenders(items)
-          setMessages(items)
+          setMessages(current => [...new Map([...current, ...items].map(message => [message.id, message])).values()].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)))
           setHasOlder(items.length >= 50)
           void refreshMessageReactions(items)
         }
@@ -462,18 +489,12 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les messages.') })
     const refreshReadMarkers = async () => {
       try {
-        const rows = await listConversationReadMarkers(selected.id)
-        if (!cancelled) setReadMarkers(rows)
+        const rows = await listConversationReadMarkers(selectedConversationId)
+        if (!cancelled) setReadMarkers(current => mergeReadMarkers(current, rows))
       } catch { /* les messages restent utilisables si la lecture des reçus échoue */ }
     }
     void refreshReadMarkers()
-    void markConversationRead(selected.id, user.id).then(read => {
-      // Le curseur de lecture est stocké en base et ne dépend pas du rendu local.
-      if (read && !cancelled) {
-        setPreviews(current => ({ ...current, [selected.id]: { preview: current[selected.id]?.preview ?? '', at: current[selected.id]?.at ?? null, unread: 0, truncated: false } }))
-        void refreshReadMarkers()
-      }
-    })
+
 
     const client = supabase
     const refreshReactionsFor = async (messageIds: string[]) => {
@@ -493,27 +514,37 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         })
       } catch { /* realtime reaction UI can recover on the next event/load */ }
     }
-    const channel = client.channel(`conversation:${selected.id}`, {
+    let refreshing = false
+    const reconcile = async () => {
+      if (cancelled || refreshing || document.visibilityState !== 'visible') return
+      refreshing = true
+      try {
+        const latest = await listMessages(selectedConversationId)
+        if (!cancelled) setMessages(current => [...new Map([...current, ...latest].map(message => [message.id, message])).values()].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)))
+        if (!cancelled) void refreshReadMarkers()
+      } catch { /* keep existing messages; reopening retries */ }
+      finally { refreshing = false }
+    }
+    const channel = client.channel(`conversation:${selectedConversationId}`, {
       config: { presence: { key: user.id } },
     })
 
     channel
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_members', filter: `conversation_id=eq.${selected.id}` }, () => { void refreshReadMarkers() })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selected.id}` }, payload => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_members', filter: `conversation_id=eq.${selectedConversationId}` }, () => { void refreshReadMarkers() })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedConversationId}` }, payload => {
         const incoming = payload.new as MessageRecord
         // L'événement ne porte que la ligne brute `messages` (sans l'embed `sender`) :
         // on nomme l'expéditeur via le cache de profils avant de l'afficher.
         // La déduplication sur l'id serve évite tout doublon avec l'envoi optimiste.
         void withSender(incoming).then(message => {
-          setMessages(current => current.some(item => item.id === message.id) ? current : [...current, message])
+          if (!cancelled) setMessages(current => current.some(item => item.id === message.id) ? current : [...current, message].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)))
         })
-        if (incoming.sender_id !== user.id) void markConversationRead(selected.id, user.id)
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selected.id}` }, payload => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedConversationId}` }, payload => {
         const incoming = payload.new as MessageRecord
         setMessages(current => current.map(message => message.id === incoming.id ? { ...message, ...incoming } : message))
       })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selected.id}` }, payload => {
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selectedConversationId}` }, payload => {
         const deleted = payload.old as MessageRecord
         setMessages(current => current.filter(message => message.id !== deleted.id))
         setMessageReactions(current => { const next = { ...current }; delete next[deleted.id]; return next })
@@ -537,6 +568,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .subscribe(async status => {
         if (status === 'SUBSCRIBED') {
           setConnection('connected')
+          void reconcile()
           await channel.track({ userId: user.id, onlineAt: new Date().toISOString() })
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setConnection('reconnecting')
@@ -545,13 +577,18 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         }
       })
 
-    const onOnline = () => { setConnection('reconnecting') }
+    const onOnline = () => { setConnection('reconnecting'); void reconcile() }
+    const onWake = () => { void reconcile() }
+    window.addEventListener('focus', onWake)
+    document.addEventListener('visibilitychange', onWake)
     const onOffline = () => { setConnection('offline') }
     window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
 
     return () => {
       cancelled = true
+      window.removeEventListener('focus', onWake)
+      document.removeEventListener('visibilitychange', onWake)
       window.removeEventListener('online', onOnline)
       window.removeEventListener('offline', onOffline)
       if (typingTimeout.current) window.clearTimeout(typingTimeout.current)
@@ -559,7 +596,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
   // `refreshMessageReactions` est memoise sur [user] : le citer ne provoque pas de
   // reabonnement, et garantit que l'effet voit la version courante en cas de changement.
-  }, [selected, user, refreshMessageReactions])
+  }, [selectedConversationId, user, refreshMessageReactions])
 
   const broadcastTyping = async (active: boolean) => {
     if (!selected || !user || !supabase) return
@@ -750,12 +787,13 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           <div className="thread-title"><ChatAvatar chat={selected} /><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? presentMembers === null || membersLoading || membersError ? 'Présence indisponible ou en synchronisation…' : `${presentMembers} personne${presentMembers > 1 ? 's' : ''} en ligne` : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'}</small></div></div><div className="thread-head-actions"><button type="button" aria-label="Rechercher dans les messages chargés" aria-expanded={searchOpen} onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕</button><button type="button" aria-label="Paramètres de la discussion" aria-haspopup="dialog" aria-expanded={infoOpen} onClick={() => { setGroupNewName(selected.title || ''); setInviteQuery(''); setGroupError(''); setInfoOpen(true); setSearchOpen(false) }}>⚙</button></div>
         </div>
 
+        {readError && <p className="messages-note" role="alert">{readError} <button type="button" onClick={retryRead}>Réessayer la lecture</button></p>}
         {searchOpen && <section className="thread-utility" aria-label="Recherche de messages">
           <label>Rechercher dans les messages chargés<input autoFocus type="search" value={messageQuery} onChange={event => setMessageQuery(event.target.value)} placeholder="Mot ou phrase…" /></label>
           <p>La recherche porte sur les messages déjà chargés. Chargez les anciens messages pour étendre les résultats.</p>
           {messageQuery.trim() && <div className="thread-search-results">{messages.filter(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))).map(message => <button type="button" key={message.id} onClick={() => { const node = document.getElementById(`message-${message.id}`); node?.scrollIntoView({ behavior: 'smooth', block: 'center' }); node?.focus({ preventScroll: true }) }}>{message.body}<small>{new Date(message.created_at).toLocaleString('fr-FR')}</small></button>)}{!messages.some(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))) && <p role="status">Aucun message correspondant parmi les messages chargés.</p>}</div>}
         </section>}
-        <div className="message-scroll" aria-live="polite">
+        <div ref={messageScrollRef} className="message-scroll" aria-live="polite">
           {hasOlder && <button type="button" className="message-button" onClick={() => void loadOlder()} disabled={loadingOlder}>{loadingOlder ? 'Chargement…' : 'Charger les anciens messages'}</button>}
           {messages.length === 0 && <p className="empty-copy">Commencez la conversation.</p>}
           {messages.map(message => {
@@ -780,7 +818,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
               </div>}
               <div className="message-foot">
                 <span className="message-time">{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</span>
-                {mine && !message.deleted_at && <span className={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'message-read-status is-read' : 'message-read-status'} aria-label={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'} title={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'}>{readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? '✓✓' : '✓'}</span>}
+                {mine && !message.deleted_at && <span className={messageWasRead(message.created_at, readMarkers, user.id) ? 'message-read-status is-read' : 'message-read-status'} aria-label={messageWasRead(message.created_at, readMarkers, user.id) ? 'Lu' : 'Envoyé'} title={messageWasRead(message.created_at, readMarkers, user.id) ? 'Lu' : 'Envoyé'}>{messageWasRead(message.created_at, readMarkers, user.id) ? '✓✓' : '✓'}</span>}
                 {!message.deleted_at && <div className="message-tools">
                   {reactionsLive && <div className="reaction-control" data-reaction-control>
                     <button type="button" className="reaction-trigger" aria-label="Réagir au message" aria-expanded={reactionPickerId === message.id} onClick={() => setReactionPickerId(current => current === message.id ? null : message.id)}>☺</button>

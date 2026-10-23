@@ -1,3 +1,5 @@
+import { unifiedGroups } from '../../src/lib/groupsModel'
+import { messageWasRead, mergeReadMarkers } from '../../src/lib/messagesModel'
 import { listingPayload, validateListingPhoto, formatListingPrice, type ListingInput } from '../../src/lib/marketplace'
 import { readComposerDraft, saveComposerDraft, moveComposerItem, DRAFT_LIFETIME_MS } from '../../src/lib/composerDraft'
 import { uniqueById, uniqueSelectedFiles } from '../../src/lib/deduplicate'
@@ -448,6 +450,19 @@ check('album vide ne produit pas index invalide', albumIndex(0, 1, 0) === 0 && a
   const photoRejects = (type: string, size: number) => { try { validateListingPhoto({ type, size } as File); return false } catch { return true } }
   check('Marketplace refuse SVG vide ou photo trop lourde', photoRejects('image/svg+xml', 10) && photoRejects('image/jpeg', 0) && photoRejects('image/png', 5242881))
   check('Marketplace accepte JPEG PNG WebP dans le quota', ['image/jpeg', 'image/png', 'image/webp'].every(type => !photoRejects(type, 100)))
+}
+
+{
+  const publicGroup = { id: 'g1', name: 'Officiel', description: null, conversation_id: 'c1', created_at: null, member_count: 99 }
+  const memberships = [{ ...publicGroup, visibility: 'public', owner_id: 'me' }, { id: 'g2', name: 'Privé', visibility: 'private', owner_id: 'other', role: 'member' }]
+  const cards = unifiedGroups(memberships, [publicGroup, publicGroup], 'me', { g1: 3, g2: 2 })
+  check('groupes fusionnes par id sans doublons', cards.length === 2 && new Set(cards.map(card => card.id)).size === 2)
+  check('compteurs groupes viennent du serveur, pas de la liste locale', cards.find(card => card.id === 'g1')?.member_count === 3)
+  check('responsable uniquement si identifiant proprietaire concordant', cards.find(card => card.id === 'g1')?.owner === true && cards.find(card => card.id === 'g2')?.owner === false)
+  check('comptage absent affiche inconnu, pas zero', unifiedGroups(memberships, [], 'me').every(card => card.member_count === null))
+  check('lu exige tous les destinataires connus', messageWasRead('2020-01-01', [{ user_id: 'me', last_read_at: null }, { user_id: 'other', last_read_at: '2020-01-02' }], 'me') && !messageWasRead('2020-01-03', [{ user_id: 'other', last_read_at: '2020-01-02' }], 'me'))
+  check('absence de recu ne devient pas lu', !messageWasRead('2020-01-01', [], 'me'))
+  check('reponse reseau tardive ne retrograde pas un recu lu', mergeReadMarkers([{ user_id: 'other', last_read_at: '2020-01-03' }], [{ user_id: 'other', last_read_at: '2020-01-01' }])[0].last_read_at === '2020-01-03')
 }
 
 const failed = results.filter(result => !result.ok)

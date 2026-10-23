@@ -14,7 +14,8 @@
     "test:assets": "node scripts/check-assets.mjs",
     "test:chat-browser": "node scripts/browser-chat-settings.mjs",
     "test:marketplace-browser": "node scripts/browser-marketplace.mjs",
-    "test:mobile-messages": "node scripts/browser-mobile-messages.mjs"
+    "test:mobile-messages": "node scripts/browser-mobile-messages.mjs",
+    "test:groups-unread-browser": "node scripts/browser-groups-unread.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
