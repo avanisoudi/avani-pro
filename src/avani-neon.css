@@ -466,3 +466,204 @@ html[data-theme="dark"] .message-profile-empty > span { background: rgba(0,91,25
 @media (prefers-reduced-motion: reduce) {
   .app-shell *, .app-shell *::before, .app-shell *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* ---------- Critical messenger layout repair (override legacy cascade) ---------- */
+/* The conversation profile is a sibling of the thread; explicitly place all three
+   children in the same row so the profile can never wrap below the conversation list. */
+@media (min-width: 761px) {
+  .app-shell.messaging-workspace {
+    display: grid !important;
+    grid-template-columns: 190px minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+  }
+  .app-shell.messaging-workspace > .sidebar {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+  }
+  .app-shell.messaging-workspace > .main-content {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    padding: 78px 12px 12px !important;
+    overflow: hidden !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger,
+  .app-shell.messaging-workspace .messages-panel.avani-messenger {
+    display: grid !important;
+    grid-template-columns: minmax(245px, 300px) minmax(0, 1fr) minmax(235px, 285px) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-auto-flow: row !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    height: calc(100dvh - 92px) !important;
+    min-height: 440px !important;
+    max-height: calc(100dvh - 92px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 18px !important;
+    isolation: isolate;
+  }
+  .app-shell.messaging-workspace .avani-messenger > .conversation-list {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: auto !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger > .message-thread {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: auto !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger > .message-profile-panel {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    display: block !important;
+    width: auto !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-thread > .message-scroll {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    padding: 22px clamp(14px, 2vw, 28px) !important;
+    gap: 12px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .thread-head {
+    flex: 0 0 auto !important;
+    min-height: 76px !important;
+    padding: 14px 18px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-compose {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    padding: 14px 16px !important;
+    gap: 10px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-input-wrap {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-input-wrap textarea {
+    width: 100% !important;
+    min-height: 44px !important;
+    max-height: 140px !important;
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-bubble {
+    max-width: min(78%, 620px) !important;
+    padding: 11px 14px !important;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .messages-heading {
+    padding: 16px 14px 12px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .conversation-row {
+    min-height: 68px !important;
+    padding: 10px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .conversation-row strong {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .conversation-row small {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-profile-section {
+    padding: 16px !important;
+  }
+}
+@media (min-width: 761px) and (max-width: 1180px) {
+  .app-shell.messaging-workspace .avani-messenger,
+  .app-shell.messaging-workspace .messages-panel.avani-messenger {
+    grid-template-columns: minmax(225px, 30%) minmax(0, 1fr) !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger > .message-profile-panel {
+    display: none !important;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell.messaging-workspace {
+    display: block !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+  .app-shell.messaging-workspace > .main-content {
+    height: calc(100dvh - 56px) !important;
+    min-height: 0 !important;
+    padding: 56px 0 0 !important;
+    overflow: hidden !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger,
+  .app-shell.messaging-workspace .messages-panel.avani-messenger {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100% !important;
+    height: calc(100dvh - 56px) !important;
+    max-height: calc(100dvh - 56px) !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger > .conversation-list,
+  .app-shell.messaging-workspace .avani-messenger > .message-thread {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger > .message-profile-panel {
+    display: none !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger.has-conversation > .conversation-list {
+    display: none !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger:not(.has-conversation) > .message-thread {
+    display: none !important;
+  }
+}
