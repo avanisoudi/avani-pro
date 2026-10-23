@@ -40,6 +40,18 @@ const DEFAULTS: Preferences = {
   savedContent: true, groupInvites: 'friends', pageUpdates: true, highContrast: false, reduceMotion: false,
   fontSize: 'normal', dateFormat: 'locale', timeFormat: '24h', timezone: 'local', language: 'fr',
 }
+const RESET_KEYS: Record<string, string[]> = {
+  general: ['startPage', 'autoplayVideos', 'confirmActions', 'compactMode'],
+  appearance: ['fontSize', 'reduceMotion', 'highContrast'],
+  privacy: ['profileVisibility', 'storyVisibility', 'messagePermission', 'mentionPermission', 'showOnline', 'readReceipts'],
+  notifications: ['emailNotifications', 'browserNotifications', 'privateMessages', 'groupMessages', 'friendRequests', 'newFollowers', 'mentions', 'reactions', 'comments', 'commentReplies', 'groupActivity', 'pageActivity', 'securityAlerts'],
+  messaging: ['messagePreview', 'messageSounds', 'autoDownload', 'showOnline', 'readReceipts', 'privateMessages', 'groupMessages'],
+  content: ['defaultAudience', 'allowTagging', 'savedContent', 'autoplayVideos'],
+  network: ['friendRequestsPermission', 'showOnline'],
+  communities: ['groupInvites', 'groupActivity', 'pageActivity'],
+  accessibility: ['fontSize', 'highContrast', 'reduceMotion'],
+  language: ['language', 'dateFormat', 'timeFormat', 'timezone'],
+}
 const THEME_CHOICES = [
   { id: 'dark', label: 'AVANI DARK', note: 'Bleu nuit et surfaces sombres' },
   { id: 'neon', label: 'AVANI NEON', note: 'Noir profond et accents néon' },
@@ -63,6 +75,7 @@ export function SettingsPage({ user, onAction, onProfile }: { user: User | null;
   const [error, setError] = useState('')
   const [theme, setCurrentTheme] = useState<string>(getTheme())
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [localStorageCount, setLocalStorageCount] = useState<number | null>(null)
   const [profileBusy, setProfileBusy] = useState(false)
   const selected = CATEGORIES.find(category => category.id === active) ?? CATEGORIES[0]
   const prefsCount = useMemo(() => Object.keys(prefs).length, [prefs])
@@ -90,6 +103,10 @@ export function SettingsPage({ user, onAction, onProfile }: { user: User | null;
     }).catch(caught => { if (!cancelled) { setError(caught instanceof Error ? caught.message : 'Impossible de charger les préférences depuis le compte.'); setLoading(false) } })
     return () => { cancelled = true }
   }, [user])
+
+  useEffect(() => {
+    try { setLocalStorageCount(window.localStorage.length) } catch { setLocalStorageCount(null) }
+  }, [])
 
   useEffect(() => {
     const sync = () => setCurrentTheme(getTheme())
@@ -187,6 +204,26 @@ export function SettingsPage({ user, onAction, onProfile }: { user: User | null;
     finally { setSaving(false) }
   }
 
+  const resetCurrentSection = () => {
+    const keys = RESET_KEYS[active] ?? []
+    if (!keys.length && active !== 'appearance') {
+      setStatus('Cette catégorie contient des informations de compte, pas de préférences réinitialisables ici.')
+      return
+    }
+    if (!window.confirm('Réinitialiser uniquement les préférences de cette catégorie ? Les autres réglages ne seront pas modifiés.')) return
+    if (active === 'appearance') {
+      setTheme('dark')
+      setCurrentTheme('dark')
+    }
+    setPrefs(current => {
+      const next = { ...current }
+      keys.forEach(key => { next[key] = DEFAULTS[key] })
+      return next
+    })
+    setDirty(true)
+    setError('')
+    setStatus('Valeurs par défaut chargées pour cette catégorie. Enregistrez pour les synchroniser avec votre compte.')
+  }
   const toggle = (key: string, label: string) => <label className="sp-toggle" key={key}><span><strong>{label}</strong></span><input type="checkbox" checked={asBoolean(prefs[key], Boolean(DEFAULTS[key]))} onChange={event => update(key, event.target.checked)} /><i aria-hidden="true" /></label>
   const select = (key: string, label: string, options: Array<[string, string]>) => <label className="sp-field" key={key}><span>{label}</span><select value={asString(prefs[key], String(DEFAULTS[key] ?? ''))} onChange={event => update(key, event.target.value)}>{options.map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select></label>
   const textField = (key: 'full_name' | 'username', label: string, maxLength: number) => <label className="sp-field" key={key}><span>{label}</span><input value={profile[key]} maxLength={maxLength} onChange={event => setProfile(current => ({ ...current, [key]: event.target.value }))} /></label>
@@ -218,11 +255,27 @@ export function SettingsPage({ user, onAction, onProfile }: { user: User | null;
         {active === 'apps' && <div className="sp-card"><h3>Autorisations du navigateur</h3>{[['Notifications','Notification API','Notification' in window],['Caméra et microphone','mediaDevices','mediaDevices' in navigator],['Sélecteur de fichiers','File API','File' in window]].map(([label,api,available]) => <div className="sp-info-row" key={String(label)}><span><strong>{String(label)}</strong><small>{String(api)}</small></span><b>{available ? 'API disponible' : 'Non disponible'}</b></div>)}<p className="sp-muted">Les autorisations du navigateur sont demandées au moment où une fonction les utilise. Cette page ne peut pas les accorder silencieusement.</p></div>}
         {active === 'accessibility' && <div className="sp-card"><h3>Confort de lecture</h3>{select('fontSize','Taille du texte',[['small','Petite'],['normal','Normale'],['large','Grande'],['xlarge','Très grande']])}{toggle('highContrast','Contraste renforcé')}{toggle('reduceMotion','Réduire les animations')}<p className="sp-muted">Les préférences sont sauvegardées. Les indicateurs de focus clavier restent visibles.</p></div>}
         {active === 'language' && <div className="sp-card"><h3>Langue et région</h3>{select('language','Langue de l’interface',[['fr','Français'],['en','English']])}{select('dateFormat','Format de date',[['locale','Format du navigateur'],['DD/MM/YYYY','JJ/MM/AAAA'],['MM/DD/YYYY','MM/JJ/AAAA'],['YYYY-MM-DD','AAAA-MM-JJ']])}{select('timeFormat','Format de l’heure',[['24h','24 heures'],['12h','12 heures']])}{select('timezone','Fuseau horaire',[['local','Fuseau de l’appareil'],['UTC','UTC']])}<p className="sp-muted">Le français est la langue principale. Le choix anglais est enregistré, mais tous les écrans ne sont pas encore traduits.</p></div>}
-        {active === 'data' && <div className="sp-card"><h3>Données et stockage</h3><div className="sp-info-row"><span><strong>Préférences enregistrées</strong><small>Nombre de clés de préférence</small></span><b>{prefsCount}</b></div><div className="sp-info-row"><span><strong>Stockage local</strong><small>Cache et données locales gérés par le navigateur</small></span><b>Appareil</b></div><p className="sp-muted">L’export complet et la suppression automatisée des données ne sont pas encore implémentés. Aucune donnée n’est supprimée depuis cette page.</p></div>}
+        {active === 'data' && <div className="sp-data-page">
+          <div className="sp-data-summary">
+            <article className="sp-data-metric"><span className="sp-data-metric-icon">⚙</span><span className="sp-data-metric-label">Préférences du compte</span><strong>{prefsCount}</strong><small>Clés de préférence en mémoire</small></article>
+            <article className="sp-data-metric"><span className="sp-data-metric-icon">▣</span><span className="sp-data-metric-label">Stockage du navigateur</span><strong>{localStorageCount === null ? '—' : localStorageCount}</strong><small>Entrées localStorage sur cet appareil</small></article>
+            <article className="sp-data-metric"><span className="sp-data-metric-icon">↻</span><span className="sp-data-metric-label">Synchronisation</span><strong className={user ? 'sp-data-state-on' : 'sp-data-state-off'}>{user ? (dirty ? 'En attente' : loading ? 'Chargement' : 'Compte') : 'Locale'}</strong><small>{user ? (dirty ? 'Modifications à enregistrer' : 'Préférences liées au compte') : 'Connectez-vous pour synchroniser'}</small></article>
+          </div>
+          <section className="sp-card sp-data-card">
+            <div className="sp-data-card-heading"><div><span className="sp-eyebrow">VOTRE APPAREIL</span><h3>Stockage local</h3><p>Informations conservées par le navigateur pour faire fonctionner votre session et l’interface.</p></div><span className="sp-data-device-icon">⌘</span></div>
+            <div className="sp-info-row"><span><strong>Entrées du stockage local</strong><small>Nombre d’entrées localStorage pour ce site, sans lire ni afficher leur contenu</small></span><b>{localStorageCount === null ? 'Indisponible' : localStorageCount + ' entrées'}</b></div>
+            <div className="sp-info-row"><span><strong>Cache et fichiers temporaires</strong><small>Gérés par le navigateur et les mécanismes de l’application</small></span><b>Gestion navigateur</b></div>
+            <p className="sp-muted">Ce compteur ne représente pas la taille totale des fichiers, photos ou messages stockés sur les serveurs.</p>
+          </section>
+          <section className="sp-card sp-data-card">
+            <div className="sp-data-card-heading"><div><span className="sp-eyebrow">GESTION DES DONNÉES</span><h3>Export et suppression</h3><p>Gardez le contrôle sur vos informations personnelles.</p></div><span className="sp-data-lock-icon">!</span></div>
+            <div className="sp-data-unavailable"><span className="sp-data-unavailable-dot" /><div><strong>Fonctionnalités en préparation</strong><p>L’export complet des données et la suppression automatisée ne sont pas encore disponibles. Aucun fichier n’a été exporté et aucune donnée n’est supprimée depuis cette page.</p></div></div>
+          </section>
+        </div>}
         {active === 'help' && <div className="sp-card"><h3>Aide et assistance</h3><a className="sp-link-row" href="https://github.com/avanisoudi/avani-pro" target="_blank" rel="noreferrer">Dépôt et signalement de problème ↗</a><a className="sp-link-row" href="/confidentialite/">Politique de confidentialité ↗</a><a className="sp-link-row" href="https://github.com/avanisoudi/avani-pro/blob/main/README.md" target="_blank" rel="noreferrer">Documentation du projet ↗</a><div className="sp-info-row"><span><strong>Version d’Avani Pro</strong><small>Version de l’application</small></span><b>1.4.0</b></div></div>}
         {active === 'premium' && <div className="sp-card"><h3>Avani Pro Premium</h3><p>Aucun abonnement Premium actif ou système de facturation vérifiable n’est exposé à cette page.</p><p className="sp-muted">Aucun faux statut d’abonnement ni paiement simulé n’est affiché.</p></div>}
         {active === 'danger' && <div className="sp-card sp-danger"><h3>Actions importantes sur le compte</h3><p>La désactivation et la suppression définitive ne disposent pas encore d’un flux serveur complet validé. Aucun bouton de suppression immédiate n’est proposé pour protéger vos données.</p><p className="sp-muted">Contactez l’assistance pour connaître les procédures disponibles.</p><a href="https://github.com/avanisoudi/avani-pro/issues" target="_blank" rel="noreferrer">Contacter l’assistance du projet ↗</a></div>}
-        <footer className="sp-footer"><span>{dirty ? 'Modifications en attente' : 'Préférences synchronisées ou inchangées'}</span><button type="button" className="sp-secondary" onClick={() => { if (window.confirm('Réinitialiser les préférences locales de cette page ? Enregistrez ensuite pour modifier le compte.')) { setPrefs(DEFAULTS); setDirty(true); setStatus('Valeurs par défaut chargées localement. Enregistrez pour les appliquer au compte.') } }}>Réinitialiser cette section</button><button type="button" className="sp-primary" onClick={() => void save()} disabled={!user || saving || loading || !dirty}>{saving ? 'Enregistrement…' : 'Enregistrer les réglages'}</button></footer>
+        <footer className="sp-footer"><span>{dirty ? 'Modifications en attente' : 'Préférences synchronisées ou inchangées'}</span><button type="button" className="sp-secondary" onClick={resetCurrentSection} disabled={!RESET_KEYS[active] && active !== 'appearance'}>Réinitialiser cette section</button><button type="button" className="sp-primary" onClick={() => void save()} disabled={!user || saving || loading || !dirty}>{saving ? 'Enregistrement…' : 'Enregistrer les réglages'}</button></footer>
       </main>
       <aside className="sp-rail"><div className="sp-rail-card"><span className="sp-rail-icon">✦</span><h3>État du compte</h3><p>{user ? 'Connecté à Avani Pro' : 'Connexion requise pour synchroniser les préférences'}</p><div className="sp-rail-line"><span>Synchronisation</span><b>{user ? 'Compte' : 'Locale'}</b></div><div className="sp-rail-line"><span>État des réglages</span><b>{dirty ? 'À enregistrer' : loading ? 'Chargement' : 'À jour'}</b></div><div className="sp-rail-line"><span>Thème</span><b>{THEME_CHOICES.find(choice => choice.id === theme)?.label ?? theme}</b></div></div><div className="sp-rail-card sp-security-card"><h3>Conseil sécurité</h3><p>Utilisez un mot de passe unique et confirmez les changements d’adresse e-mail depuis votre boîte de réception.</p><button type="button" onClick={() => setActive('security')}>Vérifier la sécurité ↗</button></div></aside>
     </div>
