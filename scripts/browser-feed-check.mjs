@@ -149,6 +149,29 @@ try {
     await page.getByText('Aucune action enregistrée.').waitFor()
     console.log('PASS logout red only, settings clarity, admin console tabs and server delete request')
   }
+  if (!captureOnly) {
+    await page.goto(`${base}/messages`)
+    await page.locator('.messages-heading .eyebrow').waitFor()
+    for (const width of [1214, 390]) {
+      await page.setViewportSize({ width, height: 900 })
+      for (const theme of ['light', 'dark']) {
+        await page.evaluate(theme => {
+          document.documentElement.dataset.theme = theme
+          const shell = document.querySelector('.app-shell')
+          shell.classList.remove('theme-light', 'theme-dark')
+          shell.classList.add(`theme-${theme}`)
+        }, theme)
+        const heading = await page.locator('.messages-heading .eyebrow').evaluate(el => ({ color: getComputedStyle(el).color, background: getComputedStyle(el).backgroundImage, fill: getComputedStyle(el).webkitTextFillColor }))
+        const expected = theme === 'light' ? 'rgb(124, 58, 237)' : 'rgb(167, 139, 250)'
+        assert.equal(heading.color, expected, `Actual heading colour ${theme}/${width}`)
+        assert.equal(heading.fill, expected, `Text not transparent ${theme}/${width}`)
+        assert.equal(heading.background, 'none')
+        assert.ok(await page.getByText('Conversations de votre compte', { exact: true }).isVisible(), `Subtitle visible ${theme}/${width}`)
+        await page.screenshot({ path: `${dir}/messages-heading-${theme}-${width}.png` })
+      }
+    }
+    console.log('PASS actual messaging heading CSS, visible subtitle, mobile/desktop, light/dark')
+  }
   assert.deepEqual(errors, [])
   console.log(captureOnly ? 'Baseline captured' : 'PASS album, keyboard, five uploads + text, persistence reload, failed-album preservation, duplicate selection/submission protection, responsive layout')
 } catch (error) { console.log('Browser errors:', errors); console.log((await page.locator('body').innerText()).slice(0, 1800)); await page.screenshot({ path: `${dir}/failure.png`, fullPage: true }); throw error } finally { await browser.close() }
