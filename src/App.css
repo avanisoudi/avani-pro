@@ -1212,3 +1212,7 @@
     max-height: calc(100dvh - 36px);
   }
 }
+
+
+/* Masquer le point rouge décoratif du bouton Notifications sans désactiver les notifications. */
+.nav-bell .nav-badge { display: none !important; }
