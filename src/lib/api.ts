@@ -300,8 +300,15 @@ export async function sendMessage(conversationId: string, senderId: string, body
 
 /** Marque lu : droit accessoire, un refus de RLS ne doit pas casser la conversation. */
 export async function markConversationRead(conversationId: string, userId: string) {
-  const { error } = await requireSupabase().from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conversationId).eq('user_id', userId)
-  if (!error) return true
+  const { data, error } = await requireSupabase()
+    .from('conversation_members')
+    .update({ last_read_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId)
+    .select('conversation_id')
+    .maybeSingle()
+
+  if (!error) return Boolean(data)
   if (isPermissionError(error) || isMissingColumnError(error, 'last_read_at')) return false
   throw writeError(error, 'Le marquage « lu »')
 }
