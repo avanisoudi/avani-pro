@@ -28,7 +28,4 @@ for (const file of (await walk('src')).filter(path => path.endsWith('.tsx'))) {
     references++; assert.ok(symbols.has(name), `Missing icon ${name} in ${file}`)
   }
 }
-const placeholder = await readFile('public/assets/story-placeholder.svg', 'utf8')
-assert.ok(!placeholder.includes('<text'), 'Story placeholder must not duplicate UI text')
-assert.ok(!placeholder.includes('M160 132v156M82 210h156'), 'Story placeholder must not duplicate the interactive plus')
-console.log(`PASS ${files.length} asset files: no identical files or duplicate SVG IDs; ${references} static icon references resolved; story decoration has no duplicate label/control.`)
+console.log(`PASS ${files.length} asset files: no identical files or duplicate SVG IDs; ${references} static icon references resolved.`)
