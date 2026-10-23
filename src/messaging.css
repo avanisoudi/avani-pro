@@ -1198,3 +1198,10 @@ html[data-theme] .app-shell.messaging-workspace .avani-messenger .conversation-s
 .avani-messenger .message-setting-toggle:focus-within,
 .avani-messenger .message-setting-control:focus-within{outline:2px solid #8b5cf6;outline-offset:2px}
 .avani-messenger .message-profile-muted{overflow-wrap:anywhere}
+
+
+.avani-messenger[data-chat-wallpaper="violet"] .message-thread{background-color:#f2eaff!important;background-image:radial-gradient(#8b5cf633 1px,transparent 1px)!important;background-size:22px 22px!important}
+.avani-messenger[data-chat-wallpaper="blue"] .message-thread{background-color:#eaf4ff!important;background-image:radial-gradient(#3b82f633 1px,transparent 1px)!important;background-size:22px 22px!important}
+.avani-messenger[data-chat-wallpaper="plain"] .message-thread{background-color:var(--chat-panel)!important;background-image:none!important}
+html[data-theme="dark"] .avani-messenger[data-chat-wallpaper="violet"] .message-thread{background-color:#21172e!important;background-image:radial-gradient(#a78bfa22 1px,transparent 1px)!important}
+html[data-theme="dark"] .avani-messenger[data-chat-wallpaper="blue"] .message-thread{background-color:#142238!important;background-image:radial-gradient(#60a5fa22 1px,transparent 1px)!important}
