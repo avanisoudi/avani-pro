@@ -71,10 +71,7 @@ create table if not exists public.message_pins (
   message_id uuid not null references public.messages(id) on delete cascade,
   pinned_by uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now(),
-  primary key (conversation_id, message_id),
-  constraint message_pins_message_conversation_fk
-    foreign key (message_id, conversation_id)
-    references public.messages(id, conversation_id) on delete cascade
+  primary key (conversation_id, message_id)
 );
 create index if not exists message_pins_conversation_created_idx
   on public.message_pins(conversation_id, created_at desc);
