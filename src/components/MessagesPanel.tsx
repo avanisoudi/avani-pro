@@ -83,6 +83,10 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [inviteQuery, setInviteQuery] = useState('')
   const [inviteResults, setInviteResults] = useState<ProfileRecord[]>([])
   const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const settingsRef = useRef<HTMLElement>(null)
+  const settingsBackdropRef = useRef<HTMLDialogElement>(null)
+  const groupMutationRef = useRef(false)
   const [memberReload, setMemberReload] = useState(0)
   const [searchOpen, setSearchOpen] = useState(false)
   const [messageQuery, setMessageQuery] = useState('')
@@ -165,21 +169,55 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   }, [selected?.id, memberReload])
 
   useEffect(() => {
-    if (!user || !infoOpen || !selected || selected.created_by !== user.id || !inviteQuery.trim()) { setInviteResults([]); return }
+    setInviteResults([])
+    setInviteError('')
+    if (!user || !infoOpen || !selected?.is_group || selected.created_by !== user.id || inviteQuery.trim().length < 2 || membersLoading || membersError) {
+      setInviteLoading(false)
+      return
+    }
     let active = true
     setInviteLoading(true)
     const timer = window.setTimeout(() => {
-      void searchMessageContacts(user.id, inviteQuery).then(rows => { if (active) setInviteResults(rows.filter(row => !members.some(member => member.id === row.id))) })
-        .catch(() => { if (active) setGroupError('Recherche de membres indisponible.') })
+      void searchMessageContacts(user.id, inviteQuery.trim()).then(rows => {
+        if (active) setInviteResults(rows.filter(row => row.id !== user.id && !members.some(member => member.id === row.id)))
+      }).catch(() => { if (active) setInviteError('Recherche indisponible. Modifiez la recherche pour réessayer.') })
         .finally(() => { if (active) setInviteLoading(false) })
-    }, 250)
+    }, 300)
     return () => { active = false; window.clearTimeout(timer) }
-  }, [inviteQuery, infoOpen, selected?.id, selected?.created_by, members, user?.id])
+  }, [inviteQuery, infoOpen, selected?.id, selected?.is_group, selected?.created_by, members, membersLoading, membersError, user?.id])
+
+  // Settings remain usable on touch screens and with a keyboard, without escaping the dialog.
+  useEffect(() => {
+    if (!infoOpen || !selected?.id) return
+    const previous = document.activeElement as HTMLElement | null
+    const dialog = settingsRef.current
+    const backdrop = settingsBackdropRef.current
+    if (backdrop && !backdrop.open) backdrop.showModal()
+    dialog?.focus()
+    const handleKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        if (!groupMutationRef.current) setInfoOpen(false)
+      }
+      if (event.key !== 'Tab' || !dialog) return
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), a[href], select:not(:disabled), textarea:not(:disabled)')).filter(el => el.getClientRects().length > 0)
+      const first = controls[0], last = controls[controls.length - 1]
+      if (!first) { event.preventDefault(); dialog.focus(); return }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { event.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', handleKeys)
+    return () => { document.removeEventListener('keydown', handleKeys); backdrop?.close(); if (previous?.isConnected) previous.focus() }
+  }, [infoOpen, selected?.id])
 
   const groupAction = async (action: 'rename' | 'add' | 'remove' | 'transfer' | 'leave', target?: string) => {
-    if (!selected || groupBusy) return
+    if (!selected?.is_group || groupMutationRef.current || !user) return
+    if (action !== 'leave' && selected.created_by !== user.id) return
+    if (action === 'add' && (!target || membersLoading || membersError || members.some(member => member.id === target))) return
+    if (action === 'rename' && (!groupNewName.trim() || groupNewName.trim().length > 100)) return
     if (['remove', 'transfer', 'leave'].includes(action) && !window.confirm(action === 'leave' ? 'Quitter ce groupe ? Vous perdrez l’accès à ses messages.' : action === 'transfer' ? 'Transférer la gestion du groupe à ce membre ? Vous ne pourrez plus administrer le groupe.' : 'Retirer cette personne du groupe ?')) return
     const chat = selected
+    groupMutationRef.current = true
     setGroupBusy(true)
     setGroupError('')
     try {
@@ -196,9 +234,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           setConversations(current => current.map(item => item.id === chat.id ? updated : item))
         }
       }
-      onAction('Groupe mis à jour.')
+      onAction(action === 'add' ? 'Personne ajoutée au groupe.' : 'Groupe mis à jour.')
     } catch (caught) { setGroupError(caught instanceof Error ? caught.message : 'Modification du groupe impossible.') }
-    finally { setGroupBusy(false) }
+    finally { groupMutationRef.current = false; setGroupBusy(false) }
   }
 
   const mention = selected?.is_group && !mentionsHidden ? mentionAtCursor(draft, mentionCursor) : null
@@ -214,8 +252,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const changeGroupPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
-    if (!selected || !user || !file || groupBusy) return
+    if (!selected?.is_group || !user || selected.created_by !== user.id || !file || groupMutationRef.current) return
     const chat = selected
+    groupMutationRef.current = true
     setGroupBusy(true)
     setGroupError('')
     try {
@@ -224,7 +263,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       setConversations(current => current.map(item => item.id === chat.id ? { ...item, avatar_path: path } : item))
       onAction('Photo du groupe mise à jour.')
     } catch (caught) { setGroupError(caught instanceof Error ? caught.message : 'Impossible de modifier la photo.') }
-    finally { setGroupBusy(false) }
+    finally { groupMutationRef.current = false; setGroupBusy(false) }
   }
 
   const insertEmoji = (emoji: string) => {
@@ -351,6 +390,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     setGroupError('')
     setGroupNewName('')
     setInviteQuery('')
+    setInviteResults([])
+    setInviteError('')
     setSearchOpen(false)
     setMessageQuery('')
     setEmojiOpen(false)
@@ -692,7 +733,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     <div className="message-thread">
       {selected ? <>
         <div className="thread-head"><button type="button" className="thread-back" onClick={() => setSelected(null)} aria-label="Retour aux discussions">←</button>
-          <div className="thread-title"><ChatAvatar chat={selected} /><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? presentMembers === null || membersLoading || membersError ? 'Présence indisponible ou en synchronisation…' : `${presentMembers} personne${presentMembers > 1 ? 's' : ''} en ligne` : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'}</small></div></div><div className="thread-head-actions"><button type="button" aria-label="Rechercher dans les messages chargés" aria-expanded={searchOpen} onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕</button><button type="button" aria-label="Informations et membres" aria-expanded={infoOpen} onClick={() => { setInfoOpen(value => !value); setSearchOpen(false) }}>ⓘ</button></div>
+          <div className="thread-title"><ChatAvatar chat={selected} /><div><span className="eyebrow">{selected.is_group ? 'GROUPE' : 'CONVERSATION PRIVÉE'}</span><strong>{selected.title || ''}</strong><small><span className="pulse-dot" />{connection === 'connected' ? presentMembers === null || membersLoading || membersError ? 'Présence indisponible ou en synchronisation…' : `${presentMembers} personne${presentMembers > 1 ? 's' : ''} en ligne` : connection === 'reconnecting' ? 'Reconnexion…' : connection === 'offline' ? 'Hors connexion' : 'Connexion…'}</small></div></div><div className="thread-head-actions"><button type="button" aria-label="Rechercher dans les messages chargés" aria-expanded={searchOpen} onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕</button><button type="button" aria-label="Paramètres de la discussion" aria-haspopup="dialog" aria-expanded={infoOpen} onClick={() => { setGroupNewName(selected.title || ''); setInviteQuery(''); setGroupError(''); setInfoOpen(true); setSearchOpen(false) }}>⚙</button></div>
         </div>
 
         {searchOpen && <section className="thread-utility" aria-label="Recherche de messages">
@@ -769,32 +810,38 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         </form>
       </> : <div className="empty-thread"><span>◌</span><h2>Vos échanges, votre réseau.</h2><p>Choisissez une discussion ou commencez un nouvel échange.</p><button type="button" className="primary-button" onClick={() => openNewConversation(false)}>Écrire à une personne</button><button type="button" className="empty-group-action" onClick={() => openNewConversation(true)}>Créer un groupe</button></div>}
     </div>
-    <aside className="message-profile-panel" aria-label="Informations sur la conversation">
-      {selected ? <>
+    {infoOpen && selected && <dialog ref={settingsBackdropRef} className="conversation-settings-backdrop" aria-label="Paramètres de la discussion" onCancel={event => { event.preventDefault(); if (!groupMutationRef.current) setInfoOpen(false) }}>
+    <aside ref={settingsRef} tabIndex={-1} className="message-profile-panel conversation-settings">
+      <div className="conversation-settings-heading"><h2>Paramètres de la discussion</h2><button type="button" disabled={groupBusy} onClick={() => setInfoOpen(false)} aria-label="Fermer les paramètres">×</button></div>
+      <>
         <div className="message-profile-hero">
-          <div className="message-profile-avatar"><ChatAvatar chat={selected} /><span className="pulse-dot" /></div>
+          <div className="message-profile-avatar"><ChatAvatar chat={selected} /></div>
           <h2>{selected.title || 'Conversation'}</h2>
-          <p>{selected.is_group ? 'Groupe AVANI PRO' : connection === 'connected' ? 'En ligne ou récemment actif' : connection === 'offline' ? 'Hors connexion' : 'Statut de connexion'}</p>
-          <div className="message-profile-actions"><button type="button" onClick={() => setInfoOpen(value => !value)} aria-expanded={infoOpen}>ⓘ Informations</button><button type="button" onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕ Rechercher</button></div>
+          <p>{selected.is_group ? 'Groupe AVANI PRO' : 'Discussion privée'}</p>
+          <div className="message-profile-actions"><button type="button" disabled={groupBusy} onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕ Rechercher</button></div>
         </div>
         {selected.is_group && selected.created_by === user.id && <section className="message-profile-section">
           <h3>Photo du groupe</h3>
           <label className="group-photo-upload">Modifier la photo (JPEG, PNG, WebP · 5 Mo maximum)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={groupBusy} onChange={event => void changeGroupPhoto(event)} /></label>
-          {groupError && <p className="message-profile-muted" role="alert">{groupError}</p>}
         </section>}
         {selected.is_group && <section className="message-profile-section">
-          <h3>Gestion du groupe</h3>
+          <h3>Gestion du groupe</h3><p className="message-profile-muted">Seul le responsable peut ajouter ou retirer des personnes et modifier le groupe. Les groupes communautaires se gèrent dans la rubrique Groupes.</p>
           {selected.created_by === user.id ? <>
             <form className="group-management-form" onSubmit={event => { event.preventDefault(); void groupAction('rename') }}>
               <label>Nom du groupe<input maxLength={100} value={groupNewName} onChange={event => setGroupNewName(event.target.value)} placeholder={selected.title || 'Nom du groupe'} disabled={groupBusy} /></label>
-              <button type="submit" disabled={groupBusy || !groupNewName.trim()}>Renommer</button>
+              <button type="submit" disabled={groupBusy || !groupNewName.trim() || groupNewName.trim() === selected.title}>Renommer</button>
             </form>
-            <label>Ajouter un membre<input value={inviteQuery} onChange={event => setInviteQuery(event.target.value)} placeholder="Nom ou identifiant" disabled={groupBusy} /></label>
+            <h3>Ajouter des personnes</h3>
+            <label>Rechercher une personne<input value={inviteQuery} maxLength={80} onChange={event => { setInviteQuery(event.target.value); setInviteResults([]) }} placeholder="Nom ou identifiant (2 caractères minimum)" disabled={groupBusy || membersLoading || !!membersError} /></label>
+            <p className="message-profile-muted">Les personnes déjà membres ne sont pas proposées.</p>
+            {inviteError && <p role="alert">{inviteError}</p>}
+            {!inviteLoading && !inviteError && inviteQuery.trim().length >= 2 && !membersLoading && !membersError && inviteResults.length === 0 && <p role="status">Aucune personne à ajouter pour cette recherche.</p>}
+            {membersError && <button type="button" disabled={groupBusy} onClick={() => setMemberReload(value => value + 1)}>Recharger les membres</button>}
             {inviteLoading && inviteQuery.trim() && <p className="message-profile-muted">Recherche…</p>}
-            {inviteResults.map(person => <button className="message-profile-manage-button" key={person.id} type="button" disabled={groupBusy || inviteLoading} onClick={() => void groupAction('add', person.id)}>Ajouter {person.full_name}</button>)}
-            {members.filter(member => member.id !== user.id).map(member => <div className="message-profile-manage-row" key={member.id}><span>{member.full_name}</span><button type="button" disabled={groupBusy} onClick={() => void groupAction('remove', member.id)}>Retirer</button><button type="button" disabled={groupBusy} onClick={() => void groupAction('transfer', member.id)}>Transférer la gestion</button></div>)}
+            {inviteResults.map(person => <button className="message-profile-manage-button" key={person.id} type="button" disabled={groupBusy || inviteLoading || membersLoading || !!membersError} onClick={() => void groupAction('add', person.id)}>Ajouter {person.full_name || person.username} (@{person.username})</button>)}
+<p className="message-profile-muted">Pour quitter le groupe, transférez d’abord la gestion à un autre membre ci-dessous.</p>
           </> : <button className="message-profile-manage-button" type="button" disabled={groupBusy} onClick={() => void groupAction('leave')}>Quitter le groupe</button>}
-          {groupBusy && <p className="message-profile-muted">Mise à jour du groupe…</p>}
+          {groupBusy && <p role="status" className="message-profile-muted">Mise à jour du groupe…</p>}
           {groupError && <p className="message-profile-muted" role="alert">{groupError}</p>}
         </section>}
         <section className="message-profile-section">
@@ -804,9 +851,10 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         </section>
         <section className="message-profile-section">
           <h3>Membres <span>{members.length}</span></h3>
-          {membersLoading ? <p className="message-profile-muted">Chargement des membres…</p> : membersError ? <p className="message-profile-muted">{membersError}</p> : <div className="message-profile-members">{members.slice(0, 5).map(member => <div className="message-profile-member" key={member.id}><span className="avatar avatar-sm avatar-soft">{member.avatar_url ? <img src={member.avatar_url} alt="" /> : (member.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()}</span><span><strong>{member.full_name || member.username}</strong><small>@{member.username}</small></span></div>)}</div>}
+          {membersLoading ? <p className="message-profile-muted">Chargement des membres…</p> : membersError ? <p className="message-profile-muted">{membersError}</p> : <div className="message-profile-members">{members.map(member => <div className="message-profile-member" key={member.id}><span className="avatar avatar-sm avatar-soft">{member.avatar_url ? <img src={member.avatar_url} alt="" /> : (member.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()}</span><span><strong>{member.full_name || member.username}</strong><small>@{member.username}{member.id === selected.created_by ? ' · Responsable' : ''}{member.id === user.id ? ' · Vous' : ''}</small></span>{selected.is_group && selected.created_by === user.id && member.id !== user.id && <div className="message-profile-manage-row"><button type="button" disabled={groupBusy} onClick={() => void groupAction('remove', member.id)} aria-label={`Retirer ${member.full_name || member.username}`}>Retirer</button><button type="button" disabled={groupBusy} onClick={() => void groupAction('transfer', member.id)} aria-label={`Transférer la gestion à ${member.full_name || member.username}`}>Transférer la gestion</button></div>}</div>)}</div>}
         </section>
         <section className="message-profile-section">
+          <p className="message-profile-muted">Les médias et fichiers ci-dessous proviennent des messages actuellement chargés.</p>
           <h3>Photos et médias <span>{messages.filter(message => !message.deleted_at && message.attachment_path && message.attachment_mime_type?.startsWith('image/')).length}</span></h3>
           <div className="message-profile-media-grid">{messages.filter(message => !message.deleted_at && message.attachment_path && message.attachment_mime_type?.startsWith('image/')).slice(-4).reverse().map(message => <div className="message-profile-media-item" key={message.id}><MessageAttachment message={message} /></div>)}</div>
           {!messages.some(message => !message.deleted_at && message.attachment_path && message.attachment_mime_type?.startsWith('image/')) && <p className="message-profile-muted">Les photos partagées apparaîtront ici.</p>}
@@ -816,8 +864,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           <div className="message-profile-files">{messages.filter(message => !message.deleted_at && message.attachment_path && !message.attachment_mime_type?.startsWith('image/')).slice(-5).reverse().map(message => <div className="message-profile-file" key={message.id}><span className="message-profile-file-icon">↗</span><span><strong>{message.attachment_name || 'Fichier partagé'}</strong><small>{formatRowTime(message.created_at)}</small></span></div>)}</div>
           {!messages.some(message => !message.deleted_at && message.attachment_path && !message.attachment_mime_type?.startsWith('image/')) && <p className="message-profile-muted">Les documents et pièces jointes apparaîtront ici.</p>}
         </section>
-      </> : <div className="message-profile-empty"><span>✦</span><h2>Votre espace de discussion</h2><p>Sélectionnez une conversation pour afficher ses informations, ses membres et les fichiers partagés.</p></div>}
-    </aside>
+      </>
+    </aside></dialog>}
     {newConversationOpen && <div className="message-dialog-backdrop" role="presentation"><div ref={dialogRef} className="message-dialog" role="dialog" aria-modal="true" aria-label={groupMode ? 'Créer un groupe' : 'Nouvelle discussion'}>
       <div className="message-dialog-head"><div><span className="eyebrow">{groupMode ? 'NOUVEAU GROUPE' : 'NOUVELLE DISCUSSION'}</span><strong>{groupMode ? 'Créer un groupe' : 'Écrire à une personne'}</strong></div><button type="button" disabled={creatingConversation} onClick={() => setNewConversationOpen(false)} aria-label="Fermer">×</button></div>
       {groupMode && <input className="message-dialog-input" maxLength={100} disabled={creatingConversation} value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Nom du groupe" aria-label="Nom du groupe" />}

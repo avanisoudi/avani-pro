@@ -868,42 +868,6 @@ html[data-theme="dark"] .avani-messenger .message-bubble.mine{
 }
 
 
-/* Group information is opened only by the ⓘ action, like WhatsApp Web. */
-@media (min-width: 1201px) {
-  .app-shell.messaging-workspace .avani-messenger {
-    grid-template-columns: minmax(260px, 300px) minmax(360px, 1fr) !important;
-  }
-  .app-shell.messaging-workspace .avani-messenger > .message-profile-panel {
-    display: none !important;
-  }
-  .app-shell.messaging-workspace .avani-messenger.show-conversation-info {
-    grid-template-columns: minmax(250px, 290px) minmax(320px, 1fr) minmax(250px, 300px) !important;
-  }
-  .app-shell.messaging-workspace .avani-messenger.show-conversation-info > .message-profile-panel {
-    display: block !important;
-  }
-}
-@media (max-width: 1200px) {
-  .app-shell.messaging-workspace .avani-messenger > .message-profile-panel {
-    display: none !important;
-  }
-  .app-shell.messaging-workspace .avani-messenger.show-conversation-info > .message-profile-panel {
-    display: block !important;
-    position: absolute !important;
-    z-index: 30 !important;
-    inset: 0 0 0 auto !important;
-    width: min(380px, 92vw) !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    background: var(--wa-panel) !important;
-    border-left: 1px solid var(--wa-line) !important;
-    box-shadow: -12px 0 32px #0002 !important;
-    overflow-y: auto !important;
-  }
-  .app-shell.messaging-workspace .avani-messenger.show-conversation-info {
-    position: relative !important;
-  }
-}
 /* Sender bubbles stay on the right; incoming bubbles and replies stay on the left. */
 .app-shell.messaging-workspace .avani-messenger .message-scroll {
   align-items: stretch !important;
@@ -997,6 +961,50 @@ html[data-theme="dark"] .avani-messenger .message-bubble.mine{
   overflow-wrap: anywhere !important;
 }
 
+/* Dedicated settings dialog: no hidden third column or mobile-only offscreen panel. */
+.app-shell.messaging-workspace .avani-messenger .conversation-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  display: flex;
+  justify-content: flex-end;
+  background: #07152380;
+}
+html[data-theme] .app-shell.messaging-workspace .avani-messenger .conversation-settings {
+  display: block !important;
+  position: relative !important;
+  inset: auto !important;
+  width: min(460px, 100%) !important;
+  max-width: 100% !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  padding: 16px !important;
+  padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  background: var(--wa-panel, #fff) !important;
+  color: var(--wa-text, #182b2a) !important;
+  box-shadow: -12px 0 32px #0003;
+  border-radius: 0 !important;
+}
+.conversation-settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.conversation-settings-heading h2 { font-size: 18px; }
+.conversation-settings-heading button { min-width: 44px; min-height: 44px; border: 1px solid var(--wa-line); border-radius: 10px; background: var(--wa-soft); color: var(--wa-text); font-size: 24px; }
+.conversation-settings :is(button, input) { min-height: 40px; }
+.conversation-settings button:disabled { opacity: .55; cursor: not-allowed; }
+.conversation-settings .message-profile-members { max-height: none; }
+.conversation-settings .message-profile-manage-button { display: block; width: 100%; margin-block: 8px; text-align: left; overflow-wrap: anywhere; }
+.conversation-settings .message-profile-member { flex-wrap: wrap; }
+.conversation-settings .message-profile-member .message-profile-manage-row { flex: 1 1 100%; }
+
+.conversation-settings-backdrop::backdrop { background: transparent; }
 
 /* AVANI PRO branded chat wallpaper, inspired by WhatsApp's subtle doodle pattern. */
 .app-shell.messaging-workspace .avani-messenger .message-thread {
