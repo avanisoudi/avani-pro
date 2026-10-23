@@ -33,7 +33,7 @@ export function prefersDarkScheme(): boolean {
  * C'est ce qui manquait : l'application démarrait figée sur `light`, même en système sombre.
  */
 export function resolveInitialTheme(stored: string | null, prefersDark: boolean): ThemeName {
-  if (stored === 'dark' || stored === 'light') return stored
+  if (stored === 'dark' || stored === 'light' || stored === 'neon' || stored === 'blue') return stored
   return prefersDark ? 'dark' : 'light'
 }
 
