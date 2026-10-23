@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
 import { updateChatAvatar, manageChat, listConversationMembers, listConversationReadMarkers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
-import { getConversationUserSettings, updateConversationUserSettings, type ConversationUserSettings } from '../lib/messagingEnhancements'
+import { getConversationUserSettings, updateConversationUserSettings, listStarredMessageIds, toggleMessageStar, listPinnedMessages, setMessagePinned, type ConversationUserSettings } from '../lib/messagingEnhancements'
 
 type TypingState = Record<string, string>
 
@@ -115,6 +115,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [conversationSettings, setConversationSettings] = useState<ConversationUserSettings | null>(null)
   const [settingsBusy, setSettingsBusy] = useState(false)
   const [settingsError, setSettingsError] = useState('')
+  const [starredMessageIds, setStarredMessageIds] = useState<string[]>([])
+  const [pinnedMessages, setPinnedMessages] = useState<Array<{ message_id: string; pinned_by: string }>>([])
+  const [messageControlError, setMessageControlError] = useState('')
 
   useEffect(() => {
     if (!newConversationOpen || !user) return
@@ -201,6 +204,51 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .catch(caught => { if (active) setSettingsError(caught instanceof Error ? caught.message : 'Impossible de charger les préférences de discussion.') })
     return () => { active = false }
   }, [selected?.id, user?.id, infoOpen])
+
+  useEffect(() => {
+    if (!selected?.id || !user) {
+      setStarredMessageIds([])
+      setPinnedMessages([])
+      return
+    }
+    let active = true
+    setMessageControlError('')
+    void Promise.all([
+      listStarredMessageIds(user.id, selected.id),
+      listPinnedMessages(selected.id),
+    ]).then(([stars, pins]) => {
+      if (active) { setStarredMessageIds(stars); setPinnedMessages(pins) }
+    }).catch(caught => {
+      if (active) setMessageControlError(caught instanceof Error ? caught.message : 'Impossible de charger les favoris et les messages épinglés.')
+    })
+    return () => { active = false }
+  }, [selected?.id, user?.id])
+
+  const toggleStarForMessage = async (message: MessageRecord) => {
+    if (!user) return
+    const wasStarred = starredMessageIds.includes(message.id)
+    setStarredMessageIds(current => wasStarred ? current.filter(id => id !== message.id) : [...current, message.id])
+    try {
+      await toggleMessageStar(message.id, user.id, !wasStarred)
+      onAction(wasStarred ? 'Message retiré des favoris.' : 'Message ajouté aux favoris.')
+    } catch (caught) {
+      setStarredMessageIds(current => wasStarred ? [...current, message.id] : current.filter(id => id !== message.id))
+      setMessageControlError(caught instanceof Error ? caught.message : 'Impossible de modifier les favoris. Vérifiez la migration 018.')
+    }
+  }
+
+  const togglePinForMessage = async (message: MessageRecord) => {
+    if (!user || !selected) return
+    const wasPinned = pinnedMessages.some(pin => pin.message_id === message.id)
+    setMessageControlError('')
+    try {
+      await setMessagePinned(message.id, selected.id, user.id, !wasPinned)
+      setPinnedMessages(current => wasPinned ? current.filter(pin => pin.message_id !== message.id) : [{ message_id: message.id, pinned_by: user.id }, ...current])
+      onAction(wasPinned ? 'Message désépinglé.' : 'Message épinglé pour les membres de cette discussion.')
+    } catch (caught) {
+      setMessageControlError(caught instanceof Error ? caught.message : 'Impossible d’épingler ce message. Vérifiez la migration 018.')
+    }
+  }
 
   const saveConversationPreference = async (patch: Partial<Pick<ConversationUserSettings, 'is_archived' | 'is_muted' | 'is_pinned' | 'wallpaper' | 'disappearing_after_seconds'>>) => {
     if (!selected || !user || settingsBusy) return
@@ -784,6 +832,15 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           {messageQuery.trim() && <div className="thread-search-results">{messages.filter(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))).map(message => <button type="button" key={message.id} onClick={() => { const node = document.getElementById(`message-${message.id}`); node?.scrollIntoView({ behavior: 'smooth', block: 'center' }); node?.focus({ preventScroll: true }) }}>{message.body}<small>{new Date(message.created_at).toLocaleString('fr-FR')}</small></button>)}{!messages.some(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))) && <p role="status">Aucun message correspondant parmi les messages chargés.</p>}</div>}
         </section>}
         <div className="message-scroll" aria-live="polite">
+          {messageControlError && <p className="message-control-error" role="alert">{messageControlError}</p>}
+          {pinnedMessages.length > 0 && (() => {
+            const pin = pinnedMessages[0]
+            const pinnedMessage = messages.find(item => item.id === pin.message_id)
+            return <button type="button" className="pinned-message-banner" onClick={() => document.getElementById(`message-${pin.message_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} aria-label="Aller au message épinglé">
+              <span aria-hidden="true">📌</span><span><strong>Message épinglé</strong><small>{pinnedMessage?.body || 'Voir le message épinglé dans la discussion'}</small></span>
+            </button>
+          })()}
+
           {hasOlder && <button type="button" className="message-button" onClick={() => void loadOlder()} disabled={loadingOlder}>{loadingOlder ? 'Chargement…' : 'Charger les anciens messages'}</button>}
           {messages.length === 0 && <p className="empty-copy">Commencez la conversation.</p>}
           {messages.map(message => {
@@ -807,7 +864,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
                 {pills.map(([type, count]) => <button type="button" data-reaction-control key={type} className={myReactions[message.id] === type ? 'is-mine' : ''} aria-label={`${type} : ${count} réaction${count > 1 ? 's' : ''}. Choisir ou retirer votre réaction`} onClick={() => setReactionPickerId(current => current === message.id ? null : message.id)}><span aria-hidden="true">{reactionEmoji[type]}</span><small>{count}</small></button>)}
               </div>}
               <div className="message-foot">
-                <span className="message-time">{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</span>
+                <span className="message-time">{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</span>{starredMessageIds.includes(message.id) && <span className="message-starred" aria-label="Message favori" title="Message favori">★</span>}
                 {mine && !message.deleted_at && <span className={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'message-read-status is-read' : 'message-read-status'} aria-label={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'} title={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'}>{readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? '✓✓' : '✓'}</span>}
                 {!message.deleted_at && <div className="message-tools">
                   {reactionsLive && <div className="reaction-control" data-reaction-control>
@@ -819,6 +876,8 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
                   </div>}
                   <details name="message-actions" className="message-action-menu" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }} onKeyDown={event => { if (event.key === 'Escape') event.currentTarget.open = false }}><summary aria-label="Actions du message">⌄</summary><div className="message-meta-actions">
                     <button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); setReplyTo(message) }}>Répondre</button>
+                    <button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void toggleStarForMessage(message) }}>{starredMessageIds.includes(message.id) ? 'Retirer des favoris ★' : 'Ajouter aux favoris ☆'}</button>
+                    <button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void togglePinForMessage(message) }}>{pinnedMessages.some(pin => pin.message_id === message.id) ? 'Désépingler' : 'Épingler dans la discussion'}</button>
                     {mine && <><button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); setEditingId(message.id); setEditingBody(message.body) }}>Modifier</button><button type="button" onClick={() => { if (window.confirm('Supprimer ce message pour tous les membres de cette discussion ?')) void removeMessage(message) }}>Supprimer</button></>}
                   </div></details>
                 </div>}
