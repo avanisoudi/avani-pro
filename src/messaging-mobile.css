@@ -1,0 +1,81 @@
+/* Final mobile geometry. Desktop and all non-messaging pages retain their layout. */
+@media (max-width: 760px) {
+  html[data-theme] .app-shell.messaging-workspace:has(.avani-messenger.has-conversation) > .mobile-tabbar {
+    display: none !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace > .main-content {
+    position: fixed !important;
+    inset: var(--chat-mobile-top, 72px) 0 auto !important;
+    height: var(--chat-mobile-height, calc(100dvh - 132px)) !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .messages-panel.avani-messenger {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger > .message-thread {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .thread-head {
+    flex: 0 0 auto !important;
+    min-height: 58px !important;
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .thread-title { gap: 8px !important; min-width: 0 !important; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .thread-title strong { font-size: 14px !important; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .thread-title .avatar { width: 34px !important; height: 34px !important; flex: 0 0 34px !important; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .thread-head-actions { gap: 2px !important; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-scroll {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    padding: 10px 8px !important;
+    gap: 2px !important;
+    background-size: 150px 150px !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-line {
+    margin: 2px 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  /* Keep search highlighting on the bubble, not a giant full-row purple frame. */
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-line:focus { outline: none !important; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-line:focus .message-bubble { outline: 2px solid #8b5cf6; outline-offset: 2px; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-bubble {
+    width: fit-content !important;
+    max-width: 85% !important;
+    padding: 7px 10px !important;
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+    border-radius: 12px !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-sender-name { font-size: 11px !important; line-height: 1.3 !important; margin-bottom: 3px !important; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-foot { margin-top: 1px !important; min-height: 14px !important; }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-compose {
+    flex: 0 0 auto !important;
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom)) !important;
+    gap: 4px !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .message-input-wrap textarea {
+    font-size: 16px !important; /* Avoid iOS focusing/zooming the whole page. */
+    min-height: 40px !important;
+    max-height: 96px !important;
+    padding: 9px 0 !important;
+  }
+  html[data-theme] .app-shell.messaging-workspace .avani-messenger .thread-utility { max-height: 32%; flex: 0 1 auto; overflow-y: auto; }
+}

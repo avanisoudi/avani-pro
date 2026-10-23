@@ -1,3 +1,4 @@
+import { useMobileChatViewport } from '../lib/useMobileChatViewport'
 import { mentionAtCursor, insertMention } from '../lib/mentions'
 import { useOnlineMembers } from '../lib/onlinePresence'
 import '../messaging.css'
@@ -72,6 +73,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [replyTo, setReplyTo] = useState<MessageRecord | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
+  useMobileChatViewport(selected?.id)
   const [infoOpen, setInfoOpen] = useState(false)
   const [members, setMembers] = useState<ProfileRecord[]>([])
   const [readMarkers, setReadMarkers] = useState<Array<{ user_id: string; last_read_at: string | null }>>([])

@@ -1,6 +1,6 @@
 /**
  * Surfaces média d'Avani Pro : Vidéos, Reels, Stories, et les écrans d'état des
- * fonctionnalités non ouvertes (Marketplace, Live) ou coupées par un drapeau.
+ * fonctionnalités non ouvertes (Live) ou coupées par un drapeau.
  *
  * Règle commune à ces quatre panneaux : rien n'est simulé. Les compteurs viennent de
  * la base, une mesure impossible à lire est annoncée comme indisponible (avec le nom du
@@ -535,7 +535,7 @@ export function StoriesPanel({ user, onAction, onMessage }: { user: User | null;
 /* ---------------------------------------------------- Écrans d'état honnêtes */
 
 /**
- * Marketplace, Live, et toute fonction coupée par un drapeau : aucun catalogue factice,
+ * Live et toute fonction coupée par un drapeau : aucun catalogue factice,
  * aucun lecteur simulé. L'écran dit l'état réel et, si l'interruption vient d'une table
  * absente, nomme le fichier de migration à exécuter.
  */

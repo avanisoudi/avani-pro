@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "test:feed": "vite build --config scripts/feed-check/vite.config.mjs && node scripts/feed-check/out/entry.js",
     "test:assets": "node scripts/check-assets.mjs",
-    "test:chat-browser": "node scripts/browser-chat-settings.mjs"
+    "test:chat-browser": "node scripts/browser-chat-settings.mjs",
+    "test:marketplace-browser": "node scripts/browser-marketplace.mjs",
+    "test:mobile-messages": "node scripts/browser-mobile-messages.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
