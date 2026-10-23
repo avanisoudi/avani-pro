@@ -63,3 +63,38 @@ export async function setMessageStarred(messageId: string, userId: string, starr
     : await client.from('message_stars').delete().eq('message_id', messageId).eq('user_id', userId)
   if (result.error) throw result.error
 }
+
+
+export async function listStarredMessageIds(userId: string, conversationId: string): Promise<string[]> {
+  const client = requireSupabase()
+  const { data, error } = await client
+    .from('message_stars')
+    .select('message_id, messages!inner(conversation_id)')
+    .eq('user_id', userId)
+    .eq('messages.conversation_id', conversationId)
+  if (error) throw error
+  return (data ?? []).map((row: { message_id: string }) => row.message_id)
+}
+
+export async function toggleMessageStar(messageId: string, userId: string, starred: boolean): Promise<void> {
+  await setMessageStarred(messageId, userId, starred)
+}
+
+export async function listPinnedMessages(conversationId: string): Promise<Array<{ message_id: string; pinned_by: string }>> {
+  const client = requireSupabase()
+  const { data, error } = await client
+    .from('message_pins')
+    .select('message_id,pinned_by')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function setMessagePinned(messageId: string, conversationId: string, userId: string, pinned: boolean): Promise<void> {
+  const client = requireSupabase()
+  const result = pinned
+    ? await client.from('message_pins').upsert({ message_id: messageId, conversation_id: conversationId, pinned_by: userId }, { onConflict: 'conversation_id,message_id' })
+    : await client.from('message_pins').delete().eq('conversation_id', conversationId).eq('message_id', messageId)
+  if (result.error) throw result.error
+}
