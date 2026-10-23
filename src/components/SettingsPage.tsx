@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { getMySettings, saveMySettings, updateMyProfile, uploadProfilePhoto, getMyProfile } from '../lib/socialApi'
+import { getMySettings, saveMySettings, updateMyProfile, uploadProfilePhoto } from '../lib/socialApi'
+import { getMyProfile } from '../lib/api'
 import { getTheme, setTheme, subscribeTheme } from '../lib/theme'
 import { supabase } from '../lib/supabase'
 import { SvgIcon } from './icons'
