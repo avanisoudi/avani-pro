@@ -634,3 +634,141 @@ html[data-theme="dark"] .avani-messenger .message-bubble.mine{
     margin-inline: 10px !important;
   }
 }
+
+
+/* WhatsApp-style inbox polish: keep filters in one clean horizontal strip,
+   separate the public-group card from the conversation list, and prevent
+   group names/status/actions from colliding at narrow widths. */
+.app-shell.messaging-workspace .avani-messenger .message-filters {
+  display: flex !important;
+  flex-flow: row nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 12px 14px !important;
+  padding: 2px 0 5px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: thin !important;
+  box-sizing: border-box !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-filters button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: max-content !important;
+  min-height: 32px !important;
+  padding: 7px 11px !important;
+  border-radius: 18px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-section {
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 12px 12px !important;
+  padding: 12px !important;
+  border-radius: 12px !important;
+  box-sizing: border-box !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-heading {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin: 0 0 8px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-heading > div {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 3px !important;
+  min-width: 0 !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-heading > div > span,
+.app-shell.messaging-workspace .avani-messenger .public-group-heading > div > small {
+  display: block !important;
+  margin: 0 !important;
+  line-height: 1.35 !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-row {
+  display: grid !important;
+  grid-template-columns: 42px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 10px 0 2px !important;
+  box-sizing: border-box !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-row > .avatar {
+  width: 42px !important;
+  height: 42px !important;
+  margin: 0 !important;
+  flex: none !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-info {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-info > strong {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 1.35 !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-info > small {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.4 !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-row > button {
+  justify-self: end !important;
+  align-self: center !important;
+  min-width: 58px !important;
+  min-height: 32px !important;
+  margin: 0 !important;
+  padding: 6px 10px !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+@media (max-width: 680px) {
+  .app-shell.messaging-workspace .avani-messenger .message-filters {
+    margin-inline: 10px !important;
+    gap: 5px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-filters button {
+    min-height: 30px !important;
+    padding: 6px 9px !important;
+    font-size: 11px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .public-group-section {
+    margin-inline: 10px !important;
+    padding: 10px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .public-group-row {
+    grid-template-columns: 38px minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .public-group-row > .avatar {
+    width: 38px !important;
+    height: 38px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .public-group-row > button {
+    min-width: 52px !important;
+    padding-inline: 8px !important;
+  }
+}
