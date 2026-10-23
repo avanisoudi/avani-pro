@@ -951,3 +951,48 @@ html[data-theme="dark"] .avani-messenger .message-bubble.mine{
     max-width: 88% !important;
   }
 }
+
+.app-shell.messaging-workspace .avani-messenger .message-profile-section .group-photo-upload,
+.app-shell.messaging-workspace .avani-messenger .message-profile-section label {
+  display: grid !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+  color: var(--wa-muted) !important;
+  font-size: 12px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-profile-section input {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 9px 10px !important;
+  border: 1px solid var(--wa-line) !important;
+  border-radius: 8px !important;
+  background: var(--wa-soft) !important;
+  color: var(--wa-text) !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-profile-manage-button,
+.app-shell.messaging-workspace .avani-messenger .message-profile-manage-row button,
+.app-shell.messaging-workspace .avani-messenger .group-management-form button {
+  border: 1px solid var(--wa-line) !important;
+  border-radius: 8px !important;
+  padding: 7px 9px !important;
+  background: var(--wa-soft) !important;
+  color: var(--wa-text) !important;
+  font-size: 11px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .group-management-form,
+.app-shell.messaging-workspace .avani-messenger .message-profile-manage-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 7px !important;
+  margin: 9px 0 !important;
+}
+.app-shell.messaging-workspace .avani-messenger .group-management-form label {
+  flex: 1 1 120px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-profile-manage-row > span {
+  flex: 1 1 100% !important;
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+}
