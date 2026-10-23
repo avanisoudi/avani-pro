@@ -87,7 +87,7 @@ create policy "members pin messages in their conversations"
     pinned_by = auth.uid()
     and public.is_conversation_member(conversation_id, auth.uid())
     and exists (select 1 from public.messages m
-      where m.id = message_id and m.conversation_id = conversation_id)
+      where m.id = message_pins.message_id and m.conversation_id = message_pins.conversation_id)
   );
 drop policy if exists "members unpin messages in their conversations" on public.message_pins;
 create policy "members unpin messages in their conversations"
