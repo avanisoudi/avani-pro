@@ -566,6 +566,16 @@ export async function listConversationMembers(conversationId: string): Promise<P
   return listProfilesByIds((data ?? []).map(row => row.user_id))
 }
 
+/** Persisted read markers for this conversation; used to show real sent/read ticks. */
+export async function listConversationReadMarkers(conversationId: string): Promise<Array<{ user_id: string; last_read_at: string | null }>> {
+  const { data, error } = await requireSupabase()
+    .from('conversation_members')
+    .select('user_id, last_read_at')
+    .eq('conversation_id', conversationId)
+  if (error) throw error
+  return (data ?? []) as Array<{ user_id: string; last_read_at: string | null }>
+}
+
 /** Store the group picture privately, reusing conversation-member Storage access. */
 export async function updateChatAvatar(chatId: string, userId: string, file: File | null) {
   const client = requireSupabase()

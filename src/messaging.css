@@ -1026,3 +1026,20 @@ html[data-theme] .app-shell.messaging-workspace .avani-messenger .conversation-s
 .app-shell.messaging-workspace .avani-messenger .message-scroll .empty-copy {
   backdrop-filter: blur(4px);
 }
+
+
+/* Persistent WhatsApp-style delivery/read state, derived from Supabase read markers. */
+.message-read-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  color: var(--muted, #94a3b8);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.message-read-status.is-read {
+  color: #53bdeb;
+}

@@ -4,7 +4,7 @@ import '../messaging.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { formatRowTime, reactionTotal, unreadBadge, type ConversationPreview } from '../lib/messagesModel'
-import { updateChatAvatar, manageChat, listConversationMembers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
+import { updateChatAvatar, manageChat, listConversationMembers, listConversationReadMarkers, createDirectConversation, createGroupConversation, deleteMessage, getMyProfile, getMessageAttachmentUrl, joinPublicGroup, listConversations, listMessages, listConversationPreviews, listProfilesByIds, listPublicGroups, listMessageReactions, markConversationRead, messageReactionsSupported, MAX_MESSAGE_ATTACHMENT_BYTES, searchMessageContacts, sendMessage, setMessageReaction, type ConversationRecord, type MessageRecord, type ProfileRecord, type PublicGroupRecord, type ReactionType, updateMessage, uploadMessageAttachment } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 type TypingState = Record<string, string>
@@ -74,6 +74,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [editingBody, setEditingBody] = useState('')
   const [infoOpen, setInfoOpen] = useState(false)
   const [members, setMembers] = useState<ProfileRecord[]>([])
+  const [readMarkers, setReadMarkers] = useState<Array<{ user_id: string; last_read_at: string | null }>>([])
   const presentMembers = useOnlineMembers(members.map(member => member.id))
   const [membersLoading, setMembersLoading] = useState(false)
   const [membersError, setMembersError] = useState('')
@@ -441,6 +442,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     if (!selected || !user || !supabase) return
     let cancelled = false
     setMessages([])
+    setReadMarkers([])
     setReactionPickerId(null)
     setTyping({})
     setHasOlder(true)
@@ -456,10 +458,19 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         }
       })
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les messages.') })
+    const refreshReadMarkers = async () => {
+      try {
+        const rows = await listConversationReadMarkers(selected.id)
+        if (!cancelled) setReadMarkers(rows)
+      } catch { /* les messages restent utilisables si la lecture des reçus échoue */ }
+    }
+    void refreshReadMarkers()
     void markConversationRead(selected.id, user.id).then(read => {
-      // `markConversationRead` renvoie false quand la policy ou la colonne manque :
-      // dans ce cas on ne fait pas semblant d'avoir tout lu, le badge reste.
-      if (read && !cancelled) setPreviews(current => ({ ...current, [selected.id]: { preview: current[selected.id]?.preview ?? '', at: current[selected.id]?.at ?? null, unread: 0, truncated: false } }))
+      // Le curseur de lecture est stocké en base et ne dépend pas du rendu local.
+      if (read && !cancelled) {
+        setPreviews(current => ({ ...current, [selected.id]: { preview: current[selected.id]?.preview ?? '', at: current[selected.id]?.at ?? null, unread: 0, truncated: false } }))
+        void refreshReadMarkers()
+      }
     })
 
     const client = supabase
@@ -485,6 +496,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     })
 
     channel
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_members', filter: `conversation_id=eq.${selected.id}` }, () => { void refreshReadMarkers() })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${selected.id}` }, payload => {
         const incoming = payload.new as MessageRecord
         // L'événement ne porte que la ligne brute `messages` (sans l'embed `sender`) :
@@ -766,6 +778,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
               </div>}
               <div className="message-foot">
                 <span className="message-time">{new Date(message.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}{message.edited_at && !message.deleted_at ? ' · modifié' : ''}</span>
+                {mine && !message.deleted_at && <span className={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'message-read-status is-read' : 'message-read-status'} aria-label={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'} title={readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? 'Lu' : 'Envoyé'}>{readMarkers.filter(marker => marker.user_id !== user.id).length > 0 && readMarkers.filter(marker => marker.user_id !== user.id).every(marker => marker.last_read_at && Date.parse(marker.last_read_at) >= Date.parse(message.created_at)) ? '✓✓' : '✓'}</span>}
                 {!message.deleted_at && <div className="message-tools">
                   {reactionsLive && <div className="reaction-control" data-reaction-control>
                     <button type="button" className="reaction-trigger" aria-label="Réagir au message" aria-expanded={reactionPickerId === message.id} onClick={() => setReactionPickerId(current => current === message.id ? null : message.id)}>☺</button>
@@ -825,7 +838,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           <label className="group-photo-upload">Modifier la photo (JPEG, PNG, WebP · 5 Mo maximum)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={groupBusy} onChange={event => void changeGroupPhoto(event)} /></label>
         </section>}
         {selected.is_group && <section className="message-profile-section">
-          <h3>Gestion du groupe</h3><p className="message-profile-muted">Seul le responsable peut ajouter ou retirer des personnes et modifier le groupe. Les groupes communautaires se gèrent dans la rubrique Groupes.</p>
+          <h3>Gestion du groupe</h3><p className="message-profile-muted">Le responsable peut ajouter ou retirer des personnes, modifier le nom et transférer la gestion. Les changements sont synchronisés avec la liste des groupes communautaires.</p>
           {selected.created_by === user.id ? <>
             <form className="group-management-form" onSubmit={event => { event.preventDefault(); void groupAction('rename') }}>
               <label>Nom du groupe<input maxLength={100} value={groupNewName} onChange={event => setGroupNewName(event.target.value)} placeholder={selected.title || 'Nom du groupe'} disabled={groupBusy} /></label>

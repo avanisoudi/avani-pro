@@ -1,4 +1,4 @@
-const baseUrl = (process.argv[2] || process.env.SMOKE_URL || 'https://avani-pro.onrender.com').replace(/\/$/, '')
+const baseUrl = (process.argv[2] || process.env.SMOKE_URL || 'https://avani-pro.vercel.app').replace(/\/$/, '')
 const checks = ['/', '/manus-routes.json', '/logo-icon.png', '/og-image.png', '/notification-bell.svg', '/group-chat-icon.svg', '/message-chat-icon.svg', '/social-icons.svg']
 let failed = 0
 for (const path of checks) {

@@ -32,10 +32,10 @@ test('la migration retire l’accès public au téléphone sans supprimer ni dé
 
 test('les routes membres sont exclues de l’indexation et seules les pages publiques sont dans le sitemap', () => {
   for (const route of ['/messages', '/settings', '/admin', '/u/', '/profile/']) assert.ok(robots.includes(`Disallow: ${route}`))
-  assert.match(robots, /Sitemap: https:\/\/avani-pro\.onrender\.com\/sitemap\.xml/)
+  assert.match(robots, /Sitemap: https:\/\/avani-pro\.vercel\.app\/sitemap\.xml/)
   assert.deepEqual([...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(match => match[1]), [
-    'https://avani-pro.onrender.com/',
-    'https://avani-pro.onrender.com/confidentialite/',
+    'https://avani-pro.vercel.app/',
+    'https://avani-pro.vercel.app/confidentialite/',
   ])
   assert.match(app, /robots\.content = 'noindex, nofollow'/)
 })
@@ -43,7 +43,7 @@ test('les routes membres sont exclues de l’indexation et seules les pages publ
 test('les pages publiques ont des métadonnées et l’aperçu du fil est clairement une démonstration', () => {
   assert.match(index, /name="description"/)
   assert.match(index, /property="og:title"/)
-  assert.match(privacy, /rel="canonical" href="https:\/\/avani-pro\.onrender\.com\/confidentialite\//)
+  assert.match(privacy, /rel="canonical" href="https:\/\/avani-pro\.vercel\.app\/confidentialite\//)
   assert.match(app, /démonstration visuelle/i)
   assert.doesNotMatch(app, /3 commentaires · 1 partage/)
 })

@@ -18,4 +18,4 @@ Disallow: /live
 Disallow: /u/
 Disallow: /profile/
 
-Sitemap: https://avani-pro.onrender.com/sitemap.xml
+Sitemap: https://avani-pro.vercel.app/sitemap.xml
