@@ -1187,3 +1187,14 @@ html[data-theme] .app-shell.messaging-workspace .avani-messenger .conversation-s
     height: 40px !important;
   }
 }
+
+
+/* Persistent conversation preferences — compact, responsive, dark-theme-safe. */
+.avani-messenger .message-setting-toggle,
+.avani-messenger .message-setting-control{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;margin:10px 0;padding:11px 12px;border:1px solid var(--chat-border);border-radius:11px;background:var(--chat-bg);color:var(--chat-text);font-size:12px;line-height:1.5}
+.avani-messenger .message-setting-toggle input{accent-color:#8b5cf6;width:16px;height:16px;flex:0 0 16px}
+.avani-messenger .message-setting-control{align-items:flex-start;flex-direction:column;gap:7px}
+.avani-messenger .message-setting-control select{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--chat-border);border-radius:9px;background:var(--chat-panel);color:var(--chat-text);font:inherit}
+.avani-messenger .message-setting-toggle:focus-within,
+.avani-messenger .message-setting-control:focus-within{outline:2px solid #8b5cf6;outline-offset:2px}
+.avani-messenger .message-profile-muted{overflow-wrap:anywhere}
