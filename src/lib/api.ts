@@ -56,7 +56,8 @@ export async function getMessageAttachmentUrl(path: string, expiresIn = 3600) {
 export async function createPost(authorId: string, body: string, postType = 'text', mediaPaths: string[] = []) {
   const client = requireSupabase()
   const content = body.trim() || ' '
-  const paths = mediaPaths.filter(Boolean)
+  // Le même chemin ne doit être enregistré qu'une fois dans l'album.
+  const paths = [...new Set(mediaPaths.filter(Boolean))]
   const payload: Record<string, unknown> = { author_id: authorId, body: content, post_type: postType }
   if (paths.length) {
     payload.media_paths = paths
