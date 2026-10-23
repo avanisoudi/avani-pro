@@ -460,7 +460,10 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       .catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les messages.') })
     void markConversationRead(selected.id, user.id).then(read => {
       // Le curseur de lecture est stocké en base et ne dépend pas du rendu local.
-      if (read && !cancelled) setPreviews(current => ({ ...current, [selected.id]: { preview: current[selected.id]?.preview ?? '', at: current[selected.id]?.at ?? null, unread: 0, truncated: false } }))
+      if (read && !cancelled) {
+        setPreviews(current => ({ ...current, [selected.id]: { preview: current[selected.id]?.preview ?? '', at: current[selected.id]?.at ?? null, unread: 0, truncated: false } }))
+        void refreshReadMarkers()
+      }
     })
     const refreshReadMarkers = async () => {
       try {
