@@ -62,13 +62,22 @@ try {
     await page.keyboard.press('Escape')
     assert.equal(await page.getByRole('dialog').count(), 0)
     await page.getByRole('textbox', { name: 'Contenu de la publication' }).fill('Texte accompagnant mes cinq photos')
-    await page.locator('.fcomposer input[type=file]').setInputFiles(Array.from({ length: 5 }, (_, i) => ({ name: `photo-${i}.png`, mimeType: 'image/png', buffer: Buffer.from('fixture image') })))
+    const selectFive = () => page.locator('.fcomposer input[type=file]').evaluate(input => {
+      const transfer = new DataTransfer()
+      for (let i = 0; i < 5; i++) transfer.items.add(new File(['fixture image'], `photo-${i}.png`, { type: 'image/png', lastModified: 42 }))
+      input.files = transfer.files
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await selectFive()
+    await selectFive()
     assert.equal(await page.locator('.fcomposer-media li:not(:has(.fcomposer-add))').count(), 5)
-    await page.getByRole('button', { name: 'Publier', exact: true }).click()
+    await page.locator('.fcomposer').evaluate(form => { form.requestSubmit(); form.requestSubmit() })
     await page.waitForFunction(() => document.querySelector('.fcomposer-field textarea')?.value === '')
     assert.equal(savedPost.body, 'Texte accompagnant mes cinq photos')
     assert.equal(savedPost.media_paths.length, 5)
     assert.equal(uploaded.length, 5)
+    assert.equal(postWrites, 1, 'Rapid repeated submissions do not create duplicate posts')
+    assert.equal(await page.getByText('Avani Pro Premium', { exact: true }).count(), 1)
     assert.deepEqual(savedPost.media_paths, uploaded.map(path => path.split('/post-media/')[1]), 'Selection order preserved in persisted paths')
     await page.reload()
     await page.getByText('Texte accompagnant mes cinq photos', { exact: true }).waitFor()
@@ -101,5 +110,5 @@ try {
     assert.equal(await page.locator('.fcomposer-media li:not(:has(.fcomposer-add))').count(), 1)
   }
   assert.deepEqual(errors, [])
-  console.log(captureOnly ? 'Baseline captured' : 'PASS album, keyboard, five uploads + text, persistence reload, failed-album preservation, responsive layout')
+  console.log(captureOnly ? 'Baseline captured' : 'PASS album, keyboard, five uploads + text, persistence reload, failed-album preservation, duplicate selection/submission protection, responsive layout')
 } catch (error) { console.log('Browser errors:', errors); console.log((await page.locator('body').innerText()).slice(0, 1800)); await page.screenshot({ path: `${dir}/failure.png`, fullPage: true }); throw error } finally { await browser.close() }

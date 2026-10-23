@@ -33,7 +33,7 @@ Ces captures ne sont **pas des captures de la production**. Les noms « Compte d
 ## Tests exécutés
 
 - `npm run build` : TypeScript et Vite réussis.
-- `npm run test:feed` : **143/143** contrôles.
+- `npm run test:feed` : **150/150** contrôles.
 - `npm run lint` : zéro erreur, 32 avertissements préexistants à cette correction.
 - `git diff --check` : propre.
 - Patch Vite verrouillé en 8.3.5 : la vulnérabilité haute signalée par l’audit avant cette livraison n’est plus présente ; `npm audit` ne signale aucune vulnérabilité.
@@ -65,3 +65,15 @@ node scripts/browser-feed-check.mjs
 Le navigateur doit disposer des bibliothèques système NSS/NSPR. Dans le sandbox de recette, elles ont été extraites de l’archive `al2023.tar.br` incluse dans le package Chromium, avec `LD_LIBRARY_PATH` pointant sur son dossier `lib`.
 
 Le serveur de recette utilise une URL Supabase factice ; ne pas le déployer. Playwright intercepte les requêtes uniquement dans son propre navigateur. Arrêter ce serveur après les tests. Captures temporaires dans `.arena/feed-check`, dossier ignoré par Git.
+
+## Suite : nettoyage des doublons
+
+- Une seule promotion Premium, dans la colonne gauche ; suppression du bloc promotionnel répété à droite et du bloc réseau déjà masqué.
+- Les groupes rejoints restent dans les raccourcis ; suppression du second bloc affichant exactement ces mêmes groupes à droite.
+- Suppression du logo supplémentaire masqué dans la sidebar ; les accès distincts entre navigation ordinateur et mobile sont conservés.
+- Déduplication stable des profils, groupes et posts par identifiant, sans modifier les données stockées ni fusionner deux publications distinctes ayant le même texte.
+- Les suggestions excluent désormais les personnes déjà suivies.
+- Même fichier sélectionné à nouveau : ignoré avant les quotas et avant upload. L’identité est basée sur nom, taille, type et date de modification ; ce n’est pas une comparaison cryptographique des contenus.
+- Verrou immédiat de soumission en complément de l’état React : deux événements `submit` consécutifs ne déclenchent qu’un envoi.
+- Recette navigateur rejouée : deux sélections successives des cinq mêmes photos donnent toujours cinq aperçus et cinq uploads ; deux soumissions synchrones donnent une seule insertion. Un seul titre Premium est présent dans le DOM.
+- Aucun nettoyage destructif en base : aucune publication, photo, personne ou groupe supprimé.

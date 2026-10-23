@@ -1,3 +1,4 @@
+import { uniqueById, uniqueSelectedFiles } from '../../src/lib/deduplicate'
 import { albumPreview, albumIndex } from '../../src/lib/postAlbum'
 import { mentionAtCursor, insertMention } from '../../src/lib/mentions'
 /**
@@ -379,6 +380,19 @@ check('album complet jusqu a dix medias', MAX_POST_MEDIA_FILES === 10 && albumPr
 check('album simple et paire sans compteur superflu', albumPreview(1).visibleCount === 1 && albumPreview(2).overflow === 0)
 check('navigation album boucle aux extremites', albumIndex(4, 1, 5) === 0 && albumIndex(0, -1, 5) === 4)
 check('album vide ne produit pas index invalide', albumIndex(0, 1, 0) === 0 && albumPreview(0).visibleCount === 0)
+
+{
+  const rows = uniqueById([{ id: 'a', text: 'récent' }, { id: 'a', text: 'ancien' }, { id: 'b', text: 'récent' }])
+  check('doublons par id retires sans fusionner des contenus distincts', rows.length === 2 && rows[0].text === 'récent' && rows[1].id === 'b')
+  check('dedoublonnage stable sans modifier entree', uniqueById([{ id: 1 }, { id: '1' }]).length === 2)
+  const image = { name: 'photo.png', size: 20, type: 'image/png', lastModified: 42 } as File
+  check('meme photo deux fois dans le lot ignoree', uniqueSelectedFiles([image, image], []).skipped === 1)
+  check('meme photo ajoutee lors selection suivante ignoree', uniqueSelectedFiles([{ ...image } as File], [image]).files.length === 0)
+  check('fichiers differents de meme nom conserves', uniqueSelectedFiles([{ ...image, lastModified: 43 } as File], [image]).files.length === 1)
+  const appSource = readFileSync('src/App.tsx', 'utf8')
+  check('premium conserve une seule fois dans le fil', (appSource.match(/<strong>Avani Pro Premium<\/strong>/g) ?? []).length === 1)
+  check('pas de bloc repetant les groupes des raccourcis', !appSource.includes('<span>Vos groupes</span>'))
+}
 
 const failed = results.filter(result => !result.ok)
 console.log(`\n${results.length - failed.length}/${results.length} vérifications du fil réussies`)

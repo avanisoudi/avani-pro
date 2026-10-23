@@ -1,3 +1,4 @@
+import { uniqueSelectedFiles } from '../lib/deduplicate'
 import { useEffect, useRef, useState } from 'react'
 import { MAX_POST_MEDIA_FILES, createComposerMedia, formatMediaSize, releaseComposerMedia, validateMediaSelection } from '../lib/postMedia'
 import type { ComposerMedia } from '../lib/postMedia'
@@ -39,6 +40,7 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
   const [placeOpen, setPlaceOpen] = useState(false)
   const [place, setPlace] = useState('')
   const [acceptKind, setAcceptKind] = useState<'all' | 'video'>('all')
+  const submitInFlight = useRef(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const mediaRef = useRef<ComposerMedia[]>([])
@@ -74,7 +76,9 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
     const selected = Array.from(event.target.files ?? [])
     event.target.value = ''
     if (!selected.length) return
-    const { accepted, rejected } = validateMediaSelection(selected, media.length, totalBytes)
+    const { files, skipped } = uniqueSelectedFiles(selected, media.map(item => item.file))
+    const { accepted, rejected } = validateMediaSelection(files, media.length, totalBytes)
+    if (skipped) rejected.unshift(`${skipped} fichier(s) déjà sélectionné(s), ignoré(s).`)
     if (rejected.length) onNotify(rejected.join(' '))
     if (accepted.length) setMedia(current => [...current, ...createComposerMedia(accepted)])
   }
@@ -94,16 +98,21 @@ export function PostComposer({ displayName, initials, avatarUrl, busy, progress,
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (busy) return
+    if (busy || submitInFlight.current) return
     if (!canPublish) {
       onNotify('Écris quelque chose ou ajoute une photo avant de publier.')
       return
     }
-    const published = await onPublish(body, media)
-    if (!published) return
-    releaseComposerMedia(media)
-    setMedia([])
-    setBody('')
+    submitInFlight.current = true
+    try {
+      const published = await onPublish(body, media)
+      if (!published) return
+      releaseComposerMedia(media)
+      setMedia([])
+      setBody('')
+    } finally {
+      submitInFlight.current = false
+    }
   }
 
   return (
