@@ -427,6 +427,12 @@ check('album vide ne produit pas index invalide', albumIndex(0, 1, 0) === 0 && a
   check('deplacement hors limites ignore', moveComposerItem(media, -1, 0).join() === 'a,b,c' && moveComposerItem(media, 0, 3).join() === 'a,b,c')
 }
 
+{
+  const css = readFileSync('src/messaging.css', 'utf8')
+  check('titre Discussions conserve son violet uni original', css.includes('.messages-heading .eyebrow{color:#7c3aed!important;') && !css.includes('background:linear-gradient(100deg,#6848ee'))
+  check('sous titre Discussions conserve sa couleur neutre', css.includes('.messages-heading small{display:block;color:var(--chat-muted)!important;'))
+}
+
 const failed = results.filter(result => !result.ok)
 console.log(`\n${results.length - failed.length}/${results.length} vérifications du fil réussies`)
 if (failed.length) process.exitCode = 1

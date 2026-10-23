@@ -129,11 +129,7 @@ html[data-theme="dark"] .avani-messenger{--chat-bg:#1c172a;--chat-panel:#241e33;
   position:relative;
   border-bottom:1px solid var(--chat-border);
 }
-.avani-messenger .messages-heading .eyebrow{
-  background:linear-gradient(100deg,#6848ee 0%,#167bdc 58%,#10a9c5 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent!important;
-  letter-spacing:-.8px!important;
-}
+/* Heading retains its original solid violet; subtitle uses --chat-muted. */
 .avani-messenger .message-new-actions button{
   transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
   border:1px solid #dfd4ff!important;
