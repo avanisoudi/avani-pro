@@ -406,7 +406,7 @@ function App() {
             <strong>{group.name}</strong>
           </button>)}
         </section>}
-        <div className="premium-card"><strong>Avani Pro Premium</strong><p>Découvrez plus de fonctionnalités et vivez une expérience unique !</p><button type="button" onClick={() => flash('Découvrez Avani Pro Premium.')}>En savoir plus</button></div>
+        {canModerate && <div className="premium-card"><strong>Avani Pro Premium</strong><p>Découvrez plus de fonctionnalités et vivez une expérience unique !</p><button type="button" onClick={() => flash('Découvrez Avani Pro Premium.')}>En savoir plus</button></div>}
         <div className="sidebar-bottom"><button className={`nav-button muted ${active === 'settings' ? 'active' : ''}`} onClick={() => navigateTo('/settings/compte', 'settings')}><SvgIcon name="settings" /> Réglages</button><div className="security-note"><span className="pulse-dot" /> Espace sécurisé<br /><small>Chiffrement actif</small></div></div>
       </aside>
       <nav className="mobile-tabbar mobile-tabbar-pro" aria-label="Navigation rapide"><NavButton active={active === 'feed'} onClick={() => navigateTo('/', 'feed')} icon="home" label="Flux" /><NavButton active={active === 'explore'} onClick={() => navigateTo('/search', 'explore')} icon="explore" label="Découvrir" /><NavButton active={active === 'messages'} onClick={() => navigateTo('/messages', 'messages')} icon="messages" label="Échanges" /><NavButton active={active === 'notifications'} onClick={() => navigateTo('/notifications', 'notifications')} icon="explore" label="Activité" /><NavButton active={active === 'profile'} onClick={() => navigateTo('/settings', 'profile')} icon="profile" label="Espace" /></nav>
