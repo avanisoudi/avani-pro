@@ -17,11 +17,11 @@ export function isVideoMedia(url: string) {
 }
 
 export function videoUrlsOf(post: Pick<Post, 'kind' | 'media'>): string[] {
-  return (post.media ?? []).filter(url => isVideoMedia(url))
+  return [...new Set((post.media ?? []).filter(url => url && isVideoMedia(url)))]
 }
 
 export function imageUrlsOf(post: Pick<Post, 'kind' | 'media'>): string[] {
-  return (post.media ?? []).filter(url => url && !isVideoMedia(url))
+  return [...new Set((post.media ?? []).filter(url => url && !isVideoMedia(url)))]
 }
 
 /**
@@ -68,9 +68,10 @@ export function postsWithTag(posts: Post[], tag: string): Post[] {
 export function hashtagCloud(posts: Post[], limit = 12): Array<{ tag: string; count: number }> {
   const counts = new Map<string, { tag: string; count: number }>()
   for (const post of posts) {
-    for (const raw of post.tags ?? []) {
-      const key = normalizeTag(raw)
-      if (!key) continue
+    // Un hashtag répété plusieurs fois dans une publication ne doit compter qu'une fois.
+    const tagsInPost = new Set((post.tags ?? []).map(normalizeTag).filter(Boolean))
+    for (const key of tagsInPost) {
+      const raw = (post.tags ?? []).find(value => normalizeTag(value) === key) ?? key
       const seen = counts.get(key)
       if (seen) seen.count += 1
       else counts.set(key, { tag: raw.startsWith('#') ? raw : `#${raw}`, count: 1 })
@@ -108,7 +109,9 @@ export type StoryRing = {
 export function storyRings(stories: StoryRecord[], myId: string | null, seenIds: string[] = []): StoryRing[] {
   const seen = new Set(seenIds)
   const byAuthor = new Map<string, StoryRing>()
-  for (const story of [...stories].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))) {
+  // Certaines réponses ou mises à jour optimistes peuvent répéter le même ID.
+  const uniqueStories = [...new Map(stories.map(story => [story.id, story])).values()]
+  for (const story of uniqueStories.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))) {
     const authorId = story.author_id
     const ring = byAuthor.get(authorId)
     if (ring) {
