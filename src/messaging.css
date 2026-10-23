@@ -1043,3 +1043,147 @@ html[data-theme] .app-shell.messaging-workspace .avani-messenger .conversation-s
 .message-read-status.is-read {
   color: #53bdeb;
 }
+
+
+/* Mobile message composer: clearer controls and keyboard/safe-area spacing. */
+@media (max-width: 760px) {
+  .app-shell.messaging-workspace > .main-content {
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding: 56px 0 0 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100% !important;
+    height: calc(100dvh - 56px) !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger.has-conversation > .message-thread {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .thread-head {
+    flex: 0 0 auto !important;
+    min-height: 60px !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .thread-title {
+    min-width: 0 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .thread-title strong {
+    max-width: 100% !important;
+    font-size: 14px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-scroll {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    padding: 14px 10px !important;
+    scroll-padding-bottom: 16px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-compose {
+    position: relative !important;
+    inset: auto !important;
+    z-index: 3 !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    align-items: flex-end !important;
+    gap: 7px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 9px 10px !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid var(--chat-border) !important;
+    background: var(--chat-panel) !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-input-wrap {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    order: 1 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-input-wrap :is(input, textarea) {
+    display: block !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    max-height: 112px !important;
+    padding: 12px 14px !important;
+    border: 1px solid var(--chat-border) !important;
+    border-radius: 22px !important;
+    background: var(--chat-bg) !important;
+    color: var(--chat-text) !important;
+    font: 16px/1.4 system-ui, sans-serif !important;
+    outline: none !important;
+    resize: none !important;
+    overflow-y: auto !important;
+    -webkit-appearance: none !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-input-wrap :is(input, textarea)::placeholder {
+    color: var(--chat-muted) !important;
+    opacity: 1 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .attachment-button,
+  .app-shell.messaging-workspace .avani-messenger .emoji-toggle {
+    display: inline-flex !important;
+    flex: 0 0 38px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    font-size: 23px !important;
+    order: 0 !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-compose > .primary-button {
+    display: inline-flex !important;
+    flex: 0 0 44px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    order: 2 !important;
+    font-size: 20px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-compose :is(button, label) {
+    touch-action: manipulation;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-compose :is(button, input, textarea) {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+@media (max-width: 380px) {
+  .app-shell.messaging-workspace .avani-messenger .message-compose {
+    gap: 4px !important;
+    padding-inline: 6px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .attachment-button,
+  .app-shell.messaging-workspace .avani-messenger .emoji-toggle {
+    flex-basis: 32px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-compose > .primary-button {
+    flex-basis: 40px !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+  }
+}
