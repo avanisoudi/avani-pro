@@ -29,3 +29,7 @@ for (const file of (await walk('src')).filter(path => path.endsWith('.tsx'))) {
   }
 }
 console.log(`PASS ${files.length} asset files: no identical files or duplicate SVG IDs; ${references} static icon references resolved.`)
+
+// The story card already supplies its accessible label and add control in React.
+const storyPlaceholder = await readFile('public/assets/story-placeholder.svg', 'utf8')
+assert.ok(!/<text\b|<path\b/.test(storyPlaceholder), 'Story placeholder must not bake in a second label or plus')

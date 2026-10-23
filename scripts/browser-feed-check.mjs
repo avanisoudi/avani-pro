@@ -161,6 +161,14 @@ try {
           shell.classList.remove('theme-light', 'theme-dark')
           shell.classList.add(`theme-${theme}`)
         }, theme)
+        const topbar = await page.locator('.topbar').evaluate(el => ({
+          background: getComputedStyle(el).backgroundImage,
+          color: getComputedStyle(el).color,
+          logo: el.querySelector('.navbar-wordmark').currentSrc,
+        }))
+        assert.ok(topbar.background.includes('rgb(17, 29, 86)'), `Navy header ${theme}/${width}`)
+        assert.equal(topbar.color, 'rgb(255, 255, 255)')
+        assert.ok(topbar.logo.endsWith('/assets/avani-navbar.svg'), 'White wordmark in both themes/sizes')
         const heading = await page.locator('.messages-heading .eyebrow').evaluate(el => ({ color: getComputedStyle(el).color, background: getComputedStyle(el).backgroundImage, fill: getComputedStyle(el).webkitTextFillColor }))
         const expected = theme === 'light' ? 'rgb(124, 58, 237)' : 'rgb(167, 139, 250)'
         assert.equal(heading.color, expected, `Actual heading colour ${theme}/${width}`)

@@ -119,42 +119,35 @@ html[data-theme="dark"] .app-shell {
     var(--av-page) !important;
   color: var(--av-text) !important;
 }
-html[data-theme="light"] .app-shell .topbar {
-  background: rgba(255, 255, 255, .96) !important;
-  color: var(--av-text) !important;
-  border-bottom: 1px solid var(--av-border) !important;
-  box-shadow: 0 4px 18px rgba(28, 48, 78, .04) !important;
+/* Reference navy header stays consistent in both themes and at mobile widths. */
+html[data-theme] .app-shell .topbar {
+  background: linear-gradient(90deg, #111d56, #1d3791 55%, #111d56) !important;
+  color: #fff !important;
+  border-bottom: 1px solid #253b77 !important;
+  box-shadow: 0 2px 8px rgba(12, 28, 75, .22) !important;
 }
-html[data-theme="dark"] .app-shell .topbar {
-  background: rgba(3, 10, 27, .96) !important;
-  color: var(--av-text) !important;
-  border-bottom: 1px solid var(--av-border) !important;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .22), 0 1px 0 rgba(0, 177, 255, .06) !important;
+html[data-theme] .app-shell .topbar .search {
+  background: rgba(255,255,255,.12) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.12) !important;
 }
-html[data-theme="light"] .app-shell .topbar .search,
-html[data-theme="light"] .app-shell .topbar .search input {
-  background: #f1f4f8 !important;
-  color: var(--av-text) !important;
-  border-color: var(--av-border) !important;
+html[data-theme] .app-shell .topbar .search input {
+  background: transparent !important;
+  color: #fff !important;
 }
-html[data-theme="dark"] .app-shell .topbar .search,
-html[data-theme="dark"] .app-shell .topbar .search input {
-  background: #081831 !important;
-  color: var(--av-text) !important;
-  border-color: rgba(58, 139, 255, .26) !important;
+html[data-theme] .app-shell .topbar .search input::placeholder {
+  color: #d2d9ef !important;
 }
-html[data-theme="light"] .app-shell .topbar-nav-pro button,
-html[data-theme="light"] .app-shell .top-actions button { color: #48617e !important; }
-html[data-theme="dark"] .app-shell .topbar-nav-pro button,
-html[data-theme="dark"] .app-shell .top-actions button { color: #8bc5ff !important; }
-html[data-theme="light"] .app-shell .topbar-nav-pro button.active {
-  background: var(--av-accent-soft) !important; color: var(--av-accent) !important; border-radius: 12px;
+html[data-theme] .app-shell .topbar-nav-pro button,
+html[data-theme] .app-shell .top-actions button,
+html[data-theme] .app-shell .topbar-status { color: #d2d9ef !important; }
+html[data-theme] .app-shell .topbar-nav-pro button.active {
+  background: transparent !important;
+  color: #fff !important;
+  border-radius: 0;
+  box-shadow: none !important;
 }
-html[data-theme="dark"] .app-shell .topbar-nav-pro button.active {
-  background: linear-gradient(135deg, #075dff, #2844f4) !important;
-  color: #fff !important; border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0, 98, 255, .28) !important;
-}
+html[data-theme] .app-shell .topbar-nav-pro button.active::after { background: #72b8ff !important; }
 html[data-theme="light"] .app-shell .sidebar {
   background: #fff !important; color: var(--av-text) !important;
   border-right: 1px solid var(--av-border) !important;
