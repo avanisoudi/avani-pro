@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { getMySettings, saveMySettings, updateMyProfile, uploadProfilePhoto } from '../lib/socialApi'
 import { getMyProfile } from '../lib/api'
+import type { ProfileRecord } from '../lib/api'
 import { getTheme, setTheme, subscribeTheme } from '../lib/theme'
 import { supabase } from '../lib/supabase'
 import { SvgIcon } from './icons'
@@ -49,7 +50,7 @@ type AppTheme = typeof THEME_CHOICES[number]['id']
 function asString(value: unknown, fallback: string) { return typeof value === 'string' ? value : fallback }
 function asBoolean(value: unknown, fallback = false) { return typeof value === 'boolean' ? value : fallback }
 
-export function SettingsPage({ user, onAction }: { user: User | null; onAction: (message: string) => void }) {
+export function SettingsPage({ user, onAction, onProfile }: { user: User | null; onAction: (message: string) => void; onProfile?: (profile: ProfileRecord) => void }) {
   const [active, setActive] = useState('general')
   const [prefs, setPrefs] = useState<Preferences>(DEFAULTS)
   const [profile, setProfile] = useState({ full_name: '', username: '', bio: '', avatar_url: '' })
@@ -123,7 +124,7 @@ export function SettingsPage({ user, onAction }: { user: User | null; onAction: 
     if (user) {
       setSaving(true); setError('')
       try {
-        await saveMySettings(user.id, { appearance: next })
+        await saveMySettings(user.id, { appearance: next, profile_visibility: prefs.profileVisibility, message_permission: prefs.messagePermission, mention_permission: prefs.mentionPermission, story_visibility: prefs.storyVisibility, language: prefs.language, notification_preferences: prefs })
         setDirty(false); setStatus('Thème enregistré dans votre compte.'); onAction('Thème appliqué et enregistré.')
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Le thème est appliqué localement, mais sa synchronisation a échoué.')
@@ -136,7 +137,8 @@ export function SettingsPage({ user, onAction }: { user: User | null; onAction: 
     if (!user) return
     setProfileBusy(true); setError(''); setStatus('Mise à jour du profil…')
     try {
-      await updateMyProfile(user.id, { full_name: profile.full_name.trim(), username: profile.username.trim().toLowerCase(), bio: profile.bio.trim() })
+      const savedProfile = await updateMyProfile(user.id, { full_name: profile.full_name.trim(), username: profile.username.trim().toLowerCase(), bio: profile.bio.trim() })
+      onProfile?.(savedProfile)
       setStatus('Profil mis à jour dans la base de données.'); onAction('Profil mis à jour.')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Impossible de mettre à jour le profil.'); setStatus('Profil non enregistré.') }
     finally { setProfileBusy(false) }
@@ -148,6 +150,7 @@ export function SettingsPage({ user, onAction }: { user: User | null; onAction: 
     try {
       const updated = await uploadProfilePhoto(user.id, file)
       setProfile(current => ({ ...current, avatar_url: updated.avatar_url ?? '' }))
+      onProfile?.(updated)
       setStatus('Photo de profil enregistrée.'); onAction('Photo de profil mise à jour.')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Impossible de téléverser la photo.') }
     finally { setProfileBusy(false) }
