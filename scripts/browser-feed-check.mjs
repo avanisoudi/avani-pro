@@ -35,13 +35,21 @@ await page.route('https://avani-test.supabase.co/**', async route => {
   else if (url.pathname.endsWith('/rpc/avani_admin_overview')) data = { users: 4, pages: 2, posts: 1, reports: 0, publications: [{ id: 'fixture-post', body: 'Publication à modérer', author: 'Compte de recette', created_at: new Date().toISOString() }], signals: [], logs: [] }
   else if (url.pathname.includes('/storage/v1/object/sign/')) {
     const body = req.postDataJSON()
-    data = body.paths.map(path => ({ path, signedURL: `/object/public/post-media/${path}` }))
+    data = body.paths ? body.paths.map(path => ({ path, signedURL: `/object/public/post-media/${path}` })) : { signedURL: '/object/public/story-media/fixture.png' }
   } else if (url.pathname.includes('/storage/v1/object/')) {
     if (req.method() === 'GET') return route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j0ZkAAAAASUVORK5CYII=', 'base64') })
     if (req.method() === 'POST') uploaded.push(url.pathname)
     if (req.method() === 'DELETE') deletedUploads += req.postDataJSON().prefixes?.length || 0
     data = { Key: url.pathname }
   } else if (url.pathname.endsWith('/profiles')) data = url.searchParams.get('id')?.startsWith('eq.') ? profile : Array.from({ length: 4 }, (_, i) => ({ ...profile, id: `contact-${i}`, full_name: `Contact de recette ${i + 1}`, username: `contact${i}` }))
+  else if (url.pathname.endsWith('/stories')) data = [
+    ['own1', user.id, 'Compte de recette'], ['other2', 'other', 'Hacker Benz'],
+    ['same-name', 'different-person', 'Hacker Benz'], ['own2', user.id, 'Compte de recette'],
+    ['other1', 'other', 'Hacker Benz'],
+  ].map(([id, author_id, full_name], index) => ({
+    id, author_id, author: { id: author_id, full_name }, media_type: 'image', media_path: `${author_id}/${id}.png`,
+    privacy: 'public', caption: id, created_at: new Date(Date.now() - (6 - index) * 10000).toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString(),
+  }))
   else if (url.pathname.endsWith('/posts')) {
     if (req.method() === 'POST') {
       postWrites++
@@ -56,6 +64,23 @@ try {
   await page.locator('.fpost-media').first().waitFor()
   await page.screenshot({ path: `${dir}/desktop.png`, fullPage: true })
   if (!captureOnly) {
+    await page.locator('.story-self.story-live').waitFor()
+    assert.equal(await page.locator('.stories-row .story-card').count(), 3, 'One card per author, not one per story or display name')
+    const otherCard = page.locator('.stories-row .story-card').filter({ hasText: '2 stories' }).filter({ hasText: 'Hacker Benz' })
+    assert.equal(await otherCard.count(), 1)
+    await otherCard.click()
+    const viewer = page.getByRole('dialog', { name: 'Story de Hacker Benz', exact: true })
+    assert.equal(await viewer.locator('p').innerText(), 'other2')
+    await page.getByRole('button', { name: 'Story suivante', exact: true }).click()
+    assert.equal(await viewer.locator('p').innerText(), 'other1', 'Finish author before switching to another person')
+    await page.getByRole('button', { name: 'Story précédente', exact: true }).click()
+    assert.equal(await viewer.locator('p').innerText(), 'other2')
+    await page.getByRole('button', { name: 'Fermer la story', exact: true }).click()
+    await page.getByRole('button', { name: 'Voir votre story', exact: true }).click()
+    await page.getByRole('button', { name: 'Story suivante', exact: true }).click()
+    assert.equal(await page.locator('.story-viewer p').innerText(), 'own2')
+    await page.getByRole('button', { name: 'Fermer la story', exact: true }).click()
+    console.log('PASS one story card per author, names not merged, all own/other stories navigable in author order')
     assert.equal(await page.locator('.fpost-media').first().locator('figure').count(), 3)
     await page.getByRole('button', { name: 'Voir les 5 médias de la publication' }).click()
     await page.getByRole('dialog', { name: 'Album de la publication' }).waitFor()
