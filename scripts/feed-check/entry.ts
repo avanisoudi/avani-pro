@@ -394,6 +394,17 @@ check('album vide ne produit pas index invalide', albumIndex(0, 1, 0) === 0 && a
   check('pas de bloc repetant les groupes des raccourcis', !appSource.includes('<span>Vos groupes</span>'))
 }
 
+{
+  const api = readFileSync('src/lib/api.ts', 'utf8')
+  const migration = readFileSync('supabase/migrations/017_post_moderation.sql', 'utf8')
+  check('suppression passe par RPC securisee', api.includes("rpc('avani_delete_post', { p_post: postId })"))
+  check('controle auteur ou administrateur cote serveur', migration.includes('owner_id<>auth.uid() and not public.avani_can_moderate()'))
+  check('droits limites a admin et super admin', migration.includes("role::text in ('admin','super_admin')"))
+  check('suppression journalisee cote serveur', migration.includes("'post.delete','post'"))
+  check('menu messages discret avec fermeture clavier', readFileSync('src/components/MessagesPanel.tsx','utf8').includes('name="message-actions"'))
+  check('bouton deconnexion distinct du panneau compte', readFileSync('src/components/FeaturePanels.tsx','utf8').includes('className="account-signout"'))
+}
+
 const failed = results.filter(result => !result.ok)
 console.log(`\n${results.length - failed.length}/${results.length} vérifications du fil réussies`)
 if (failed.length) process.exitCode = 1

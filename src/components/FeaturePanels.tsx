@@ -6,7 +6,7 @@ import { adoptCloudTheme, getTheme, setTheme, subscribeTheme } from '../lib/them
 import { readFeatureFlags, setFeatureFlag, type FeatureFlag } from '../lib/socialApi'
 import { VerifiedBadge } from './icons'
 import { supabase } from '../lib/supabase'
-import { addGroupMember, createGroup, createPage, getAdminStats, getMySettings, isAdmin, listAuditLogs, listDiscoverableProfiles, listMyGroups, listMyPages, listOpenReports, saveMySettings, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
+import { addGroupMember, createGroup, createPage, getMySettings, isAdmin, listDiscoverableProfiles, listMyGroups, listMyPages, saveMySettings, toggleFollow, togglePageFollow, updateMyProfile, uploadProfilePhoto, type PageRecord } from '../lib/socialApi'
 
 type PersonCard = { id: string; name: string; role: string; avatar: string; mutual: string }
 
@@ -95,7 +95,7 @@ export function ProfilePanel({ user, profile, onProfile }: { user: User | null; 
       <div className="profile-form profile-form-modern">
         <div className="profile-form-footer">
           <span className="form-status" role="status">{accountMessage}</span>
-          <button type="button" className="ghost-button" disabled={accountBusy} onClick={() => void signOut()}>
+          <button type="button" className="account-signout" disabled={accountBusy} onClick={() => void signOut()}>
             {accountBusy ? 'Déconnexion…' : 'Se déconnecter ↗'}
           </button>
         </div>
@@ -285,13 +285,7 @@ export function PagesPanel({ user, onAction }: { user: User | null; onAction: (m
   return <section className="feature-panel"><div className="feature-header"><div><span className="eyebrow">PAGES PROFESSIONNELLES</span><h2>Vos pages</h2><p>Construisez une présence officielle et publiez au nom de votre organisation.</p></div><button className="primary-button" onClick={() => setOpen(!open)}>＋ Créer une page</button></div>{open && <form className="inline-form" onSubmit={submit}><label>Nom de la page<input value={name} onChange={event => setName(event.target.value)} required placeholder="Avani Studio" /></label><label>Slug public<input value={slug} onChange={event => setSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} required placeholder="avani-studio" /></label><label>Catégorie<select value={category} onChange={event => setCategory(event.target.value)}><option value="company">Entreprise</option><option value="creator">Créateur</option><option value="community">Communauté</option><option value="brand">Marque</option></select></label><label>Description<textarea value={description} onChange={event => setDescription(event.target.value)} rows={2} /></label><button className="primary-button" disabled={busy}>{busy ? 'Création…' : 'Créer la page ↗'}</button></form>}<div className="group-list">{pages.length === 0 && <div className="empty-state">Aucune page créée. Lancez votre première présence officielle.</div>}{pages.map(page => <article className="group-card" key={page.id}><div className="group-icon">◆</div><div><strong>{page.name}{page.verified && <span className="verified">✓</span>}</strong><span>/{page.slug} · {page.description || 'Page Avani Pro'}</span><small>{page.category} · {page.followers_count} abonnés</small></div><button onClick={async () => { try { const next = await togglePageFollow(page.id, user.id, followed.includes(page.id)); setFollowed(current => next ? [...current, page.id] : current.filter(id => id !== page.id)); onAction(next ? `Vous suivez ${page.name}.` : `Vous ne suivez plus ${page.name}.`) } catch { onAction('Impossible de modifier cet abonnement.') } }}>{followed.includes(page.id) ? 'Suivi' : 'Suivre'} ↗</button></article>)}</div></section>
 }
 
-export function AdminPanel({ user, onAction }: { user: User | null; onAction: (message: string) => void }) {
-  const [role, setRole] = useState<string | null>(null); const [stats, setStats] = useState({ users: 0, pages: 0, posts: 0, reports: 0 }); const [reports, setReports] = useState<any[]>([]); const [logs, setLogs] = useState<any[]>([]); const [error, setError] = useState('')
-  useEffect(() => { if (!user) return; isAdmin(user.id).then(result => { setRole(result?.role ?? null); if (result) Promise.all([getAdminStats().then(setStats), listOpenReports().then(setReports), listAuditLogs().then(setLogs)]).catch(() => undefined) }).catch(error => setError(error instanceof Error ? error.message : 'Accès admin indisponible.')) }, [user])
-  if (!user) return <FeatureEmpty title="Administration Avani Pro" text="Connectez-vous avec un compte administrateur pour accéder au tableau de bord." action="Se connecter" />
-  if (error || !role) return <FeatureEmpty title="Accès administrateur requis" text={error || 'Votre compte ne possède pas encore de rôle admin dans admin_roles.'} action="Retour au feed" />
-  return <section className="feature-panel admin-panel"><div className="feature-header"><div><span className="eyebrow">CONSOLE ADMIN · {role.toUpperCase()}</span><h2>Vue plateforme</h2><p>Supervision, modération et santé de la communauté.</p></div><span className="admin-shield">✓</span></div><div className="admin-network-summary" aria-label="Résumé réel de la plateforme"><div><span>UTILISATEURS</span><strong>{stats.users}</strong><small>profils enregistrés</small></div><div><span>PAGES</span><strong>{stats.pages}</strong><small>pages enregistrées</small></div><div><span>PUBLICATIONS</span><strong>{stats.posts}</strong><small>publications enregistrées</small></div><button onClick={() => onAction('Ouvrez Groupes pour gérer vos communautés.')}>Ouvrir mes groupes <span>↗</span></button></div><div className="admin-stats"><div><strong>{stats.users}</strong><span>utilisateurs</span></div><div><strong>{stats.pages}</strong><span>pages</span></div><div><strong>{stats.posts}</strong><span>publications</span></div><div className={stats.reports ? 'attention' : ''}><strong>{stats.reports}</strong><span>signalements ouverts</span></div></div><div className="admin-grid"><div><h3>Modération</h3>{reports.length === 0 ? <p className="empty-copy">Aucun signalement ouvert.</p> : reports.map(report => <div className="admin-row" key={report.id}><span>{report.reason}</span><small>{report.status} · {new Date(report.created_at).toLocaleDateString('fr-FR')}</small><button onClick={() => onAction(`Signalement ${report.id.slice(0, 8)} sélectionné.`)}>Ouvrir</button></div>)}</div><div><h3>Audit logs</h3>{logs.length === 0 ? <p className="empty-copy">Aucun événement d’audit.</p> : logs.slice(0, 5).map(log => <div className="admin-row" key={log.id}><span>{log.action}</span><small>{log.entity_type} · {new Date(log.created_at).toLocaleDateString('fr-FR')}</small></div>)}</div></div></section>
-}
+export { AdminPanel } from './AdminConsole'
 
 const FLAG_KEYS: Array<{ key: string; label: string; help: string }> = [
   { key: 'stories', label: 'Stories', help: 'Fil du haut de page, publication 24 h et archive.' },
@@ -305,8 +299,9 @@ const FLAG_KEYS: Array<{ key: string; label: string; help: string }> = [
 ]
 
 export function SettingsPanel({ user, onAction, onFlagsChanged }: { user: User | null; onAction: (message: string) => void; onFlagsChanged?: () => void }) {
-  const [emailNotifications, setEmailNotifications] = useState(true)
-  const [compactMode, setCompactMode] = useState(false)
+  const storedPreferences = useRef<Record<string, unknown>>({})
+  const [settingsError, setSettingsError] = useState('')
+  const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(Boolean(user))
   // Le thème se lit et se écrit dans le magasin de src/lib/theme.ts : ce panneau est le seul
   // contrôle de l'application, il n'y a plus de bascule dans la barre du haut à garder synchrone.
@@ -325,7 +320,7 @@ export function SettingsPanel({ user, onAction, onFlagsChanged }: { user: User |
   useEffect(() => {
     void loadFlags().catch(() => setFlagsNote('Les drapeaux n’ont pas pu être relus.'))
     if (!user) { setMayManageFlags(false); return }
-    isAdmin(user.id).then(admin => setMayManageFlags(Boolean(admin))).catch(() => setMayManageFlags(false))
+    isAdmin(user.id).then(admin => setMayManageFlags(admin?.role === 'admin' || admin?.role === 'super_admin')).catch(() => setMayManageFlags(false))
   }, [user, loadFlags])
   const toggleFlag = async (flag: FeatureFlag) => {
     setFlagBusy(flag.key)
@@ -340,29 +335,32 @@ export function SettingsPanel({ user, onAction, onFlagsChanged }: { user: User |
     if (!user) { setLoading(false); return }
     getMySettings(user.id).then(settings => {
       const prefs = (settings?.notification_preferences as Record<string, unknown> | null) ?? {}
-      setEmailNotifications(prefs.email !== false)
-      setCompactMode(Boolean(prefs.compact))
+      storedPreferences.current = prefs
       // La valeur du compte n'est retenue que si cet appareil n'a encore rien choisi : un choix
       // local est plus récent, sinon ce panneau annulerait la bascule à chaque rechargement.
       adoptCloudTheme(settings?.appearance)
-    }).catch(error => onAction(error instanceof Error ? error.message : 'Réglages non relus depuis votre compte.'))
+    }).catch(error => setSettingsError(error instanceof Error ? error.message : 'Réglages non relus depuis votre compte.'))
       .finally(() => setLoading(false))
-  }, [user, onAction])
-  const save = async (next: { email?: boolean; compact?: boolean; appearance?: 'light' | 'dark' }) => {
+  }, [user])
+  const save = async (next: { appearance?: 'light' | 'dark' }) => {
     if (!user) { onAction('Connectez-vous pour synchroniser vos préférences.'); return }
+    setSaving(true)
     try {
       await saveMySettings(user.id, {
         appearance: next.appearance ?? theme,
-        notification_preferences: { email: next.email ?? emailNotifications, compact: next.compact ?? compactMode },
+        notification_preferences: storedPreferences.current,
       })
       onAction('Préférence enregistrée dans votre compte.')
-    } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible d’enregistrer cette préférence.') }
+    } catch (error) { onAction(error instanceof Error ? error.message : 'Thème appliqué localement, synchronisation impossible.') }
+    finally { setSaving(false) }
   }
-  return <section className="feature-panel settings-panel"><div className="feature-header"><div><span className="eyebrow">ESPACE PERSONNEL</span><h2>Réglages</h2><p>{user ? 'Préférences synchronisées avec votre compte.' : 'Connectez-vous pour synchroniser vos préférences avec votre compte.'}</p></div><span className="admin-shield">⚙</span></div><div className="settings-list">
-    <label><span><strong>Apparence</strong><small>Seul réglage de thème de l’application — appliqué immédiatement, enregistré sur cet appareil et sur votre compte.</small></span><select value={theme} disabled={loading} onChange={event => { const next = event.target.value === 'dark' ? 'dark' : 'light'; setTheme(next); void save({ appearance: next }) }}><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
-    <label><span><strong>Notifications email</strong><small>Recevoir les alertes importantes de votre réseau.</small></span><input type="checkbox" checked={emailNotifications} disabled={loading || !user} onChange={event => { const value = event.target.checked; setEmailNotifications(value); void save({ email: value }) }} /></label>
-    <label><span><strong>Mode compact</strong><small>Réduire l’espacement du feed pour afficher plus de contenu.</small></span><input type="checkbox" checked={compactMode} disabled={loading || !user} onChange={event => { const value = event.target.checked; setCompactMode(value); void save({ compact: value }) }} /></label>
-    <div className="settings-flags">
+  return <section className="professional-panel settings-panel"><div className="feature-header"><div><span className="eyebrow">ESPACE PERSONNEL</span><h2>Préférences & compte</h2><p>{user ? 'Préférences synchronisées avec votre compte.' : 'Connectez-vous pour synchroniser vos préférences avec votre compte.'}</p></div><span className="admin-shield">⚙</span></div><div className="settings-list">
+    {settingsError && <p role="alert">{settingsError}</p>}
+    {saving && <p role="status">Synchronisation en cours…</p>}
+    <label><span><strong>Apparence</strong><small>Seul réglage de thème de l’application — appliqué immédiatement, enregistré sur cet appareil et sur votre compte.</small></span><select value={theme} disabled={loading || saving} onChange={event => { const next = event.target.value === 'dark' ? 'dark' : 'light'; setTheme(next); void save({ appearance: next }) }}><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+    <section className="professional-section"><h3>Identité professionnelle</h3><p>Votre nom, identifiant, présentation et photo sont gérés dans un seul espace.</p><button type="button" className="professional-secondary" onClick={() => goTo('/settings')}>Modifier mon profil</button></section>
+    <section className="professional-section"><h3>Confidentialité & session</h3><p>Compte connecté : {user?.email || 'Non connecté'}. La déconnexion de cet appareil se trouve dans votre profil professionnel.</p><a href="/confidentialite/">Consulter la politique de confidentialité</a><p>Les préférences email ne constituent pas un service d’envoi d’alertes. Aucun service de notification email n’est annoncé ici.</p></section>
+    {mayManageFlags && <div className="settings-flags professional-section">
       <strong>Fonctionnalités de la plateforme</strong>
       <small>{mayManageFlags ? 'Ces interrupteurs écrivent dans `feature_flags` et s’appliquent à tous les comptes.' : 'Lecture seule : seuls les administrateurs peuvent activer ou couper une fonctionnalité (policy RLS).'}</small>
       {flagsNote && <p className="settings-flags-note">{flagsNote}</p>}
@@ -380,7 +378,7 @@ export function SettingsPanel({ user, onAction, onFlagsChanged }: { user: User |
           )
         })}
       </ul>
-    </div>
+    </div>}
   </div></section>
 }
 function FeatureEmpty({ title, text, action }: { title: string; text: string; action: string }) { return <section className="feature-panel feature-empty"><div className="placeholder-orb">✦</div><span className="eyebrow">AVANI PRO · ESPACE SÉCURISÉ</span><h2>{title}</h2><p>{text}</p><button className="primary-button" type="button" onClick={() => goTo('/')}>{action} ↗</button></section> }

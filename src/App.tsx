@@ -12,6 +12,7 @@ import './reactions.css'
 import './feed.css'
 import './themes.css'
 import './feed-reference.css'
+import './professional.css'
 import { AuthModal } from './components/AuthModal'
 import { ConfirmEmailPanel } from './components/ConfirmEmailPanel'
 import { ResetPasswordPanel } from './components/ResetPasswordPanel'
@@ -152,6 +153,7 @@ function App() {
   const initialNav: NavKey = navForPath(initialPath)
   const [active, setActive] = useState<NavKey>(initialNav)
   const [pathname, setPathname] = useState(initialPath)
+  const [canModerate, setCanModerate] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [toast, setToast] = useState('')
   const [followed, setFollowed] = useState<string[]>([])
@@ -164,6 +166,7 @@ function App() {
   const [mediaProgress, setMediaProgress] = useState<{ done: number; total: number } | null>(null)
   const [composerRequest, setComposerRequest] = useState<{ id: number; kind: 'all' | 'video' } | null>(null)
   const [sessionUser, setSessionUser] = useState<User | null>(null)
+  useEffect(() => { let active = true; setCanModerate(false); if (sessionUser && supabase) void supabase.rpc('avani_can_moderate').then(({ data }) => { if (active) setCanModerate(data === true) }); return () => { active = false } }, [sessionUser])
   useAppPresence(sessionUser?.id)
   const [profile, setProfile] = useState<ProfileRecord | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
@@ -333,6 +336,7 @@ function App() {
   const deletePost = async (id: string | number) => {
     if (typeof id !== 'string' || !sessionUser) { flash('Cette publication ne peut pas être supprimée hors connexion.'); return }
     try {
+      if (!window.confirm('Supprimer définitivement cette publication et ses commentaires ?')) return
       await deletePostRecord(id, sessionUser.id)
       setPosts(current => current.filter(post => post.id !== id))
       flash('Publication supprimée.')
@@ -431,6 +435,7 @@ function App() {
             <section className="post-list feed-post-list" aria-label="Publications">
               {visiblePosts.length === 0 ? <div className="empty-feed"><div className="empty-feed-icon">⌁</div><strong>Aucune publication pour le moment</strong><span>Les publications de votre réseau apparaîtront ici. Vous pouvez commencer par partager une idée.</span></div> : visiblePosts.map(post => (
               <PostCard
+                canModerate={canModerate}
                 key={post.id}
                 post={post}
                 user={sessionUser}
