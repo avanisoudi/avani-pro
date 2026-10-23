@@ -224,7 +224,8 @@ export function toFeedPost(record: FeedRecord): Post {
   const author = record.author ?? ({} as ProfileRecord)
   const name = author.full_name || 'Membre Avani Pro'
   const body = record.body ?? ''
-  const media = Array.isArray(record.media) ? record.media.filter(Boolean) : []
+  // URLs dupliquées dans la réponse SQL ne doivent pas créer plusieurs fois la même pièce jointe.
+  const media = Array.isArray(record.media) ? [...new Set(record.media.filter(Boolean))] : []
   return {
     id: record.id,
     authorId: author.id,
@@ -245,6 +246,6 @@ export function toFeedPost(record: FeedRecord): Post {
     reaction: record.reaction ?? undefined,
     reactionCounts: record.reactionCounts ?? emptyReactionCounts(),
     saved: Boolean(record.saved),
-    media: media.length ? media : collectTokens(body, IMAGE_TOKEN),
+    media: [...new Set(media.length ? media : collectTokens(body, IMAGE_TOKEN))],
   }
 }
