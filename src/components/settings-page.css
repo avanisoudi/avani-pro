@@ -143,3 +143,41 @@ html[data-avani-theme="light"] .sp-data-unavailable p{color:#604d35}
     gap: 12px !important;
   }
 }
+
+
+/* AVANI PRO — réglages compacts : même lisibilité, moins d'espace perdu */
+.app-shell:has(.sp-layout) .sp-layout { padding-top: 16px !important; padding-bottom: 26px !important; }
+.app-shell:has(.sp-layout) .sp-header { padding: 17px 20px; margin-bottom: 14px; border-radius: 16px; }
+.app-shell:has(.sp-layout) .sp-header h1 { font-size: clamp(22px, 2.2vw, 29px); margin: 5px 0 4px; }
+.app-shell:has(.sp-layout) .sp-header p { font-size: 11px; line-height: 1.45; }
+.app-shell:has(.sp-layout) .sp-grid { gap: 16px !important; grid-template-columns: minmax(205px, 245px) minmax(0,1fr) !important; }
+.app-shell:has(.sp-layout) .sp-sidebar { padding: 9px; border-radius: 15px; }
+.app-shell:has(.sp-layout) .sp-sidebar-title { padding: 8px 9px 10px; font-size: 9px; }
+.app-shell:has(.sp-layout) .sp-nav-item { min-height: 35px; padding: 7px 9px; gap: 8px; font-size: 11px; border-radius: 9px; }
+.app-shell:has(.sp-layout) .sp-nav-item .svg-icon { width: 15px; height: 15px; flex-basis: 15px; }
+.app-shell:has(.sp-layout) .sp-content { padding: clamp(14px, 1.7vw, 22px) !important; border-radius: 16px; }
+.app-shell:has(.sp-layout) .sp-section-heading { margin-bottom: 14px; }
+.app-shell:has(.sp-layout) .sp-section-heading h2 { font-size: clamp(19px, 1.7vw, 24px); margin: 5px 0 4px; }
+.app-shell:has(.sp-layout) .sp-section-heading p { font-size: 11px; line-height: 1.5; }
+.app-shell:has(.sp-layout) .sp-section-symbol { width: 38px; height: 38px; flex-basis: 38px; border-radius: 12px; }
+.app-shell:has(.sp-layout) .sp-card { padding: 14px; margin-bottom: 10px; border-radius: 13px; }
+.app-shell:has(.sp-layout) .sp-card h3 { margin-bottom: 10px; font-size: 13px; }
+.app-shell:has(.sp-layout) .sp-card p { font-size: 11px; line-height: 1.5; }
+.app-shell:has(.sp-layout) .sp-toggle { padding: 10px 0; gap: 12px; }
+.app-shell:has(.sp-layout) .sp-toggle strong { font-size: 11px; }
+.app-shell:has(.sp-layout) .sp-field { gap: 5px; margin: 10px 0; font-size: 11px; }
+.app-shell:has(.sp-layout) .sp-field input,
+.app-shell:has(.sp-layout) .sp-field select,
+.app-shell:has(.sp-layout) .sp-field textarea { padding: 9px 10px; font-size: 12px; }
+.app-shell:has(.sp-layout) .sp-primary,
+.app-shell:has(.sp-layout) .sp-secondary { min-height: 35px; padding: 8px 11px; font-size: 11px; }
+@media (min-width:1500px) {
+  .app-shell:has(.sp-layout) .sp-grid { grid-template-columns: minmax(220px, 265px) minmax(0,1fr) !important; }
+  .app-shell:has(.sp-layout) .sp-content { padding: 22px !important; }
+}
+@media (max-width:760px) {
+  .app-shell:has(.sp-layout) .sp-header { padding: 14px; }
+  .app-shell:has(.sp-layout) .sp-layout { padding: 10px 10px 20px !important; }
+  .app-shell:has(.sp-layout) .sp-content { padding: 12px !important; }
+  .app-shell:has(.sp-layout) .sp-section-heading h2 { font-size: 20px; }
+}
