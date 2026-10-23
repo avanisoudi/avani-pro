@@ -17,6 +17,7 @@ let savedPost = null
 let uploaded = []
 let rejectAlbum = false
 let postWrites = 0
+let moderatedDeletes = 0
 let deletedUploads = 0
 const page = await browser.newPage({ viewport: { width: 1214, height: 1295 } })
 const errors = []
@@ -30,6 +31,8 @@ await page.route('https://avani-test.supabase.co/**', async route => {
   const req = route.request(), url = new URL(req.url())
   let data = []
   if (url.pathname.includes('/auth/')) data = { user }
+  else if (url.pathname.endsWith('/rpc/avani_delete_post')) { moderatedDeletes++; data = null }
+  else if (url.pathname.endsWith('/rpc/avani_admin_overview')) data = { users: 4, pages: 2, posts: 1, reports: 0, publications: [{ id: 'fixture-post', body: 'Publication à modérer', author: 'Compte de recette', created_at: new Date().toISOString() }], signals: [], logs: [] }
   else if (url.pathname.includes('/storage/v1/object/sign/')) {
     const body = req.postDataJSON()
     data = body.paths.map(path => ({ path, signedURL: `/object/public/post-media/${path}` }))
@@ -62,6 +65,9 @@ try {
     await page.keyboard.press('Escape')
     assert.equal(await page.getByRole('dialog').count(), 0)
     await page.getByRole('textbox', { name: 'Contenu de la publication' }).fill('Texte accompagnant mes cinq photos')
+    await page.reload()
+    await page.getByRole('textbox', { name: 'Contenu de la publication' }).waitFor()
+    assert.equal(await page.getByRole('textbox', { name: 'Contenu de la publication' }).inputValue(), 'Texte accompagnant mes cinq photos', 'Text draft restored after reload')
     const selectFive = () => page.locator('.fcomposer input[type=file]').evaluate(input => {
       const transfer = new DataTransfer()
       for (let i = 0; i < 5; i++) transfer.items.add(new File(['fixture image'], `photo-${i}.png`, { type: 'image/png', lastModified: 42 }))
@@ -71,6 +77,9 @@ try {
     await selectFive()
     await selectFive()
     assert.equal(await page.locator('.fcomposer-media li:not(:has(.fcomposer-add))').count(), 5)
+    await page.getByRole('button', { name: 'Déplacer le média 2 vers la gauche' }).click()
+    assert.match(await page.locator('.fcomposer-media li img').first().getAttribute('alt'), /photo-1.png/)
+    await page.getByRole('textbox', { name: 'Contenu de la publication' }).press('Control+Enter')
     await page.locator('.fcomposer').evaluate(form => { form.requestSubmit(); form.requestSubmit() })
     await page.waitForFunction(() => document.querySelector('.fcomposer-field textarea')?.value === '')
     assert.equal(savedPost.body, 'Texte accompagnant mes cinq photos')
@@ -108,6 +117,37 @@ try {
     assert.ok(deletedUploads >= 1, 'Failed upload cleaned up')
     assert.equal(await page.getByRole('textbox', { name: 'Contenu de la publication' }).inputValue(), 'Brouillon conservé si la base refuse mon album')
     assert.equal(await page.locator('.fcomposer-media li:not(:has(.fcomposer-add))').count(), 1)
+  }
+  if (!captureOnly) {
+    page.once('dialog', dialog => dialog.accept())
+    await page.getByRole('button', { name: 'Vider le brouillon', exact: true }).click()
+    assert.equal(await page.getByRole('textbox', { name: 'Contenu de la publication' }).inputValue(), '')
+    assert.equal(await page.locator('.fcomposer-media').count(), 0)
+    await page.reload()
+    await page.getByRole('textbox', { name: 'Contenu de la publication' }).waitFor()
+    assert.equal(await page.getByRole('textbox', { name: 'Contenu de la publication' }).inputValue(), '')
+    console.log('PASS draft restore/discard, media reorder and Control+Enter')
+    await page.goto(`${base}/settings`)
+    const logout = page.getByRole('button', { name: 'Se déconnecter ↗', exact: true })
+    await logout.waitFor()
+    assert.equal(await logout.count(), 1)
+    assert.equal(await logout.evaluate(el => getComputedStyle(el).color), 'rgb(192, 47, 69)')
+    await page.goto(`${base}/settings/compte`)
+    await page.getByRole('heading', { name: 'Préférences & compte' }).waitFor()
+    assert.equal(await page.getByRole('checkbox').count(), 0, 'No nonfunctional notification/compact switches')
+    await page.goto(`${base}/admin`)
+    await page.getByRole('heading', { name: 'Modérer les publications' }).waitFor()
+    await page.setViewportSize({ width: 1214, height: 1000 })
+    await page.screenshot({ path: `${dir}/admin-console.png`, fullPage: true })
+    page.once('dialog', dialog => dialog.accept())
+    await page.getByRole('button', { name: 'Supprimer', exact: true }).click()
+    await page.waitForTimeout(300)
+    assert.equal(moderatedDeletes, 1, 'Console delete invokes server moderation RPC')
+    await page.getByRole('button', { name: 'Signalements', exact: true }).click()
+    await page.getByText('Aucun signalement en attente.').waitFor()
+    await page.getByRole('button', { name: 'Journal des actions', exact: true }).click()
+    await page.getByText('Aucune action enregistrée.').waitFor()
+    console.log('PASS logout red only, settings clarity, admin console tabs and server delete request')
   }
   assert.deepEqual(errors, [])
   console.log(captureOnly ? 'Baseline captured' : 'PASS album, keyboard, five uploads + text, persistence reload, failed-album preservation, duplicate selection/submission protection, responsive layout')

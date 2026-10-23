@@ -754,10 +754,10 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
                       <button type="button" className="reaction-close" aria-label="Fermer les réactions" onClick={() => setReactionPickerId(null)}>×</button>
                     </div>}
                   </div>}
-                  <div className="message-meta-actions">
-                    <button type="button" onClick={() => setReplyTo(message)}>Répondre</button>
-                    {mine && <><button type="button" onClick={() => { setEditingId(message.id); setEditingBody(message.body) }}>Modifier</button><button type="button" onClick={() => void removeMessage(message)}>Supprimer</button></>}
-                  </div>
+                  <details name="message-actions" className="message-action-menu" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }} onKeyDown={event => { if (event.key === 'Escape') event.currentTarget.open = false }}><summary aria-label="Actions du message">⌄</summary><div className="message-meta-actions">
+                    <button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); setReplyTo(message) }}>Répondre</button>
+                    {mine && <><button type="button" onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); setEditingId(message.id); setEditingBody(message.body) }}>Modifier</button><button type="button" onClick={() => { if (window.confirm('Supprimer ce message pour tous les membres de cette discussion ?')) void removeMessage(message) }}>Supprimer</button></>}
+                  </div></details>
                 </div>}
               </div>
             </div>

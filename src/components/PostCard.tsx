@@ -34,6 +34,7 @@ type PostCardProps = {
   onCommentTotalChange: (total: number) => void
   onNotify: (message: string) => void
   onEdit: () => void
+  canModerate?: boolean
   onDelete: () => void
   editing: boolean
   onCancelEdit: () => void
@@ -70,7 +71,7 @@ function initialsOf(name: string, fallback = 'AV') {
  * ligne d’engagement (icônes superposées + total, commentaires, partages),
  * barre d’actions J’aime / Commenter / Partager / Enregistrer, puis commentaires.
  */
-export function PostCard({ post, user, me, onReact, onShare, onSave, onCommentTotalChange, onNotify, onEdit, onDelete, editing, onCancelEdit, onSaveEdit }: PostCardProps) {
+export function PostCard({ post, user, me, canModerate = false, onReact, onShare, onSave, onCommentTotalChange, onNotify, onEdit, onDelete, editing, onCancelEdit, onSaveEdit }: PostCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [hidden, setHidden] = useState(() => readHidden(post.id))
   const [commentsOpen, setCommentsOpen] = useState(false)
@@ -188,12 +189,12 @@ export function PostCard({ post, user, me, onReact, onShare, onSave, onCommentTo
               >
                 Masquer la publication
               </button>
-              {user?.id === post.authorId ? (
+              {(user?.id === post.authorId || canModerate) ? (
                 <>
                   <span className="fpost-menu-sep" />
-                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setDraft(post.body); onEdit() }}>
+                  {user?.id === post.authorId && <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setDraft(post.body); onEdit() }}>
                     Modifier
-                  </button>
+                  </button>}
                   <button type="button" role="menuitem" className="is-danger" onClick={() => { setMenuOpen(false); onDelete() }}>
                     Supprimer
                   </button>

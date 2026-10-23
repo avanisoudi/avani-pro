@@ -1,3 +1,4 @@
+import { readComposerDraft, saveComposerDraft, moveComposerItem, DRAFT_LIFETIME_MS } from '../../src/lib/composerDraft'
 import { uniqueById, uniqueSelectedFiles } from '../../src/lib/deduplicate'
 import { albumPreview, albumIndex } from '../../src/lib/postAlbum'
 import { mentionAtCursor, insertMention } from '../../src/lib/mentions'
@@ -392,6 +393,38 @@ check('album vide ne produit pas index invalide', albumIndex(0, 1, 0) === 0 && a
   const appSource = readFileSync('src/App.tsx', 'utf8')
   check('premium conserve une seule fois dans le fil', (appSource.match(/<strong>Avani Pro Premium<\/strong>/g) ?? []).length === 1)
   check('pas de bloc repetant les groupes des raccourcis', !appSource.includes('<span>Vos groupes</span>'))
+}
+
+{
+  const api = readFileSync('src/lib/api.ts', 'utf8')
+  const migration = readFileSync('supabase/migrations/017_post_moderation.sql', 'utf8')
+  check('suppression passe par RPC securisee', api.includes("rpc('avani_delete_post', { p_post: postId })"))
+  check('controle auteur ou administrateur cote serveur', migration.includes('owner_id<>auth.uid() and not public.avani_can_moderate()'))
+  check('droits limites a admin et super admin', migration.includes("role::text in ('admin','super_admin')"))
+  check('suppression journalisee cote serveur', migration.includes("'post.delete','post'"))
+  check('menu messages discret avec fermeture clavier', readFileSync('src/components/MessagesPanel.tsx','utf8').includes('name="message-actions"'))
+  check('bouton deconnexion distinct du panneau compte', readFileSync('src/components/FeaturePanels.tsx','utf8').includes('className="account-signout"'))
+}
+
+{
+  const memory = new Map<string,string>()
+  const storage = { getItem: (key: string) => memory.get(key) ?? null, setItem: (key: string, value: string) => { memory.set(key, value) }, removeItem: (key: string) => { memory.delete(key) } }
+  check('brouillon texte sauvegarde et restaure', saveComposerDraft(storage, 'alice', 'Projet #Album', 1000) && readComposerDraft(storage, 'alice', 1001) === 'Projet #Album')
+  check('brouillon isole par compte', readComposerDraft(storage, 'bob', 1001) === '')
+  check('brouillon expire apres 24 heures', readComposerDraft(storage, 'alice', 1000 + DRAFT_LIFETIME_MS) === '')
+  check('brouillon futur invalide', readComposerDraft(storage, 'alice', 999) === '')
+  check('stockage bloque sans exception', !saveComposerDraft(null, 'alice', 'test') && readComposerDraft(null, 'alice') === '')
+  const denied = { setItem: () => { throw new Error('quota') }, removeItem: () => { throw new Error('quota') } }
+  check('quota de stockage gere sans plantage', saveComposerDraft(denied, 'alice', 'test') === false)
+  saveComposerDraft(storage, 'alice', '')
+  check('brouillon supprime apres publication ou abandon', memory.size === 0)
+  memory.set('avani:post-draft:v1:alice', '{broken')
+  check('brouillon corrompu ignore', readComposerDraft(storage, 'alice') === '')
+  saveComposerDraft(storage, 'alice', 'x'.repeat(6000), 1000)
+  check('brouillon limite a 5000 caracteres', readComposerDraft(storage, 'alice', 1001).length === 5000)
+  const media = ['a', 'b', 'c']
+  check('ordre des medias modifiable sans mutation', moveComposerItem(media, 2, 0).join() === 'c,a,b' && media.join() === 'a,b,c')
+  check('deplacement hors limites ignore', moveComposerItem(media, -1, 0).join() === 'a,b,c' && moveComposerItem(media, 0, 3).join() === 'a,b,c')
 }
 
 const failed = results.filter(result => !result.ok)

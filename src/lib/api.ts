@@ -554,8 +554,8 @@ export async function updatePost(postId: string, authorId: string, body: string)
   return data as { id: string; body: string; updated_at: string }
 }
 
-export async function deletePost(postId: string, authorId: string) {
-  const { error } = await requireSupabase().from('posts').delete().eq('id', postId).eq('author_id', authorId)
+export async function deletePost(postId: string, _authorId?: string) {
+  const { error } = await requireSupabase().rpc('avani_delete_post', { p_post: postId })
   if (error) throw error
 }
 
