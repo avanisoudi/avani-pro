@@ -9,12 +9,6 @@ html[data-theme=dark] .professional-panel{background:#161f2e;color:#e5edf5;borde
 .profile-page .profile-workspace .profile-form-footer button.account-signout{color:#c02f45!important;background:transparent!important;border-color:#e6bbc3!important}
 /* Action menus must not be clipped by short post cards. */
 .app-shell .feed-post-list .fpost-card{overflow:visible!important}
-/* Reusable vector assets take semantic colours; uploaded photos are never recoloured. */
-.app-shell .nav-stack-pro .nav-button .svg-icon{color:#3e697d!important}
-.app-shell .nav-stack-pro .nav-button.active .svg-icon{color:#086c70!important;filter:drop-shadow(0 2px 3px #086c7020)}
-.app-shell .nav-stack-pro .nav-button:nth-of-type(3n) .svg-icon{color:#9b704e!important}
-html[data-theme=dark] .app-shell .nav-stack-pro .nav-button .svg-icon{color:#89b6c4!important}
-html[data-theme=dark] .app-shell .nav-stack-pro .nav-button:nth-of-type(3n) .svg-icon{color:#d3ac86!important}
 .app-shell .fcomposer-media-order{position:absolute;top:6px;left:6px;display:flex;align-items:center;gap:3px;padding:3px;border-radius:8px;background:#14243cd9;color:#fff;z-index:1}
 .app-shell .fcomposer-media-order span{padding:0 5px;font-size:12px;font-weight:700}
 .app-shell .fcomposer-media-order button{position:static;inset:auto;display:grid;place-items:center;width:26px;height:26px;margin:0;padding:0;border:0;border-radius:5px;background:#ffffff20;color:#fff;font-size:22px;line-height:1}
