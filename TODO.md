@@ -51,4 +51,4 @@
 - [x] Ajouter `robots.txt`, un sitemap limité aux pages publiques et des métadonnées de partage pour la politique de confidentialité.
 - [x] Ajouter les tests de régression et exécuter build, lint et tests du fil.
 - [ ] Appliquer `016_private_profile_phone.sql` au projet Supabase de production, puis vérifier les lectures publiques de profil et confirmer que `anon`/`authenticated` ne peuvent pas sélectionner `phone`.
-- [ ] Exécuter `npm run test:smoke` sur le site Render après publication.
+- [x] Exécuter `npm run test:smoke` sur le site Render après publication.
