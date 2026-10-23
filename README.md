@@ -108,3 +108,4 @@ limité au bureau.
 ## Architecture
 
 Voir `plan.md` pour les choix structurants et `TODO.md` pour les tranches restantes : Auth, migrations SQL/RLS, Storage, Realtime, pages, groupes et `/admin`.
+\n\n### Messagerie enrichie\n\nPour activer les préférences de discussion (notifications muettes, épinglage/archivage personnel, fonds de chat et durée des messages éphémères), exécute `supabase/migrations/018_whatsapp_messaging_features.sql` dans Supabase SQL Editor après les migrations précédentes. Le panneau de paramètres propose ces options. Attention : la durée éphémère est enregistrée comme préférence, mais l’effacement automatique nécessite un traitement planifié côté serveur et n’est pas activé par cette migration seule.\n
