@@ -680,8 +680,6 @@ html[data-theme="dark"] .app-shell.messaging-workspace{--wa-accent:#00a884;--wa-
 .app-shell.messaging-workspace .avani-messenger>.message-thread{grid-column:2!important;grid-row:1!important;display:flex!important;flex-direction:column!important;width:auto!important;height:100%!important;min-width:0!important;min-height:0!important;max-height:100%!important;overflow:hidden!important;background:var(--wa-chat)!important;color:var(--wa-text)!important}
 .app-shell.messaging-workspace .avani-messenger>.message-profile-panel{display:none!important}
 .app-shell.messaging-workspace .avani-messenger .messages-heading{display:flex!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;min-height:76px!important;padding:16px 16px 10px!important;background:var(--wa-panel)!important;border:0!important;box-sizing:border-box!important}
-.app-shell.messaging-workspace .avani-messenger .messages-heading .eyebrow{display:block!important;color:var(--wa-text)!important;font-size:21px!important;font-weight:650!important;letter-spacing:-.3px!important}
-.app-shell.messaging-workspace .avani-messenger .messages-heading small{display:none!important}
 .app-shell.messaging-workspace .avani-messenger .message-new-actions{display:flex!important;gap:6px!important}
 .app-shell.messaging-workspace .avani-messenger .message-new-actions button{min-height:33px!important;padding:6px 9px!important;border:1px solid var(--wa-line)!important;border-radius:18px!important;background:var(--wa-soft)!important;color:var(--wa-text)!important;font-size:11px!important;white-space:nowrap!important}
 .app-shell.messaging-workspace .avani-messenger .message-search{display:flex!important;align-items:center!important;gap:8px!important;min-height:38px!important;margin:0 12px 8px!important;padding:0 12px!important;border:0!important;border-radius:9px!important;background:var(--wa-soft)!important;color:var(--wa-muted)!important;box-sizing:border-box!important}
@@ -756,3 +754,9 @@ html[data-theme="dark"] .app-shell.messaging-workspace{--wa-accent:#00a884;--wa-
 .app-shell.messaging-workspace .avani-messenger .message-compose{padding:8px!important;gap:4px!important}
 .app-shell.messaging-workspace .avani-messenger .emoji-toggle,.app-shell.messaging-workspace .avani-messenger .attachment-button{flex-basis:30px!important;width:30px!important}
 }
+
+/* Shared heading colour and subtitle, outside desktop-only geometry rules. */
+.app-shell.messaging-workspace .avani-messenger .messages-heading .eyebrow{display:block!important;color:#7c3aed!important;background:none!important;background-clip:border-box!important;-webkit-background-clip:border-box!important;-webkit-text-fill-color:currentColor!important;font-size:21px!important;font-weight:650!important;letter-spacing:-.3px!important}
+.app-shell.messaging-workspace .avani-messenger .messages-heading small{display:block!important;color:var(--wa-muted)!important;margin-top:4px!important;font-size:11px!important}
+
+html[data-theme="dark"] .app-shell.messaging-workspace .avani-messenger .messages-heading .eyebrow{color:#a78bfa!important}
