@@ -158,7 +158,10 @@ export function onlineConversationUserIds(state: Record<string, readonly { userI
   const users = new Set<string>()
   for (const sessions of Object.values(state)) {
     for (const session of sessions) {
-      if (typeof session.userId === 'string' && session.userId.trim()) users.add(session.userId)
+      if (typeof session.userId === 'string') {
+        const userId = session.userId.trim()
+        if (userId) users.add(userId)
+      }
     }
   }
   return [...users]
