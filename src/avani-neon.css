@@ -1,0 +1,360 @@
+/* AVANI PRO — finition néon inspirée de la référence fournie.
+   Cette couche est ajoutée après les feuilles existantes afin de préserver les comportements React/API.
+   Les surfaces sombres et les accents cyan/violet sont limités à l'interface connectée. */
+:root {
+  --avani-neon-bg: #020817;
+  --avani-neon-panel: #050e22;
+  --avani-neon-panel-2: #07152d;
+  --avani-neon-line: rgba(35, 117, 255, .36);
+  --avani-neon-cyan: #12c8ff;
+  --avani-neon-blue: #075dff;
+  --avani-neon-violet: #7b42ff;
+  --avani-neon-text: #e8f2ff;
+  --avani-neon-muted: #91b7e9;
+}
+.app-shell {
+  background:
+    radial-gradient(ellipse at 16% 90%, rgba(0, 73, 255, .22), transparent 32%),
+    radial-gradient(ellipse at 92% 78%, rgba(127, 35, 255, .12), transparent 28%),
+    var(--avani-neon-bg) !important;
+  color: var(--avani-neon-text) !important;
+}
+.app-shell .topbar {
+  background: rgba(2, 9, 27, .96) !important;
+  border: 1px solid rgba(0, 153, 255, .34) !important;
+  box-shadow: 0 0 24px rgba(0, 130, 255, .12), inset 0 -1px rgba(15, 197, 255, .08) !important;
+  backdrop-filter: blur(18px);
+}
+.app-shell .topbar .search,
+.app-shell .topbar .search input {
+  background: rgba(7, 25, 54, .9) !important;
+  color: var(--avani-neon-text) !important;
+  border-color: rgba(58, 139, 255, .24) !important;
+}
+.app-shell .topbar-nav-pro button,
+.app-shell .top-actions button { color: #75b9ff !important; }
+.app-shell .topbar-nav-pro button.active {
+  color: #fff !important;
+  background: linear-gradient(135deg, #075dff, #2344ff) !important;
+  border-radius: 15px !important;
+  box-shadow: 0 0 22px rgba(0, 98, 255, .35) !important;
+}
+.app-shell .topbar-nav-pro button.active::after { display: none !important; }
+.app-shell .sidebar {
+  background: rgba(3, 12, 31, .96) !important;
+  border-right: 1px solid rgba(15, 142, 255, .28) !important;
+  color: var(--avani-neon-text) !important;
+  box-shadow: inset -1px 0 rgba(0, 183, 255, .05);
+}
+.app-shell .sidebar .nav-stack button,
+.app-shell .sidebar .nav-stack a,
+.app-shell .sidebar .sidebar-shortcuts button {
+  color: #8dc4ff !important;
+  border-radius: 13px !important;
+  transition: background .18s ease, box-shadow .18s ease, color .18s ease;
+}
+.app-shell .sidebar .nav-stack button:hover,
+.app-shell .sidebar .nav-stack a:hover,
+.app-shell .sidebar .sidebar-shortcuts button:hover {
+  background: rgba(0, 100, 255, .13) !important;
+  color: #fff !important;
+}
+.app-shell .sidebar .nav-stack button.active,
+.app-shell .sidebar .nav-stack a.active {
+  background: linear-gradient(100deg, #075dff, #172eff) !important;
+  color: #fff !important;
+  box-shadow: 0 0 22px rgba(0, 85, 255, .32) !important;
+}
+.app-shell .main-content {
+  color: var(--avani-neon-text) !important;
+}
+.app-shell .main-content > * { color: inherit; }
+.app-shell .right-rail {
+  background: rgba(3, 12, 31, .92) !important;
+  color: var(--avani-neon-text) !important;
+  border-left: 1px solid rgba(15, 142, 255, .25) !important;
+}
+.app-shell .rail-card,
+.app-shell .main-content .feed-page-heading,
+.app-shell .main-content .feed-post,
+.app-shell .main-content .post-card,
+.app-shell .main-content .feed-controls {
+  background: rgba(5, 15, 36, .92) !important;
+  border-color: var(--avani-neon-line) !important;
+  color: var(--avani-neon-text) !important;
+}
+.app-shell .rail-card strong,
+.app-shell .rail-card h2,
+.app-shell .rail-card .card-heading,
+.app-shell .main-content h1,
+.app-shell .main-content h2,
+.app-shell .main-content h3 { color: var(--avani-neon-text) !important; }
+.app-shell .rail-card p,
+.app-shell .rail-card small,
+.app-shell .main-content .feed-page-heading p { color: var(--avani-neon-muted) !important; }
+
+/* Messagerie plein écran : liste, discussion et panneau d'informations. */
+.messaging-workspace {
+  grid-template-columns: 258px minmax(0, 1fr) !important;
+  max-width: none !important;
+  gap: 0 !important;
+}
+.messaging-workspace > .main-content {
+  grid-column: 2 !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding: 82px 12px 12px !important;
+  background:
+    radial-gradient(ellipse at 55% 60%, rgba(0, 74, 255, .13), transparent 44%),
+    transparent !important;
+}
+.messaging-workspace > .right-rail { display: none !important; }
+.messaging-workspace .sidebar {
+  min-width: 0;
+  padding-top: 78px !important;
+}
+.avani-messenger {
+  --chat-bg: #020b1c !important;
+  --chat-panel: #030d21 !important;
+  --chat-text: #e9f3ff !important;
+  --chat-muted: #8fb6e8 !important;
+  --chat-border: rgba(29, 126, 255, .38) !important;
+  display: grid !important;
+  grid-template-columns: minmax(265px, 25%) minmax(360px, 1fr) minmax(235px, 24%) !important;
+  height: calc(100dvh - 94px) !important;
+  min-height: 480px !important;
+  border: 1px solid rgba(0, 167, 255, .55) !important;
+  border-radius: 27px !important;
+  background: rgba(2, 9, 25, .97) !important;
+  overflow: hidden !important;
+  box-shadow: 0 0 32px rgba(0, 90, 255, .16), inset 0 0 24px rgba(0, 115, 255, .035) !important;
+}
+.avani-messenger .conversation-list {
+  min-width: 0 !important;
+  border-right: 1px solid rgba(0, 149, 255, .36) !important;
+  background: rgba(3, 12, 30, .98) !important;
+}
+.avani-messenger .messages-heading,
+.avani-messenger .thread-head {
+  background: rgba(3, 12, 29, .98) !important;
+  border-color: rgba(27, 124, 255, .28) !important;
+  color: var(--avani-neon-text) !important;
+}
+.avani-messenger .messages-heading .eyebrow {
+  color: #e6f2ff !important;
+  font: 750 22px/1.3 'Space Grotesk', system-ui !important;
+  letter-spacing: -.5px !important;
+}
+.avani-messenger .messages-heading small { color: var(--avani-neon-muted) !important; }
+.avani-messenger .message-new-actions button {
+  min-height: 34px !important;
+  border: 1px solid rgba(22, 126, 255, .36) !important;
+  border-radius: 12px !important;
+  background: rgba(0, 91, 255, .15) !important;
+  color: #a8d5ff !important;
+}
+.avani-messenger .message-search {
+  margin: 0 14px 12px !important;
+  border: 1px solid rgba(40, 132, 255, .27) !important;
+  border-radius: 22px !important;
+  background: #071832 !important;
+  color: #7fb8ff !important;
+}
+.avani-messenger .message-search input {
+  color: #eaf4ff !important;
+  background: transparent !important;
+}
+.avani-messenger .message-search input::placeholder,
+.avani-messenger .message-compose textarea::placeholder { color: #7398c6 !important; }
+.avani-messenger .message-filters {
+  gap: 6px !important;
+  padding: 0 13px 12px !important;
+}
+.avani-messenger .message-filters button {
+  border: 1px solid rgba(41, 115, 211, .26) !important;
+  border-radius: 18px !important;
+  background: #06152b !important;
+  color: #9ac6f7 !important;
+}
+.avani-messenger .message-filters button.active {
+  background: linear-gradient(110deg, #075dff, #1648ff) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 0 15px rgba(0, 90, 255, .24) !important;
+}
+.avani-messenger .conversation-row {
+  margin: 3px 9px !important;
+  border: 1px solid transparent !important;
+  border-radius: 16px !important;
+  color: #e6f2ff !important;
+}
+.avani-messenger .conversation-row:hover {
+  background: rgba(0, 98, 255, .12) !important;
+  border-color: rgba(30, 132, 255, .22) !important;
+}
+.avani-messenger .conversation-row.selected {
+  background: linear-gradient(105deg, rgba(0, 79, 255, .46), rgba(0, 40, 111, .65)) !important;
+  border-color: rgba(31, 141, 255, .65) !important;
+  box-shadow: inset 0 0 0 1px rgba(25, 150, 255, .08), 0 0 20px rgba(0, 91, 255, .12) !important;
+}
+.avani-messenger .conversation-row strong,
+.avani-messenger .conversation-row .conversation-row-name { color: #e7f3ff !important; }
+.avani-messenger .conversation-row small,
+.avani-messenger .conversation-row .conversation-row-preview,
+.avani-messenger .conversation-row-time { color: #8eb9ed !important; }
+.avani-messenger .unread-pill {
+  background: #075dff !important;
+  color: #fff !important;
+  box-shadow: 0 0 12px rgba(0, 91, 255, .45);
+}
+.avani-messenger .message-thread {
+  min-width: 0 !important;
+  background-color: #020b1c !important;
+  background-image:
+    radial-gradient(rgba(27, 135, 255, .14) 1px, transparent 1px),
+    radial-gradient(ellipse at 60% 55%, rgba(0, 54, 170, .25), transparent 55%),
+    linear-gradient(150deg, #030d22, #06132b 58%, #030919) !important;
+  background-size: 19px 19px, auto, auto !important;
+}
+.avani-messenger .thread-head {
+  min-height: 76px !important;
+  border-bottom: 1px solid rgba(24, 127, 255, .3) !important;
+}
+.avani-messenger .thread-title strong { color: #edf6ff !important; }
+.avani-messenger .thread-title small { color: #8dbbfa !important; }
+.avani-messenger .thread-head-actions button,
+.avani-messenger .thread-back {
+  color: #70b8ff !important;
+  background: #071831 !important;
+  border: 1px solid rgba(30, 125, 255, .25) !important;
+  border-radius: 50% !important;
+}
+.avani-messenger .message-bubble {
+  border: 1px solid rgba(47, 135, 255, .26) !important;
+  background: rgba(9, 25, 53, .88) !important;
+  color: #eaf3ff !important;
+  backdrop-filter: blur(8px);
+  border-radius: 20px !important;
+}
+.avani-messenger .message-bubble.mine {
+  background: linear-gradient(130deg, #075dff, #0753e8) !important;
+  border-color: rgba(67, 160, 255, .8) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 24px rgba(0, 70, 255, .18) !important;
+}
+.avani-messenger .message-compose {
+  background: rgba(3, 12, 29, .98) !important;
+  border-top: 1px solid rgba(23, 126, 255, .27) !important;
+  box-shadow: 0 -10px 30px rgba(0, 4, 15, .32) !important;
+}
+.avani-messenger .message-input-wrap textarea,
+.avani-messenger .message-input-wrap input {
+  background: #071832 !important;
+  border: 1px solid rgba(35, 132, 255, .32) !important;
+  border-radius: 22px !important;
+  color: #eaf4ff !important;
+}
+.avani-messenger .message-compose button,
+.avani-messenger .message-compose .attachment-button {
+  border-color: rgba(44, 135, 255, .28) !important;
+  color: #8fc4ff !important;
+}
+.avani-messenger .message-compose .primary-button {
+  background: linear-gradient(135deg, #075dff, #0b82ff) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 0 22px rgba(0, 95, 255, .34) !important;
+}
+.avani-messenger .empty-thread {
+  background: transparent !important;
+  color: var(--avani-neon-text) !important;
+}
+.avani-messenger .empty-thread h2 { color: #eaf4ff !important; }
+.avani-messenger .empty-thread p { color: #91b7e9 !important; }
+
+/* Panneau droit : contenu réel de la conversation, pas de données de démonstration. */
+.message-profile-panel {
+  min-width: 0;
+  overflow-y: auto;
+  background: rgba(3, 12, 30, .98);
+  border-left: 1px solid rgba(20, 127, 255, .32);
+  color: var(--avani-neon-text);
+  scrollbar-width: thin;
+  scrollbar-color: #16477d transparent;
+}
+.message-profile-hero {
+  padding: 22px 16px 18px;
+  text-align: center;
+  border-bottom: 1px solid rgba(28, 116, 231, .22);
+  background: radial-gradient(ellipse at 50% 10%, rgba(53, 43, 255, .15), transparent 62%);
+}
+.message-profile-avatar {
+  width: 106px;
+  height: 106px;
+  margin: 0 auto 13px;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.message-profile-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid #7957ff;
+  box-shadow: 0 0 14px #6e45ff, inset 0 0 12px rgba(100, 65, 255, .24);
+  pointer-events: none;
+}
+.message-profile-avatar .avatar {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  overflow: hidden;
+}
+.message-profile-avatar .avatar img { width: 100%; height: 100%; object-fit: cover; }
+.message-profile-avatar > .pulse-dot { position: absolute; right: -1px; bottom: 3px; width: 15px; height: 15px; border: 3px solid #031020; border-radius: 50%; background: #00d49a; }
+.message-profile-hero h2 { margin: 8px 0 4px; font-size: 19px; color: #edf6ff; }
+.message-profile-hero > p { margin: 0; color: #16b8ff; font-size: 12px; }
+.message-profile-actions { display: flex; justify-content: center; gap: 6px; margin-top: 17px; flex-wrap: wrap; }
+.message-profile-actions button { border: 1px solid rgba(37, 127, 255, .28); border-radius: 12px; background: #071831; color: #b4d7ff; padding: 8px 9px; font-size: 11px; }
+.message-profile-section { padding: 15px 14px; border-bottom: 1px solid rgba(28, 116, 231, .22); }
+.message-profile-section h3 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 12px; color: #e9f4ff; font-size: 14px; }
+.message-profile-section h3 span { color: #78b7ff; font-size: 11px; font-weight: 500; }
+.message-profile-section p { margin: 6px 0; color: #c1d9f5; font-size: 12px; line-height: 1.5; }
+.message-profile-section .message-profile-muted { color: #83a7d4; }
+.message-profile-members { display: grid; gap: 11px; }
+.message-profile-member { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.message-profile-member > span:last-child { display: grid; min-width: 0; gap: 3px; }
+.message-profile-member strong { color: #e8f2ff; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.message-profile-member small { color: #7fa9dc; font-size: 10px; }
+.message-profile-media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.message-profile-media-item { min-width: 0; aspect-ratio: 1; overflow: hidden; border-radius: 9px; background: #071831; }
+.message-profile-media-item .message-attachment-image { width: 100%; height: 100%; object-fit: cover; }
+.message-profile-media-item .attachment-loading { display: block; padding: 8px; font-size: 10px; color: #82b7f5; }
+.message-profile-files { display: grid; gap: 11px; }
+.message-profile-file { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.message-profile-file-icon { display: grid; place-items: center; flex: 0 0 31px; height: 34px; border-radius: 8px; background: rgba(26, 93, 255, .2); color: #7bbaff; }
+.message-profile-file > span:last-child { display: grid; gap: 4px; min-width: 0; }
+.message-profile-file strong { color: #dcecff; font-size: 11px; overflow-wrap: anywhere; }
+.message-profile-file small { color: #83a7d4; font-size: 10px; }
+.message-profile-empty { padding: 30px 18px; text-align: center; color: #8fb8ed; }
+.message-profile-empty > span { display: inline-grid; place-items: center; width: 54px; height: 54px; border: 1px solid rgba(39, 133, 255, .35); border-radius: 50%; color: #63b8ff; font-size: 24px; }
+.message-profile-empty h2 { color: #eaf4ff; font-size: 16px; }
+.message-profile-empty p { color: #8fb8ed; font-size: 12px; line-height: 1.6; }
+@media (max-width: 1250px) and (min-width: 761px) {
+  .avani-messenger { grid-template-columns: minmax(240px, 31%) minmax(0, 1fr) !important; }
+  .message-profile-panel { display: none; }
+}
+@media (max-width: 760px) {
+  .app-shell { background: #020817 !important; }
+  .messaging-workspace { grid-template-columns: minmax(0, 1fr) !important; }
+  .messaging-workspace > .main-content { grid-column: 1 !important; padding: 70px 0 0 !important; }
+  .messaging-workspace .sidebar { display: none !important; }
+  .avani-messenger { grid-template-columns: minmax(0, 1fr) !important; height: calc(100dvh - 70px) !important; min-height: 0 !important; border-radius: 0 !important; border-left: 0 !important; border-right: 0 !important; }
+  .message-profile-panel { display: none !important; }
+  .avani-messenger:not(.has-conversation) .message-thread { display: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell *, .app-shell *::before, .app-shell *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

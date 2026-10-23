@@ -790,6 +790,35 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         </form>
       </> : <div className="empty-thread"><span>◌</span><h2>Vos échanges, votre réseau.</h2><p>Choisissez une discussion ou commencez un nouvel échange.</p><button type="button" className="primary-button" onClick={() => openNewConversation(false)}>Écrire à une personne</button><button type="button" className="empty-group-action" onClick={() => openNewConversation(true)}>Créer un groupe</button></div>}
     </div>
+    <aside className="message-profile-panel" aria-label="Informations sur la conversation">
+      {selected ? <>
+        <div className="message-profile-hero">
+          <div className="message-profile-avatar"><ChatAvatar chat={selected} /><span className="pulse-dot" /></div>
+          <h2>{selected.title || 'Conversation'}</h2>
+          <p>{selected.is_group ? 'Groupe AVANI PRO' : connection === 'connected' ? 'En ligne ou récemment actif' : connection === 'offline' ? 'Hors connexion' : 'Statut de connexion'}</p>
+          <div className="message-profile-actions"><button type="button" onClick={() => setInfoOpen(value => !value)} aria-expanded={infoOpen}>ⓘ Informations</button><button type="button" onClick={() => { setSearchOpen(value => !value); setInfoOpen(false) }}>⌕ Rechercher</button></div>
+        </div>
+        <section className="message-profile-section">
+          <h3>À propos</h3>
+          <p>{selected.is_group ? `${members.length} membre${members.length === 1 ? '' : 's'} dans ce groupe` : 'Conversation privée sur AVANI PRO'}</p>
+          <p className="message-profile-muted">{selected.is_group ? 'Échangez, partagez des fichiers et retrouvez les membres du groupe.' : 'Vos échanges restent dans votre messagerie.'}</p>
+        </section>
+        <section className="message-profile-section">
+          <h3>Membres <span>{members.length}</span></h3>
+          {membersLoading ? <p className="message-profile-muted">Chargement des membres…</p> : membersError ? <p className="message-profile-muted">{membersError}</p> : <div className="message-profile-members">{members.slice(0, 5).map(member => <div className="message-profile-member" key={member.id}><span className="avatar avatar-sm avatar-soft">{member.avatar_url ? <img src={member.avatar_url} alt="" /> : (member.full_name || 'AV').split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()}</span><span><strong>{member.full_name || member.username}</strong><small>@{member.username}</small></span></div>)}</div>}
+        </section>
+        <section className="message-profile-section">
+          <h3>Photos et médias <span>{messages.filter(message => !message.deleted_at && message.attachment_path && message.attachment_mime_type?.startsWith('image/')).length}</span></h3>
+          <div className="message-profile-media-grid">{messages.filter(message => !message.deleted_at && message.attachment_path && message.attachment_mime_type?.startsWith('image/')).slice(-4).reverse().map(message => <div className="message-profile-media-item" key={message.id}><MessageAttachment message={message} /></div>)}</div>
+          {!messages.some(message => !message.deleted_at && message.attachment_path && message.attachment_mime_type?.startsWith('image/')) && <p className="message-profile-muted">Les photos partagées apparaîtront ici.</p>}
+        </section>
+        <section className="message-profile-section">
+          <h3>Fichiers partagés <span>{messages.filter(message => !message.deleted_at && message.attachment_path && !message.attachment_mime_type?.startsWith('image/')).length}</span></h3>
+          <div className="message-profile-files">{messages.filter(message => !message.deleted_at && message.attachment_path && !message.attachment_mime_type?.startsWith('image/')).slice(-5).reverse().map(message => <div className="message-profile-file" key={message.id}><span className="message-profile-file-icon">↗</span><span><strong>{message.attachment_name || 'Fichier partagé'}</strong><small>{formatRowTime(message.created_at)}</small></span></div>)}</div>
+          {!messages.some(message => !message.deleted_at && message.attachment_path && !message.attachment_mime_type?.startsWith('image/')) && <p className="message-profile-muted">Les documents et pièces jointes apparaîtront ici.</p>}
+        </section>
+      </> : <div className="message-profile-empty"><span>✦</span><h2>Votre espace de discussion</h2><p>Sélectionnez une conversation pour afficher ses informations, ses membres et les fichiers partagés.</p></div>}
+    </aside>
     {newConversationOpen && <div className="message-dialog-backdrop" role="presentation"><div ref={dialogRef} className="message-dialog" role="dialog" aria-modal="true" aria-label={groupMode ? 'Créer un groupe' : 'Nouvelle discussion'}>
       <div className="message-dialog-head"><div><span className="eyebrow">{groupMode ? 'NOUVEAU GROUPE' : 'NOUVELLE DISCUSSION'}</span><strong>{groupMode ? 'Créer un groupe' : 'Écrire à une personne'}</strong></div><button type="button" disabled={creatingConversation} onClick={() => setNewConversationOpen(false)} aria-label="Fermer">×</button></div>
       {groupMode && <input className="message-dialog-input" maxLength={100} disabled={creatingConversation} value={groupTitle} onChange={event => setGroupTitle(event.target.value)} placeholder="Nom du groupe" aria-label="Nom du groupe" />}
