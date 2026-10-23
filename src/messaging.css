@@ -866,3 +866,88 @@ html[data-theme="dark"] .avani-messenger .message-bubble.mine{
     min-height: 0 !important;
   }
 }
+
+
+/* Group information is opened only by the ⓘ action, like WhatsApp Web. */
+@media (min-width: 1201px) {
+  .app-shell.messaging-workspace .avani-messenger {
+    grid-template-columns: minmax(260px, 300px) minmax(360px, 1fr) !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger > .message-profile-panel {
+    display: none !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger.show-conversation-info {
+    grid-template-columns: minmax(250px, 290px) minmax(320px, 1fr) minmax(250px, 300px) !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger.show-conversation-info > .message-profile-panel {
+    display: block !important;
+  }
+}
+@media (max-width: 1200px) {
+  .app-shell.messaging-workspace .avani-messenger > .message-profile-panel {
+    display: none !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger.show-conversation-info > .message-profile-panel {
+    display: block !important;
+    position: absolute !important;
+    z-index: 30 !important;
+    inset: 0 0 0 auto !important;
+    width: min(380px, 92vw) !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    background: var(--wa-panel) !important;
+    border-left: 1px solid var(--wa-line) !important;
+    box-shadow: -12px 0 32px #0002 !important;
+    overflow-y: auto !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger.show-conversation-info {
+    position: relative !important;
+  }
+}
+/* Sender bubbles stay on the right; incoming bubbles and replies stay on the left. */
+.app-shell.messaging-workspace .avani-messenger .message-scroll {
+  align-items: stretch !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  align-self: stretch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line.mine {
+  align-items: flex-end !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-bubble {
+  display: block !important;
+  width: fit-content !important;
+  max-width: min(78%, 680px) !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  text-align: left !important;
+  overflow-wrap: anywhere !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line.mine .message-bubble {
+  align-self: flex-end !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line:not(.mine) .message-bubble {
+  align-self: flex-start !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-reply-preview {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-align: left !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+@media (max-width: 760px) {
+  .app-shell.messaging-workspace .avani-messenger .message-bubble {
+    max-width: 88% !important;
+  }
+}
