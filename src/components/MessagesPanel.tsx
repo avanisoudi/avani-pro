@@ -10,6 +10,18 @@ import { getConversationUserSettings, updateConversationUserSettings, listStarre
 
 type TypingState = Record<string, string>
 
+function describeMessageControlError(error: unknown): string {
+  if (typeof error === 'string') return error
+  if (error && typeof error === 'object') {
+    const value = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown }
+    const parts = [value.message, value.details, value.hint, value.code ? `Code ${String(value.code)}` : null]
+      .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+    if (parts.length) return parts.join(' · ')
+    try { return JSON.stringify(error) } catch { return 'Erreur inconnue lors du chargement des favoris ou des épingles.' }
+  }
+  return String(error ?? 'Erreur inconnue lors du chargement des favoris ou des épingles.')
+}
+
 function MessageAttachment({ message }: { message: MessageRecord }) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState(false)
@@ -222,9 +234,9 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       if (!active) return
       const errors: string[] = []
       if (starsResult.status === 'fulfilled') setStarredMessageIds(starsResult.value)
-      else errors.push(`Favoris : ${starsResult.reason instanceof Error ? starsResult.reason.message : String(starsResult.reason)}`)
+      else errors.push(`Favoris : ${describeMessageControlError(starsResult.reason)}`)
       if (pinsResult.status === 'fulfilled') setPinnedMessages(pinsResult.value)
-      else errors.push(`Épingles : ${pinsResult.reason instanceof Error ? pinsResult.reason.message : String(pinsResult.reason)}`)
+      else errors.push(`Épingles : ${describeMessageControlError(pinsResult.reason)}`)
       setMessageControlError(errors.join(' · '))
     })
     return () => { active = false }
@@ -239,7 +251,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       onAction(wasStarred ? 'Message retiré des favoris.' : 'Message ajouté aux favoris.')
     } catch (caught) {
       setStarredMessageIds(current => wasStarred ? [...current, message.id] : current.filter(id => id !== message.id))
-      setMessageControlError(caught instanceof Error ? caught.message : 'Impossible de modifier les favoris. Vérifiez la migration 018.')
+      setMessageControlError(describeMessageControlError(caught) || 'Impossible de modifier les favoris. Vérifiez la migration 018.')
     }
   }
 
@@ -252,7 +264,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       setPinnedMessages(current => wasPinned ? current.filter(pin => pin.message_id !== message.id) : [{ message_id: message.id, pinned_by: user.id }, ...current])
       onAction(wasPinned ? 'Message désépinglé.' : 'Message épinglé pour les membres de cette discussion.')
     } catch (caught) {
-      setMessageControlError(caught && typeof caught === 'object' ? [Reflect.get(caught, 'message'), Reflect.get(caught, 'details'), Reflect.get(caught, 'hint'), Reflect.get(caught, 'code') && `Code ${Reflect.get(caught, 'code')}`].filter(value => typeof value === 'string' && value.trim()).join(' · ') || 'Épinglage impossible : vérifiez les droits de la migration 018.' : String(caught || 'Épinglage impossible : vérifiez la migration 018.'))
+      setMessageControlError(describeMessageControlError(caught) || 'Épinglage impossible : vérifiez les droits de la migration 018.')
     }
   }
 
