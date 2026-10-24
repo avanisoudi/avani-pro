@@ -69,7 +69,7 @@ export async function listStarredMessageIds(userId: string, conversationId: stri
   const client = requireSupabase()
   const { data, error } = await client
     .from('message_stars')
-    .select('message_id, messages!inner(conversation_id)')
+    .select('message_id, messages!message_stars_message_id_fkey!inner(conversation_id)')
     .eq('user_id', userId)
     .eq('messages.conversation_id', conversationId)
   if (error) throw error
