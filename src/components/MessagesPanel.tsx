@@ -252,7 +252,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       setPinnedMessages(current => wasPinned ? current.filter(pin => pin.message_id !== message.id) : [{ message_id: message.id, pinned_by: user.id }, ...current])
       onAction(wasPinned ? 'Message désépinglé.' : 'Message épinglé pour les membres de cette discussion.')
     } catch (caught) {
-      setMessageControlError(caught instanceof Error ? caught.message : 'Impossible d’épingler ce message. Vérifiez la migration 018.')
+      setMessageControlError(caught && typeof caught === 'object' ? [Reflect.get(caught, 'message'), Reflect.get(caught, 'details'), Reflect.get(caught, 'hint'), Reflect.get(caught, 'code') && `Code ${Reflect.get(caught, 'code')}`].filter(value => typeof value === 'string' && value.trim()).join(' · ') || 'Épinglage impossible : vérifiez les droits de la migration 018.' : String(caught || 'Épinglage impossible : vérifiez la migration 018.'))
     }
   }
 
@@ -913,7 +913,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
         {replyTo && <div className="reply-composer"><span>Réponse à : {replyTo.body}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Annuler la réponse">×</button></div>}
 
         {mention && mentionCandidates.length > 0 && <div className="mention-suggestions" role="listbox" aria-label="Mentionner un membre" id="mention-list">{mentionCandidates.map((member, index) => <button type="button" role="option" aria-selected={index === mentionIndex % mentionCandidates.length} id={`mention-option-${index}`} key={member.id} onMouseDown={event => event.preventDefault()} onClick={() => chooseMention(member)}><strong>{member.full_name}</strong><small>@{member.username}</small></button>)}</div>}
-        {emojiOpen && <div className="composer-emojis" role="group" aria-label="Choisir un émoji">{['😀','😊','😂','❤️','👍','🙏','🎉','🔥','💜','👋','✅','💡','🤝','🚀','👏','💬'].map(emoji => <button type="button" key={emoji} aria-label={`Insérer ${emoji}`} onClick={() => insertEmoji(emoji)}>{emoji}</button>)}<button type="button" onClick={() => setEmojiOpen(false)} aria-label="Fermer les émojis">×</button></div>}
+        {emojiOpen && <div className="composer-emojis avani-emoji-picker" role="group" aria-label="Collection des 20 emojis Avani Pro"><strong className="avani-emoji-title">Avani Pro · Emojis exclusifs</strong>{['💜✨','🔷⚡','🌌💜','🪐🔷','👑💜','🚀🔷','🦋💜','🛡️🔷','💎💜','🌠🔷','🤖💜','🧿🔷','🌙💜','☄️🔷','🪽💜','🎧🔷','🪄💜','🏆🔷','💫💜','❤️‍🔥🔷'].map((emoji, index) => <button type="button" key={emoji} className="avani-custom-emoji" title={`Emoji Avani Pro ${index + 1}`} aria-label={`Insérer l’emoji Avani Pro ${index + 1} ${emoji}`} onClick={() => insertEmoji(emoji)}>{emoji}</button>)}<button type="button" onClick={() => setEmojiOpen(false)} aria-label="Fermer les émojis">×</button></div>}
         <form className="message-compose" onSubmit={submit}>
           <div className="message-input-wrap"><textarea ref={composerRef} rows={1} aria-controls={mentionCandidates.length ? 'mention-list' : undefined} aria-activedescendant={mentionCandidates.length ? `mention-option-${mentionIndex % mentionCandidates.length}` : undefined}
             onSelect={event => setMentionCursor(event.currentTarget.selectionStart)}
