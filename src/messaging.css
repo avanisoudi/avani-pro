@@ -1616,3 +1616,132 @@ html[data-theme="light"] .avani-messenger .message-bubble.mine{color:#35204e!imp
     min-width: 40px !important;
   }
 }
+
+
+/* WhatsApp-style compact message spacing: keep bubbles content-sized and metadata tucked in. */
+.app-shell.messaging-workspace .avani-messenger .message-scroll {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 5px !important;
+  padding: 18px clamp(10px, 3.5vw, 34px) !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  align-self: flex-start !important;
+  width: fit-content !important;
+  max-width: min(82%, 680px) !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 0 17px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line.mine {
+  align-self: flex-end !important;
+  align-items: flex-end !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-bubble {
+  box-sizing: border-box !important;
+  display: block !important;
+  width: fit-content !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  padding: 8px 12px 25px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  line-height: 1.42 !important;
+  overflow-wrap: anywhere !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line.mine .message-bubble {
+  border-bottom-right-radius: 4px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line:not(.mine) .message-bubble {
+  border-bottom-left-radius: 4px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-foot {
+  position: absolute !important;
+  right: 8px !important;
+  bottom: 18px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 3px !important;
+  min-height: 12px !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-tools {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 2px !important;
+  margin: 0 0 0 2px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-tools .reaction-trigger,
+.app-shell.messaging-workspace .avani-messenger .message-tools .message-action-menu > summary {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 14px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-action-menu > summary::after {
+  font-size: 15px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-starred {
+  font-size: 10px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-reaction-pills {
+  position: relative !important;
+  align-self: flex-start !important;
+  margin: -14px 0 2px 8px !important;
+  z-index: 1 !important;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line.mine .message-reaction-pills {
+  align-self: flex-end !important;
+  margin: -14px 8px 2px 0 !important;
+}
+@media (hover: hover) and (min-width: 681px) {
+  .app-shell.messaging-workspace .avani-messenger .message-tools {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity .12s ease !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-line:hover .message-tools,
+  .app-shell.messaging-workspace .avani-messenger .message-line:focus-within .message-tools {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+@media (max-width: 680px) {
+  .app-shell.messaging-workspace .avani-messenger .message-scroll {
+    gap: 4px !important;
+    padding: 12px 9px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-line {
+    max-width: 90% !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-bubble {
+    padding: 7px 10px 24px !important;
+    font-size: 14px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-foot {
+    bottom: 17px !important;
+  }
+  .app-shell.messaging-workspace .avani-messenger .message-tools {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
