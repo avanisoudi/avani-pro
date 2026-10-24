@@ -3,7 +3,7 @@
 Les fichiers de ce dossier ne sont **jamais** exécutés par l'application ni par l'agent :
 ils sont à coller dans l'éditeur SQL de Supabase, dans l'ordre.
 
-`001` → `002` → `003` → `004` → `005` → `006` → `007` → `008` → `009` → `010` → `011` → `012` → `013` → `014` → `015` → `016` → `017`
+`001` → `002` → `003` → `004` → `005` → `006` → `007` → `008` → `009` → `010` → `011` → `012` → `013` → `014` → `015` → `016` → `017` → `018`
 
 Tous sont idempotents : `create table if not exists`, `add column if not exists`,
 `create index if not exists`, `drop policy if exists` puis `create policy`, inserts en
@@ -29,7 +29,9 @@ détruit aucune donnée et ne réactive aucun réglage coupé par l'administrati
 | `013_conversation_management.sql` | règles de gestion des membres et des conversations | messagerie et groupes persistants |
 | `014_private_chat_storage.sql` | bucket privé et policies pour les pièces jointes de conversations | `src/lib/api.ts` |
 | `015_community_groups_and_media.sql` | création atomique de groupes, avatar de conversation et lecture des médias de publication | groupes, conversations et fil |
-| `016_private_profile_phone.sql` | retire la lecture publique du champ `profiles.phone`; conserve les colonnes publiques et l’accès serveur `service_role` | profils et inscription |\n| `017_message_read_persistence.sql` | garantit `conversation_members.last_read_at` et la policy permettant à chaque membre de mettre à jour son marqueur de lecture | compteur de messages non lus |
+| `016_private_profile_phone.sql` | retire la lecture publique du champ `profiles.phone`; conserve les colonnes publiques et l’accès serveur `service_role` | profils et inscription |
+| `017_message_read_persistence.sql` | garantit `conversation_members.last_read_at` et la policy permettant à chaque membre de mettre à jour son marqueur de lecture | compteur de messages non lus |
+| `018_whatsapp_messaging_features.sql` | préférences persistantes par discussion (archiver, épingler, muet, fond, durée éphémère), favoris de messages, épingles de messages et métadonnée `expires_at` | `src/lib/messagingEnhancements.ts`, paramètres de `MessagesPanel` |
 
 `016` ne supprime ni ne modifie les valeurs existantes. Exécutez-le dans l’éditeur SQL Supabase après vérification des rôles et permissions du projet réel. Après son application, testez la lecture des colonnes publiques depuis le client et confirmez qu’un accès `anon`/`authenticated` ne peut pas sélectionner `phone`.
 
@@ -58,3 +60,8 @@ le panneau Réglages nomment le fichier à exécuter (via `describeAccessError` 
   l'écran reste un état honnête piloté par `feature_flags`.
 - Aucun `drop table`, aucun `truncate`, aucune politique qui élargirait la lecture au-delà
   du propriétaire ou de l'audience déclarée.
+
+
+### Messagerie enrichie (migration 018)
+
+Exécute `supabase/migrations/018_whatsapp_messaging_features.sql` après les migrations 001–017. Les préférences sont privées par utilisateur et limitées aux conversations dont il est membre par RLS. Les durées éphémères enregistrent le choix (désactivé, 24 h, 7 j, 90 j), mais la suppression automatique nécessite encore un job serveur fiable qui supprime les messages expirés; l’interface ne doit pas présenter ce nettoyage comme actif tant que ce job n’est pas déployé. Les tables `message_stars` et `message_pins` fournissent le stockage sécurisé utilisé par les actions de favoris et d’épinglage dans la messagerie.
