@@ -83,7 +83,21 @@ export function PostCard({ post, user, me, canModerate = false, onReact, onShare
 
   const { total: reactionTotal } = reactionState(post)
   const stacked = topReactions(post)
-  const { text, media } = parsePostContent(post.body, post.media ?? [])
+  const { text, media: parsedMedia } = parsePostContent(post.body, post.media ?? [])
+  // A même média peut être renvoyé par le contenu historique et media_paths.
+  // Compare l'origine + le chemin du fichier, sans paramètres signés variables.
+  const mediaKeys = new Set<string>()
+  const media = parsedMedia.filter(item => {
+    let key = item.url.trim()
+    try {
+      const parsed = new URL(item.url, window.location.origin)
+      key = `${parsed.origin}${parsed.pathname}`
+    } catch { /* URL relative ou ancienne : conserver sa chaîne d'origine */ }
+    key = key.replace(/\\/+/g, '/')
+    if (mediaKeys.has(key)) return false
+    mediaKeys.add(key)
+    return true
+  })
   const long = isLongPost(text)
   const collapsed = long && !expanded
   const edited = isEditedPost(post.createdAt, post.editedAt)
