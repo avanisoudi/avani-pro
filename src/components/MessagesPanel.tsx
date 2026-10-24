@@ -119,6 +119,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
   const [starredMessageIds, setStarredMessageIds] = useState<string[]>([])
   const [pinnedMessages, setPinnedMessages] = useState<Array<{ message_id: string; pinned_by: string }>>([])
   const [messageControlError, setMessageControlError] = useState('')
+  const [messageControlsReload, setMessageControlsReload] = useState(0)
 
   useEffect(() => {
     if (!newConversationOpen || !user) return
@@ -218,12 +219,12 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
       listStarredMessageIds(user.id, selected.id),
       listPinnedMessages(selected.id),
     ]).then(([stars, pins]) => {
-      if (active) { setStarredMessageIds(stars); setPinnedMessages(pins) }
+      if (active) { setStarredMessageIds(stars); setPinnedMessages(pins); setMessageControlError('') }
     }).catch(caught => {
       if (active) setMessageControlError(caught instanceof Error ? caught.message : 'Impossible de charger les favoris et les messages épinglés.')
     })
     return () => { active = false }
-  }, [selected?.id, user?.id])
+  }, [selected?.id, user?.id, messageControlsReload])
 
   const toggleStarForMessage = async (message: MessageRecord) => {
     if (!user) return
@@ -849,7 +850,7 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
           {messageQuery.trim() && <div className="thread-search-results">{messages.filter(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))).map(message => <button type="button" key={message.id} onClick={() => { const node = document.getElementById(`message-${message.id}`); node?.scrollIntoView({ behavior: 'smooth', block: 'center' }); node?.focus({ preventScroll: true }) }}>{message.body}<small>{new Date(message.created_at).toLocaleString('fr-FR')}</small></button>)}{!messages.some(message => !message.deleted_at && message.body.toLocaleLowerCase('fr').includes(messageQuery.trim().toLocaleLowerCase('fr'))) && <p role="status">Aucun message correspondant parmi les messages chargés.</p>}</div>}
         </section>}
         <div className="message-scroll" aria-live="polite">
-          {messageControlError && <p className="message-control-error" role="alert">{messageControlError}</p>}
+          {messageControlError && <p className="message-control-error" role="alert">{messageControlError} <button type="button" onClick={() => setMessageControlsReload(value => value + 1)}>Réessayer</button></p>}
           {pinnedMessages.length > 0 && (() => {
             const pin = pinnedMessages[0]
             const pinnedMessage = messages.find(item => item.id === pin.message_id)
