@@ -1,0 +1,162 @@
+/* AVANI PRO — correction centralisée des dimensions du fil, stories et médias.
+   Chargée après les feuilles historiques pour éviter les règles contradictoires. */
+.app-shell,
+.app-shell * { box-sizing: border-box; }
+.app-shell { min-width: 0; }
+.app-shell .main-content {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 18px 0 48px !important;
+}
+.app-shell .feed-rebuild,
+.app-shell .feed-post-list,
+.app-shell .post-list,
+.app-shell .fpost-card,
+.app-shell .fcomposer,
+.app-shell .stories-section,
+.app-shell .feed-controls { min-width: 0 !important; width: 100%; }
+.app-shell .feed-rebuild { display: flex; flex-direction: column; gap: 12px; }
+.app-shell .feed-page-heading { margin: 0 !important; }
+.app-shell .stories-section {
+  overflow: hidden;
+  margin: 0 !important;
+  padding: 12px !important;
+  border: 1px solid var(--ref-line, #e2e8f0) !important;
+  border-radius: 14px !important;
+  background: var(--ref-surface, #fff) !important;
+}
+.app-shell .stories-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 10px !important; }
+.app-shell .stories-heading > div:first-child { display:grid; gap:3px; min-width:0; }
+.app-shell .stories-heading strong { font-size:14px !important; line-height:1.3; }
+.app-shell .stories-heading span { font-size:11px !important; line-height:1.4; }
+.app-shell .stories-heading-actions { display:flex; align-items:center; gap:8px; flex:none; }
+.app-shell .stories-row {
+  display:flex !important; align-items:stretch !important; gap:10px !important;
+  width:100%; min-width:0; padding:2px 1px 5px !important;
+  overflow-x:auto !important; overflow-y:hidden !important;
+  scroll-snap-type:x proximity; overscroll-behavior-inline:contain;
+  scrollbar-width:thin;
+}
+.app-shell .story-card {
+  position:relative !important; display:block !important; flex:0 0 112px !important;
+  width:112px !important; height:166px !important; min-width:112px !important;
+  margin:0 !important; padding:0 !important; overflow:hidden !important;
+  border:1px solid var(--ref-line, #e2e8f0) !important; border-radius:12px !important;
+  background:#e8ebf5 !important; scroll-snap-align:start;
+}
+.app-shell .story-card .story-media-preview {
+  position:absolute !important; inset:0 !important; display:block !important;
+  width:100% !important; height:100% !important; max-width:none !important; max-height:none !important;
+  object-fit:cover !important; object-position:center !important;
+}
+.app-shell .story-card .story-shade { position:absolute !important; inset:0 !important; z-index:1; background:linear-gradient(180deg,#1112 0%,transparent 35%,#090b1dc9 100%) !important; }
+.app-shell .story-card > strong { position:absolute !important; z-index:2; left:9px !important; right:8px !important; bottom:29px !important; margin:0 !important; color:#fff !important; font-size:11px !important; line-height:1.25 !important; text-align:left !important; overflow-wrap:anywhere; }
+.app-shell .story-card .story-card-label { position:absolute !important; z-index:2; left:9px !important; right:7px !important; bottom:9px !important; color:#fff !important; font-size:9px !important; text-align:left !important; }
+.app-shell .story-card .story-add-button { z-index:3 !important; top:auto !important; bottom:47px !important; left:10px !important; transform:none !important; width:28px !important; height:28px !important; border:2px solid #fff !important; }
+.app-shell .story-card .story-avatar { position:absolute; z-index:2; top:10px; left:10px; width:32px !important; height:32px !important; border-radius:50% !important; object-fit:cover; }
+.app-shell .fcomposer { margin:0 !important; border-radius:14px !important; }
+.app-shell .fcomposer-media { width:100%; max-width:100%; grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:clamp(90px, 16vw, 180px); gap:4px; }
+.app-shell .fcomposer-media li { min-width:0; min-height:0; }
+.app-shell .fcomposer-media img,
+.app-shell .fcomposer-media video { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+.app-shell .feed-controls { margin:0 !important; }
+.app-shell .feed-post-list,
+.app-shell .post-list {
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) !important;
+  align-content:start;
+  gap:14px !important;
+  margin:0 !important; padding:0 !important;
+}
+.app-shell .feed-post-list > .fpost-card,
+.app-shell .feed-post-list > .fpost-hidden { width:100% !important; min-width:0 !important; margin:0 !important; }
+.app-shell .fpost-card {
+  overflow:hidden !important; margin:0 !important; border:1px solid var(--fp-hairline,#e4e6eb) !important;
+  border-radius:14px !important; box-shadow:0 2px 8px #18294b0a !important;
+}
+.app-shell .fpost-head { align-items:center !important; padding:13px 14px 7px !important; gap:10px !important; }
+.app-shell .fpost-avatar { flex:0 0 42px !important; width:42px !important; height:42px !important; }
+.app-shell .fpost-avatar img,
+.app-shell .fpost-comment-avatar img,
+.app-shell .profile-mini .avatar img,
+.app-shell .profile-trigger .avatar img,
+.app-shell .fcomposer-avatar img { display:block; width:100% !important; height:100% !important; object-fit:cover !important; }
+.app-shell .fpost-id { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; }
+.app-shell .fpost-author { gap:4px !important; line-height:1.35 !important; }
+.app-shell .fpost-meta { gap:4px !important; flex-wrap:wrap; line-height:1.35 !important; }
+.app-shell .fpost-text { margin:0 !important; padding:5px 14px 12px !important; font-size:14px !important; line-height:1.5 !important; overflow-wrap:anywhere; }
+.app-shell .fpost-text p { margin:0 !important; }
+.app-shell .fpost-media {
+  display:grid !important; width:100% !important; max-width:100% !important;
+  margin:0 !important; padding:0 !important; gap:3px !important;
+  overflow:hidden !important; background:#10131b;
+}
+.app-shell .fpost-media figure { position:relative; min-width:0 !important; min-height:0 !important; margin:0 !important; overflow:hidden !important; background:#10131b; }
+.app-shell .fpost-media figure img,
+.app-shell .fpost-media figure video,
+.app-shell .fpost-media .fpost-photo-open { display:block !important; width:100% !important; max-width:100% !important; height:100% !important; max-height:none !important; object-fit:cover !important; object-position:center !important; }
+.app-shell .fpost-media-1 { display:flex !important; align-items:center; justify-content:center; aspect-ratio:auto !important; max-height:min(72vh, 760px); }
+.app-shell .fpost-media-1 figure { width:100% !important; height:auto !important; max-height:min(72vh,760px) !important; }
+.app-shell .fpost-media-1 figure img,
+.app-shell .fpost-media-1 figure video,
+.app-shell .fpost-media-1 .fpost-photo-open { width:100% !important; height:auto !important; max-height:min(72vh,760px) !important; object-fit:contain !important; }
+.app-shell .fpost-media-2 { grid-template-columns:repeat(2,minmax(0,1fr)) !important; grid-template-rows:clamp(150px, 28vw, 330px) !important; aspect-ratio:auto !important; }
+.app-shell .fpost-media-3 { grid-template-columns:minmax(0,1.65fr) minmax(0,1fr) !important; grid-template-rows:repeat(2,clamp(100px, 18vw, 210px)) !important; aspect-ratio:auto !important; }
+.app-shell .fpost-media-3 figure:first-child { grid-row:span 2; }
+.app-shell .fpost-media-4,
+.app-shell .fpost-media:not(.fpost-media-1):not(.fpost-media-2):not(.fpost-media-3) { grid-template-columns:repeat(2,minmax(0,1fr)) !important; grid-auto-rows:clamp(130px, 22vw, 260px) !important; aspect-ratio:auto !important; }
+.app-shell .fpost-media-more { display:grid !important; place-items:center; width:100% !important; height:100% !important; background:#080b16a8 !important; color:#fff !important; font-size:26px !important; }
+.app-shell .fpost-engagement { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px !important; min-height:40px; margin:0 14px !important; padding:8px 0 !important; }
+.app-shell .fpost-engagement-meta { display:flex !important; flex-wrap:wrap; gap:10px !important; min-width:0; justify-content:flex-end; }
+.app-shell .fpost-actions { display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:2px !important; margin:0 12px !important; padding:4px 0 !important; }
+.app-shell .fpost-actions > button,
+.app-shell .fpost-actions .rx-button { min-width:0 !important; min-height:38px !important; padding:5px 3px !important; gap:5px !important; font-size:12px !important; white-space:normal; }
+.app-shell .fpost-comments { margin:0 !important; padding:8px 14px 12px !important; }
+.app-shell .fpost-comment { min-width:0; }
+.app-shell .fpost-comment-body { min-width:0; overflow-wrap:anywhere; }
+.app-shell .sidebar-shortcuts button strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.app-shell .sidebar-shortcuts button .shortcut-mark { flex:0 0 30px; }
+@media (min-width: 761px) {
+  .app-shell { grid-template-columns:minmax(220px, 252px) minmax(0, 660px) minmax(250px, 286px) !important; justify-content:center !important; gap:0 16px !important; padding-top:64px !important; }
+  .app-shell .sidebar { grid-column:1; min-width:0; width:100%; }
+  .app-shell .main-content { grid-column:2; }
+  .app-shell .right-rail { grid-column:3; min-width:0; width:100%; }
+}
+@media (min-width: 761px) and (max-width: 1180px) {
+  .app-shell { grid-template-columns:220px minmax(0,1fr) !important; gap:0 14px !important; padding-inline:12px !important; }
+  .app-shell .right-rail { display:none !important; }
+  .app-shell .sidebar { grid-column:1; }
+  .app-shell .main-content { grid-column:2; }
+}
+@media (max-width: 760px) {
+  .app-shell .main-content { padding:8px 0 calc(var(--m-nav-h,60px) + 20px) !important; }
+  .app-shell .feed-rebuild { gap:8px !important; }
+  .app-shell .stories-section { margin:0 !important; padding:10px !important; border-radius:0 !important; }
+  .app-shell .stories-heading { align-items:flex-start; }
+  .app-shell .stories-heading > div:first-child > span:last-child { max-width:220px; }
+  .app-shell .story-card { flex-basis:102px !important; width:102px !important; min-width:102px !important; height:150px !important; }
+  .app-shell .stories-row { gap:8px !important; }
+  .app-shell .fcomposer { border-radius:0 !important; }
+  .app-shell .fcomposer-media { grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:clamp(90px, 28vw, 150px); }
+  .app-shell .fpost-card { border-radius:0 !important; border-left:0 !important; border-right:0 !important; box-shadow:none !important; }
+  .app-shell .fpost-head { padding:10px 12px 5px !important; }
+  .app-shell .fpost-text { padding:4px 12px 10px !important; }
+  .app-shell .fpost-media-1 { max-height:none !important; }
+  .app-shell .fpost-media-1 figure,
+  .app-shell .fpost-media-1 figure img,
+  .app-shell .fpost-media-1 figure video,
+  .app-shell .fpost-media-1 .fpost-photo-open { max-height:72dvh !important; }
+  .app-shell .fpost-media-2 { grid-template-rows:clamp(130px, 46vw, 240px) !important; }
+  .app-shell .fpost-media-3 { grid-template-rows:repeat(2,clamp(90px, 32vw, 170px)) !important; }
+  .app-shell .fpost-media-4,
+  .app-shell .fpost-media:not(.fpost-media-1):not(.fpost-media-2):not(.fpost-media-3) { grid-auto-rows:clamp(100px, 34vw, 180px) !important; }
+  .app-shell .fpost-actions { margin:0 8px !important; }
+  .app-shell .fpost-actions > button,
+  .app-shell .fpost-actions .rx-button { font-size:11px !important; }
+  .app-shell .fpost-engagement { margin:0 12px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .story-card, .app-shell .fpost-card { scroll-behavior:auto !important; transition:none !important; }
+}
