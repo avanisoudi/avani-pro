@@ -138,3 +138,6 @@ Le thème est une donnée de compte, pas un détail de rendu : `user_settings.ap
 ## Render
 
 Après ajout des variables Render, déclencher un nouveau deploy. Supabase Auth → URL Configuration doit autoriser `https://avani-pro.onrender.com` et l’URL de redirection `https://avani-pro.onrender.com/reset-password`.
+
+
+La migration `018_whatsapp_messaging_features.sql` ajoute des préférences de discussion par utilisateur protégées par RLS, les tables de favoris/épingles de messages et la colonne `messages.expires_at`. Le panneau de paramètres utilise ces préférences pour le mode muet, l’archivage/épinglage personnel, le fond et la durée souhaitée des messages éphémères. Un job serveur planifié reste nécessaire pour effacer automatiquement les messages expirés.
