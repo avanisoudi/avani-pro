@@ -1271,3 +1271,28 @@ html[data-theme="light"] .avani-messenger .message-bubble.mine{color:#35204e!imp
 @media(prefers-reduced-motion:reduce){
   .avani-messenger *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+
+/* Compact public-group section by 10% while preserving its layout and responsiveness. */
+.app-shell.messaging-workspace .avani-messenger .public-group-section {
+  margin: 0 10.8px 10.8px !important;
+  padding: 10.8px !important;
+  border-radius: 10.8px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-heading {
+  gap: 9px !important;
+  margin-bottom: 7.2px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-row {
+  grid-template-columns: 37.8px minmax(0, 1fr) auto !important;
+  gap: 9px !important;
+  padding-top: 9px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-row > .avatar {
+  width: 37.8px !important;
+  height: 37.8px !important;
+}
+.app-shell.messaging-workspace .avani-messenger .public-group-row > button {
+  min-height: 28.8px !important;
+  padding: 5.4px 9px !important;
+}
