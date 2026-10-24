@@ -175,8 +175,8 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
   const handleJoinPublicGroup = async (group: PublicGroupRecord) => { if (!user) { onAction('Connectez-vous pour rejoindre un groupe.'); return }; setJoiningPublic(group.id); try { const result = await joinPublicGroup(user.id, group.id); setPublicGroups(current => current.map(item => item.id === result.group.id ? result.group : item)); reload(); onAction(result.note || `Tu es dans « ${result.group.name} ».`); if (result.conversation) onOpenMessages(result.conversation.id) } catch (error) { onAction(error instanceof Error ? error.message : 'Impossible de rejoindre le groupe public.') } finally { setJoiningPublic(null) } }
   if (!user) return <FeatureEmpty title="Les communautés font le mouvement" text="Connectez-vous pour créer ou rejoindre des groupes professionnels." action="Se connecter" />
   return (
-    <section className="feature-panel">
-      <div className="feature-header">
+    <section className="feature-panel groups-community-panel">
+      <div className="feature-header groups-community-header">
         <div>
           <span className="eyebrow">COMMUNAUTÉS · MESSAGERIE</span>
           <h2>Vos groupes Avani Pro</h2>
@@ -198,7 +198,8 @@ export function GroupsPanel({ user, onAction, onOpenMessages }: { user: User | n
         </article>
       )}
 
-      {publicGroups.map(group => {
+      {/* Les groupes déjà rejoints apparaissent dans « Vos groupes » ci-dessous, pas deux fois. */}
+      {publicGroups.filter(group => !groups.some(item => item.id === group.id)).map(group => {
         const joined = groups.some(item => item.id === group.id)
         return <article className="public-group-card" key={group.id}>
           <div className="public-group-icon">{group.name.slice(0, 1).toUpperCase() || 'G'}</div>
