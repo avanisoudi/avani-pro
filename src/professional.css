@@ -20,3 +20,117 @@ html[data-theme=dark] .professional-panel{background:#161f2e;color:#e5edf5;borde
 html[data-theme=dark] .app-shell .fcomposer-draft-tools{color:#bdcbd9;border-color:#334459}
 html[data-theme=dark] .app-shell .fcomposer-draft-tools button{color:#9bd1cf}
 @media(max-width:480px){.app-shell .fcomposer-keyboard-hint{display:none}.app-shell .fcomposer-draft-tools{align-items:flex-start}}
+
+
+/* AVANI PRO Communities — redesigned, compact and responsive. */
+.app-shell .groups-community-panel {
+  --community-ink: #1d2340;
+  --community-muted: #6e7690;
+  --community-border: #e3e7f4;
+  --community-surface: #ffffff;
+  --community-wash: #f6f7ff;
+  overflow: hidden;
+  padding: clamp(16px, 2.4vw, 28px);
+  border: 1px solid var(--community-border);
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 100% 0%, #e9e7ff 0, transparent 34%), var(--community-surface);
+  box-shadow: 0 18px 48px #22255b0a;
+  color: var(--community-ink);
+}
+.app-shell .groups-community-panel .groups-community-header {
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 20px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--community-border);
+}
+.app-shell .groups-community-header .eyebrow { color: #6954df; letter-spacing: .14em; font-size: 10px; font-weight: 800; }
+.app-shell .groups-community-header h2 { margin: 5px 0 7px; font-size: clamp(23px, 3vw, 31px); letter-spacing: -.045em; }
+.app-shell .groups-community-header p { max-width: 610px; margin: 0; color: var(--community-muted); font-size: 13px; line-height: 1.6; }
+.app-shell .groups-community-panel .primary-button {
+  min-height: 40px; padding: 10px 15px; border: 0; border-radius: 12px;
+  background: linear-gradient(115deg, #2864e8, #8050e8); color: #fff;
+  box-shadow: 0 7px 18px #604de326; font-size: 12px; font-weight: 750;
+  white-space: nowrap; transition: transform .15s ease, box-shadow .15s ease;
+}
+.app-shell .groups-community-panel .primary-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 22px #604de333; }
+.app-shell .groups-community-panel .public-group-card,
+.app-shell .groups-community-panel .whatsapp-group-card {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center;
+  gap: 14px; margin: 10px 0; padding: 16px; border: 1px solid var(--community-border);
+  border-radius: 16px; background: var(--community-surface); box-shadow: 0 4px 14px #22255b06;
+  transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.app-shell .groups-community-panel .public-group-card:hover,
+.app-shell .groups-community-panel .whatsapp-group-card:hover {
+  border-color: #c9c5fa; transform: translateY(-1px); box-shadow: 0 10px 24px #4338ca0c;
+}
+.app-shell .groups-community-panel .public-group-icon,
+.app-shell .groups-community-panel .group-icon {
+  display: grid; place-items: center; width: 48px; height: 48px; margin: 0;
+  border: 0; border-radius: 15px; background: linear-gradient(145deg, #e5eaff, #f0e5ff);
+  color: #5948ce; font-size: 18px; font-weight: 850; overflow: hidden;
+}
+.app-shell .groups-community-panel .group-icon img { width: 28px; height: 28px; object-fit: contain; }
+.app-shell .groups-community-panel .public-group-copy,
+.app-shell .groups-community-panel .whatsapp-group-card > div:nth-child(2) { min-width: 0; }
+.app-shell .groups-community-panel .public-group-copy .eyebrow { color: #7056d9; font-size: 9px; font-weight: 850; letter-spacing: .12em; }
+.app-shell .groups-community-panel .public-group-copy h3,
+.app-shell .groups-community-panel .whatsapp-group-card strong { display: block; margin: 4px 0 3px; color: var(--community-ink); font-size: 15px; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+.app-shell .groups-community-panel .public-group-copy p,
+.app-shell .groups-community-panel .whatsapp-group-card span { display: block; margin: 0; color: var(--community-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.app-shell .groups-community-panel .public-group-meta,
+.app-shell .groups-community-panel .whatsapp-group-card small { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; color: var(--community-muted); font-size: 10px; }
+.app-shell .groups-community-panel .public-group-meta span,
+.app-shell .groups-community-panel .whatsapp-group-card small { padding: 4px 7px; border-radius: 7px; background: var(--community-wash); }
+.app-shell .groups-community-panel .group-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0 10px; padding: 10px; border: 1px solid var(--community-border); border-radius: 14px; background: var(--community-wash); }
+.app-shell .groups-community-panel .group-search { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 130px; padding: 0 8px; }
+.app-shell .groups-community-panel .group-search span { color: #7563df; font-size: 21px; }
+.app-shell .groups-community-panel .group-search input { width: 100%; min-width: 0; padding: 8px 0; border: 0; outline: 0; background: transparent; color: var(--community-ink); font-size: 12px; }
+.app-shell .groups-community-panel .group-filters,
+.app-shell .groups-community-panel .group-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.app-shell .groups-community-panel .group-filters button,
+.app-shell .groups-community-panel .group-shortcuts button,
+.app-shell .groups-community-panel .group-card-actions button {
+  min-height: 32px; padding: 7px 10px; border: 1px solid var(--community-border); border-radius: 9px;
+  background: var(--community-surface); color: var(--community-muted); font-size: 11px; font-weight: 650;
+}
+.app-shell .groups-community-panel .group-filters button.active { border-color: #d6d0ff; background: #eae7ff; color: #5543c6; }
+.app-shell .groups-community-panel .group-shortcuts { justify-content: flex-end; margin: 0 0 14px; }
+.app-shell .groups-community-panel .group-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.app-shell .groups-community-panel .group-card-actions button:last-child { border-color: transparent; background: #eae7ff; color: #5945ca; }
+.app-shell .groups-community-panel .empty-state { padding: 28px 16px; border: 1px dashed #d7d8eb; border-radius: 14px; background: var(--community-wash); color: var(--community-muted); text-align: center; font-size: 13px; }
+.app-shell .groups-community-panel .inline-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 14px 0; padding: 18px; border: 1px solid var(--community-border); border-radius: 16px; background: var(--community-wash); }
+.app-shell .groups-community-panel .inline-form label { display: grid; gap: 7px; color: var(--community-muted); font-size: 11px; font-weight: 700; }
+.app-shell .groups-community-panel .inline-form label:nth-child(2) { grid-column: span 2; }
+.app-shell .groups-community-panel .inline-form input,
+.app-shell .groups-community-panel .inline-form textarea,
+.app-shell .groups-community-panel .inline-form select { box-sizing: border-box; width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--community-border); border-radius: 10px; background: var(--community-surface); color: var(--community-ink); font: 13px/1.45 system-ui; }
+.app-shell .groups-community-panel .inline-form textarea { resize: vertical; }
+.app-shell .groups-community-panel .invite-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 12px 0; padding: 14px; border: 1px solid var(--community-border); border-radius: 14px; background: var(--community-wash); }
+.app-shell .groups-community-panel .invite-strip strong { margin-right: auto; color: var(--community-ink); font-size: 12px; }
+.app-shell .groups-community-panel .invite-strip select { max-width: 260px; min-width: 0; padding: 9px; border: 1px solid var(--community-border); border-radius: 9px; background: var(--community-surface); color: var(--community-ink); }
+html[data-theme="dark"] .app-shell .groups-community-panel {
+  --community-ink: #f3f0ff; --community-muted: #b7b0cd; --community-border: #3a3152;
+  --community-surface: #211b30; --community-wash: #2a2340;
+  background: radial-gradient(ellipse at 100% 0%, #493b7733 0, transparent 36%), #191526;
+  box-shadow: none;
+}
+html[data-theme="dark"] .app-shell .groups-community-panel .public-group-icon,
+html[data-theme="dark"] .app-shell .groups-community-panel .group-icon { background: linear-gradient(145deg, #303b67, #45305d); color: #e5ddff; }
+html[data-theme="dark"] .app-shell .groups-community-panel .group-filters button.active,
+html[data-theme="dark"] .app-shell .groups-community-panel .group-card-actions button:last-child { background: #3b315d; color: #e7e0ff; }
+@media (max-width: 760px) {
+  .app-shell .groups-community-panel { padding: 14px; border-radius: 15px; }
+  .app-shell .groups-community-panel .groups-community-header { align-items: flex-start; flex-direction: column; }
+  .app-shell .groups-community-panel .public-group-card,
+  .app-shell .groups-community-panel .whatsapp-group-card { grid-template-columns: 40px minmax(0, 1fr); gap: 10px; padding: 12px; }
+  .app-shell .groups-community-panel .public-group-icon,
+  .app-shell .groups-community-panel .group-icon { width: 40px; height: 40px; border-radius: 12px; }
+  .app-shell .groups-community-panel .public-group-card > .primary-button { grid-column: 1 / -1; width: 100%; }
+  .app-shell .groups-community-panel .group-card-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .app-shell .groups-community-panel .group-tools { align-items: stretch; flex-direction: column; }
+  .app-shell .groups-community-panel .group-shortcuts { justify-content: flex-start; }
+  .app-shell .groups-community-panel .inline-form { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .app-shell .groups-community-panel .inline-form label:nth-child(2) { grid-column: auto; }
+}
