@@ -215,13 +215,17 @@ export function MessagesPanel({ user, onAction, initialConversationId }: { user:
     }
     let active = true
     setMessageControlError('')
-    void Promise.all([
+    void Promise.allSettled([
       listStarredMessageIds(user.id, selected.id),
       listPinnedMessages(selected.id),
-    ]).then(([stars, pins]) => {
-      if (active) { setStarredMessageIds(stars); setPinnedMessages(pins); setMessageControlError('') }
-    }).catch(caught => {
-      if (active) setMessageControlError(caught instanceof Error ? caught.message : 'Impossible de charger les favoris et les messages épinglés.')
+    ]).then(([starsResult, pinsResult]) => {
+      if (!active) return
+      const errors: string[] = []
+      if (starsResult.status === 'fulfilled') setStarredMessageIds(starsResult.value)
+      else errors.push(`Favoris : ${starsResult.reason instanceof Error ? starsResult.reason.message : String(starsResult.reason)}`)
+      if (pinsResult.status === 'fulfilled') setPinnedMessages(pinsResult.value)
+      else errors.push(`Épingles : ${pinsResult.reason instanceof Error ? pinsResult.reason.message : String(pinsResult.reason)}`)
+      setMessageControlError(errors.join(' · '))
     })
     return () => { active = false }
   }, [selected?.id, user?.id, messageControlsReload])

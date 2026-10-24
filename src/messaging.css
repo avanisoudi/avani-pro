@@ -1386,3 +1386,30 @@ html[data-theme="light"] .avani-messenger .message-bubble.mine{color:#35204e!imp
   .app-shell.messaging-workspace .avani-messenger .message-line { max-width: 90% !important; }
   .app-shell.messaging-workspace .avani-messenger .message-tools { opacity: 1; }
 }
+
+
+/* WhatsApp-like message action: no visible down-chevron; show a discreet menu only on intent. */
+.app-shell.messaging-workspace .avani-messenger .message-action-menu > summary {
+  font-size: 0 !important;
+  opacity: 0;
+  transition: opacity .12s ease, background-color .12s ease, border-color .12s ease;
+}
+.app-shell.messaging-workspace .avani-messenger .message-action-menu > summary::after {
+  content: '⋮';
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+.app-shell.messaging-workspace .avani-messenger .message-line:hover .message-action-menu > summary,
+.app-shell.messaging-workspace .avani-messenger .message-line:focus-within .message-action-menu > summary,
+.app-shell.messaging-workspace .avani-messenger .message-action-menu[open] > summary,
+.app-shell.messaging-workspace .avani-messenger .message-action-menu > summary:focus-visible {
+  opacity: 1;
+}
+.app-shell.messaging-workspace .avani-messenger .message-action-menu[open] > summary {
+  color: #8b5cf6 !important;
+  border-color: #8b5cf6 !important;
+}
+@media (hover: none), (max-width: 680px) {
+  .app-shell.messaging-workspace .avani-messenger .message-action-menu > summary { opacity: 1; }
+}
